@@ -1,13 +1,15 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
 from app.adapters.inbound.api.schemas.usuario_schema import (
     CriarUsuarioRequest,
     UsuarioResponse,
 )
-from app.adapters.outbound.persistence.usuario_repository_memory import (
-    UsuarioRepositoryMemory,
+from app.adapters.outbound.persistence.usuario_repository_sqlalchemy import (
+    SQLAlchemyUsuarioRepository,
 )
 from app.application.use_cases.criar_usuario import CriarUsuario
+from app.infrastructure.database import get_db
 
 
 router = APIRouter(
@@ -15,13 +17,13 @@ router = APIRouter(
     tags=["Usuarios"],
 )
 
-repository = UsuarioRepositoryMemory()
-criar_usuario = CriarUsuario(repository)
-
 
 @router.post("", response_model=UsuarioResponse, status_code=201)
-def criar(request: CriarUsuarioRequest):
+def criar(request: CriarUsuarioRequest, db: Session = Depends(get_db)):
     try:
+        repository = SQLAlchemyUsuarioRepository(db)
+        criar_usuario = CriarUsuario(repository)
+
         usuario = criar_usuario.execute(
             nome=request.nome,
             email=request.email,
