@@ -17,5 +17,21 @@ services:
       timeout: 5s
       retries: 5
 
+  api:
+    build: .
+    container_name: viajajunto_api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-viajajunto}:${POSTGRES_PASSWORD:-viajajunto}@db:5432/${POSTGRES_DB:-viajajunto}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+      - ./alembic:/app/alembic
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
 volumes:
   viajajunto_db_data:
