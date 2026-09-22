@@ -17,7 +17,7 @@ def test_criar_usuario_via_api_persiste_no_banco(db_session, email_teste):
 
     response = client.post(
         "/usuarios",
-        json={"nome": "Livia", "email": email_teste, "senha_hash": "hash123"},
+        json={"nome": "Livia", "email": email_teste, "senha": "senha123"},
     )
     app.dependency_overrides.clear()
 
@@ -26,6 +26,7 @@ def test_criar_usuario_via_api_persiste_no_banco(db_session, email_teste):
     assert body["nome"] == "Livia"
     assert body["email"] == email_teste
     assert "senha_hash" not in body
+    assert "senha" not in body
 
 
 def test_criar_usuario_via_api_rejeita_email_duplicado(db_session, email_teste):
@@ -33,11 +34,11 @@ def test_criar_usuario_via_api_rejeita_email_duplicado(db_session, email_teste):
 
     client.post(
         "/usuarios",
-        json={"nome": "Livia", "email": email_teste, "senha_hash": "hash123"},
+        json={"nome": "Livia", "email": email_teste, "senha": "senha123"},
     )
     response = client.post(
         "/usuarios",
-        json={"nome": "Livia 2", "email": email_teste, "senha_hash": "hash456"},
+        json={"nome": "Livia 2", "email": email_teste, "senha": "senha456"},
     )
     app.dependency_overrides.clear()
 

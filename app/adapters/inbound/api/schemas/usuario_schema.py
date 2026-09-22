@@ -1,13 +1,17 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class CriarUsuarioRequest(BaseModel):
-    nome: str
-    email: EmailStr
-    senha_hash: str
+    nome: str = Field(examples=["Livia Bampi"])
+    email: EmailStr = Field(examples=["livia@example.com"])
+    senha: str = Field(
+        min_length=8,
+        examples=["senhaSegura123"],
+        description="Senha em texto puro; o backend a converte em hash antes de persistir.",
+    )
 
 
 class UsuarioResponse(BaseModel):
-    id: int
-    nome: str
-    email: EmailStr
+    id: int = Field(examples=[1])
+    nome: str = Field(examples=["Livia Bampi"])
+    email: EmailStr = Field(examples=["livia@example.com"])
