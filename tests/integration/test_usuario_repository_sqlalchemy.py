@@ -40,3 +40,14 @@ def test_buscar_por_email_inexistente_retorna_none(db_session):
     repository = SQLAlchemyUsuarioRepository(db_session)
 
     assert repository.buscar_por_email("nao-existe@example.com") is None
+
+
+def test_deletar_remove_usuario_salvo(db_session, email_teste):
+    repository = SQLAlchemyUsuarioRepository(db_session)
+    salvo = repository.salvar(
+        Usuario(nome="Livia", email=email_teste, senha_hash="hash123")
+    )
+
+    repository.deletar(salvo.id)
+
+    assert repository.buscar_por_id(salvo.id) is None

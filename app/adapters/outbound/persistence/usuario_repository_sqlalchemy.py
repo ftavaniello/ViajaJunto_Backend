@@ -42,6 +42,13 @@ class SQLAlchemyUsuarioRepository(UsuarioRepository):
 
         return self._to_entity(model) if model else None
 
+    def deletar(self, usuario_id: int) -> None:
+        model = self.db.get(UsuarioModel, usuario_id)
+
+        if model is not None:
+            self.db.delete(model)
+            self.db.commit()
+
     @staticmethod
     def _to_entity(model: UsuarioModel) -> Usuario:
         return Usuario(

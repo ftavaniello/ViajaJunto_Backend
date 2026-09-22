@@ -8,10 +8,11 @@ class UsuarioRepositoryMemory(UsuarioRepository):
         self.proximo_id = 1
 
     def salvar(self, usuario: Usuario) -> Usuario:
-        usuario.id = self.proximo_id
+        if usuario.id is None:
+            usuario.id = self.proximo_id
+            self.proximo_id += 1
 
-        self.usuarios[self.proximo_id] = usuario
-        self.proximo_id += 1
+        self.usuarios[usuario.id] = usuario
 
         return usuario
 
@@ -24,3 +25,6 @@ class UsuarioRepositoryMemory(UsuarioRepository):
                 return usuario
 
         return None
+
+    def deletar(self, usuario_id: int) -> None:
+        self.usuarios.pop(usuario_id, None)

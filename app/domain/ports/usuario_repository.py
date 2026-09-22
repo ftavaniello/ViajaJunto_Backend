@@ -16,3 +16,7 @@ class UsuarioRepository(ABC):
     @abstractmethod
     def buscar_por_email(self, email: str) -> Usuario | None:
         pass
+
+    @abstractmethod
+    def deletar(self, usuario_id: int) -> None:
+        pass
