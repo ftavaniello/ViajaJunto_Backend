@@ -1,266 +1,182 @@
-# ViajaJunto — Backend
+﻿# ViajaJunto — Backend
 
-Boilerplate do backend do ViajaJunto, aplicação web de planejamento colaborativo de viagens.
-Esta entrega tem como objetivo comprovar a stack e a arquitetura escolhidas usando `Usuario`
-como um slice mínimo, porém real, do sistema.
+O ViajaJunto é uma aplicação web de planejamento colaborativo de viagens, desenvolvida para a disciplina de Construção de Software. Sua proposta é centralizar informações que normalmente ficam espalhadas entre conversas, planilhas, emails e anotações, permitindo que um grupo organize o roteiro em um ambiente compartilhado.
 
-## Stack
+A plataforma foi especificada para reunir viagens com múltiplos destinos, datas, atividades e orçamento, além de visualização geográfica e descoberta de locais e atividades com avaliações da comunidade. A colaboração é o eixo do produto: o criador de uma viagem pode convidar outros usuários e definir quem pode editar ou apenas consultar o planejamento.
 
-| Tecnologia | Papel no projeto |
+Este repositório contém a API do projeto. Atualmente, o backend implementa o módulo de usuários: cadastro, autenticação e gerenciamento da própria conta. As funcionalidades de planejamento de viagens fazem parte da evolução prevista e ainda não estão implementadas.
+
+## Visão do produto
+
+No fluxo previsto, um usuário cria uma viagem com nome, descrição e datas gerais, organiza os destinos na ordem de visita e associa atividades a cada parada. As atividades incluem informações como horário, duração, categoria e custo previsto. O orçamento reúne esses custos para apresentar o total planejado, o saldo disponível e a distribuição por categoria.
+
+O criador compartilha a viagem por código de convite e administra os colaboradores. As permissões são específicas de cada viagem:
+
+| Perfil | Participação prevista |
 |---|---|
-| Python | Linguagem do backend |
-| FastAPI | API HTTP e adapter de entrada |
-| Pydantic | Validação dos contratos HTTP |
-| SQLAlchemy | ORM e adapter de persistência |
-| PostgreSQL | Banco de dados relacional |
-| Docker / Compose | Ambiente reproduzível para o banco de dados |
-| bcrypt | Hash de senha |
-| PyJWT | Autenticação via token JWT |
+| Visitante | Consulta o catálogo público e as avaliações, sem criar viagens ou publicar avaliações |
+| Usuário registrado | Cria viagens, gerencia seu planejamento e publica avaliações |
+| Criador da viagem | Convida colaboradores, altera permissões e remove membros |
+| Colaborador Editor | Adiciona, edita e remove destinos, atividades e informações de orçamento |
+| Colaborador Visualizador | Consulta o planejamento com acesso somente leitura |
 
-## Arquitetura Hexagonal
+O acesso aos dados de uma viagem deve ser restrito ao criador e aos colaboradores convidados. Os recursos públicos de catálogo e avaliações constituem um acesso separado do planejamento privado.
 
-O projeto segue a Arquitetura Hexagonal (Ports and Adapters): o domínio e os casos de uso ficam
-no núcleo, sem depender de FastAPI, Pydantic ou SQLAlchemy. As tecnologias externas ficam nas
-bordas, implementando os contratos (`ports`) definidos pelo núcleo.
+## Escopo especificado e implementação atual
 
-```
-HTTP -> FastAPI (Inbound Adapter)
-        -> CriarUsuario (Application / Use Case)
-           -> Usuario (Domain)
-              -> UsuarioRepository (Port)
-                 <- SQLAlchemyUsuarioRepository (Outbound Adapter, em uso atualmente)
-                    -> PostgreSQL
-                 <- UsuarioRepositoryMemory (Outbound Adapter, alternativo/testes)
-              -> PasswordHasher (Port)
-                 <- BcryptPasswordHasher (Outbound Adapter)
+| Área | Previsão nos requisitos | Situação neste backend |
+|---|---|---|
+| Autenticação e perfil — RF01–RF03 | Cadastro, login, logout e recuperação de senha por email | Cadastro e login implementados, além de consulta, edição, troca de senha e exclusão da conta; não há endpoint de logout/revogação nem recuperação por email |
+| Viagens — RF04–RF07 | Criação, edição, exclusão, painel pessoal e status de planejamento | Ainda não implementado |
+| Destinos — RF08–RF11 | Múltiplos destinos ordenados, informações da estadia, pesquisa e mapa de países visitados | Ainda não implementado |
+| Atividades — RF12–RF14 | Atividades por destino, horários, duração, custos e status | Ainda não implementado |
+| Orçamento — RF15–RF17 | Limite total, custos previstos e resumo financeiro por categoria | Ainda não implementado |
+| Colaboração — RF18–RF21 | Convite por código, permissões de Editor/Visualizador e notificações in-app | Ainda não implementado |
+| Avaliação e descoberta — RF22–RF25 | Avaliações, páginas públicas, catálogo com filtros e destaques | Ainda não implementado |
 
-HTTP -> FastAPI (Inbound Adapter)
-        -> AutenticarUsuario (Application / Use Case)
-           -> PasswordHasher (Port) <- BcryptPasswordHasher (Outbound Adapter)
-           -> TokenService (Port)   <- PyJWTTokenService (Outbound Adapter)
+A especificação também estabelece interface responsiva e acessível, carregamento das páginas principais em menos de três segundos em condições normais, autenticação por token, senhas com hash e separação entre frontend e backend. Esses são requisitos do produto; este README não representa uma validação de atendimento a todos eles.
 
-HTTP -> get_usuario_atual (Inbound Adapter, dependency de proteção)
-        -> TokenService (Port) <- PyJWTTokenService (Outbound Adapter)
-        -> UsuarioRepository (Port) <- SQLAlchemyUsuarioRepository (Outbound Adapter)
-```
+## Funcionamento da aplicação
 
-## Estrutura de pastas
+O acesso começa pelo cadastro de uma conta com nome, email e senha. A API valida os dados recebidos, verifica se o email já está cadastrado e transforma a senha em um hash bcrypt antes de salvar o usuário no PostgreSQL. As respostas de usuário contêm apenas identificador, nome e email.
 
-```
+No login, o backend confere as credenciais e emite um token JWT com o identificador do usuário e um prazo de expiração. Esse token acompanha as próximas requisições no cabeçalho `Authorization: Bearer <token>`.
+
+As operações de conta usam a rota `/usuarios/me`: o usuário é identificado pelo token, sem precisar informar um identificador na URL. A cada acesso protegido, a API valida o token e consulta se a conta ainda existe no banco.
+
+O usuário autenticado pode consultar seu perfil, alterar nome e email, trocar a senha mediante confirmação da senha atual e excluir sua conta. Após a exclusão, o token deixa de permitir acesso às rotas protegidas, pois a conta não é mais encontrada.
+
+## Funcionalidades disponíveis
+
+| Funcionalidade | Comportamento |
+|---|---|
+| Cadastro | Cria uma conta com email único e senha de pelo menos oito caracteres no contrato da API |
+| Autenticação | Valida email e senha e retorna um token JWT |
+| Consulta de perfil | Retorna os dados da própria conta |
+| Atualização de perfil | Altera nome e/ou email; campos omitidos ou nulos permanecem inalterados |
+| Alteração de senha | Exige a senha atual e uma nova senha de pelo menos oito caracteres |
+| Exclusão de conta | Remove permanentemente o usuário autenticado |
+| Verificação de disponibilidade | Expõe uma rota pública de liveness da API |
+
+## Arquitetura
+
+A documentação oficial descreve uma arquitetura cliente-servidor com frontend separado, API REST, PostgreSQL e serviços externos de mapas e locais/atividades. Prevê um catálogo interno enriquecido com Google Places, preservando as avaliações próprias e os dados associados às viagens. Essas integrações ainda não existem neste repositório.
+
+O documento de arquitetura menciona NextJS para o frontend e NestJS para o backend, embora sua tabela de restrições deixe linguagem e framework a definir. A implementação atual utiliza Python e FastAPI. A organização hexagonal descrita abaixo corresponde ao código presente; a divergência de stack permanece pendente de alinhamento na documentação oficial.
+
+O backend segue a **Arquitetura Hexagonal (Ports and Adapters)**. As regras de domínio e os casos de uso ficam no núcleo da aplicação, enquanto HTTP, persistência e bibliotecas de segurança são integrados por adaptadores.
+
+Essa separação permite exercitar os casos de uso com um repositório em memória e utilizar PostgreSQL na API, mantendo os mesmos contratos de persistência.
+
+| Camada | Responsabilidade no projeto |
+|---|---|
+| `domain` | Define a entidade `Usuario` e os contratos `UsuarioRepository`, `PasswordHasher` e `TokenService` |
+| `application` | Coordena os casos de uso de criação, autenticação, atualização, alteração de senha e exclusão de usuários |
+| `adapters/inbound` | Recebe requisições HTTP, valida contratos com Pydantic e converte resultados em respostas da API |
+| `adapters/outbound` | Implementa persistência com SQLAlchemy ou memória, hash com bcrypt e tokens com PyJWT |
+| `infrastructure` | Centraliza configurações, conexão e sessões do banco de dados |
+
+Em uma operação de cadastro, por exemplo, a rota recebe os dados e chama `CriarUsuario`. O caso de uso consulta o repositório para verificar duplicidade de email, solicita o hash da senha e salva a entidade. As implementações concretas de persistência e hashing são fornecidas ao caso de uso pela camada de entrada.
+
+O domínio e os casos de uso não dependem de FastAPI, Pydantic ou SQLAlchemy. A montagem da aplicação e o registro das rotas ficam em `app/main.py`.
+
+## Tecnologias
+
+| Tecnologia | Papel |
+|---|---|
+| Python | Linguagem do backend; a imagem Docker utiliza Python 3.13 |
+| FastAPI e Uvicorn | API HTTP e servidor da aplicação |
+| Pydantic | Validação dos dados de entrada e definição dos contratos de resposta |
+| SQLAlchemy e PostgreSQL | Mapeamento e armazenamento relacional dos usuários |
+| Alembic | Versionamento e aplicação de alterações no banco |
+| bcrypt | Geração e verificação de hashes de senha |
+| PyJWT | Emissão e validação de tokens JWT |
+| Docker Compose | Execução da API e do PostgreSQL em containers |
+| pytest | Testes automatizados de domínio, aplicação e integração |
+
+## API HTTP
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/health` | Público | Verifica se a API está respondendo |
+| `POST` | `/usuarios` | Público | Cadastra um usuário |
+| `POST` | `/auth/login` | Público | Autentica e retorna o token de acesso |
+| `GET` | `/usuarios/me` | JWT | Consulta o perfil autenticado |
+| `PATCH` | `/usuarios/me` | JWT | Atualiza nome e/ou email |
+| `PATCH` | `/usuarios/me/senha` | JWT | Altera a senha da conta |
+| `DELETE` | `/usuarios/me` | JWT | Exclui a conta autenticada |
+
+Os contratos completos, exemplos e respostas estão disponíveis no Swagger UI em [http://localhost:8000/docs](http://localhost:8000/docs), com a aplicação em execução. O documento OpenAPI fica em `/openapi.json`.
+
+A proteção das rotas de conta é feita pela dependência `get_usuario_atual`. Tokens ausentes, inválidos ou expirados e tokens de contas excluídas resultam em resposta `401`. O JWT utiliza o algoritmo HS256 e tem validade padrão de 60 minutos. A troca de senha não revoga tokens já emitidos; eles continuam sujeitos à expiração e à existência da conta.
+
+## Dados e persistência
+
+A entidade `Usuario` representa a conta e contém `id`, `nome`, `email` e `senha_hash`. Ela rejeita nome, email e hash vazios. A validação do formato do email e dos contratos HTTP fica nos schemas Pydantic; a verificação de email duplicado ocorre nos casos de uso de cadastro e atualização.
+
+Na persistência, a tabela `usuarios` possui identificador inteiro gerado automaticamente e uma restrição de unicidade para o email. A API utiliza `SQLAlchemyUsuarioRepository`; a implementação `UsuarioRepositoryMemory` está disponível como alternativa para testes.
+
+As migrações em `alembic/versions/` criam a tabela, inserem um usuário de exemplo e atualizam a senha desse registro para um hash bcrypt. No ambiente Docker Compose, as migrações pendentes são aplicadas antes da inicialização da API. Os dados do PostgreSQL são mantidos em um volume Docker.
+
+O modelo oficial prevê também `viagem`, `membro_viagem`, `destino_catalogo`, `destino_viagem`, `catalogo_atividade`, `atividade_viagem`, `orcamento` e `avaliacao`. Ele distingue os dados reutilizáveis do catálogo das informações de cada viagem: por exemplo, a atividade do catálogo descreve um local ou experiência, enquanto sua associação à viagem registra horário, custo previsto e status. Cada viagem possui um orçamento, e as avaliações se vinculam às atividades do catálogo.
+
+Essas entidades ainda não possuem implementação ou migrações neste backend. Mesmo o usuário tem uma diferença em relação ao modelo especificado: a tabela atual se chama `usuarios` e ainda não possui o campo `criado_em` previsto no documento.
+
+## Organização do repositório
+
+```text
 app/
 ├── domain/
-│   ├── entities/
-│   │   └── usuario.py              # Entidade Usuario, sem dependência de frameworks
-│   └── ports/
-│       ├── usuario_repository.py   # Contrato de persistência (port)
-│       ├── password_hasher.py      # Contrato de hash de senha (port)
-│       └── token_service.py        # Contrato de emissão/validação de token (port)
+│   ├── entities/          # Entidades e validações de domínio
+│   └── ports/             # Contratos de persistência e segurança
 ├── application/
-│   └── use_cases/
-│       ├── criar_usuario.py        # Regra de aplicação: criar usuário, validando email duplicado
-│       └── autenticar_usuario.py   # Regra de aplicação: validar credenciais e emitir token
+│   └── use_cases/         # Operações da aplicação
 ├── adapters/
-│   ├── inbound/
-│   │   └── api/
-│   │       ├── routes/
-│   │       │   ├── health.py       # GET /health
-│   │       │   ├── auth.py         # POST /auth/login
-│   │       │   └── usuario.py      # POST /usuarios, GET /usuarios/me
-│   │       ├── schemas/
-│   │       │   ├── usuario_schema.py
-│   │       │   └── auth_schema.py
-│   │       └── security.py         # Dependency get_usuario_atual (protege rotas via JWT)
-│   └── outbound/
-│       ├── persistence/
-│       │   ├── usuario_model.py               # Modelo SQLAlchemy da tabela `usuarios`
-│       │   ├── usuario_repository_sqlalchemy.py  # Adapter real, usado hoje pela API
-│       │   └── usuario_repository_memory.py   # Adapter em memória (alternativo/testes)
-│       └── security/
-│           ├── bcrypt_password_hasher.py      # Adapter de hash de senha (bcrypt)
-│           └── pyjwt_token_service.py         # Adapter de emissão/validação de JWT (PyJWT)
-├── infrastructure/
-│   ├── config.py                   # Lê DATABASE_URL e configs de JWT do .env
-│   └── database.py                 # Engine e SessionLocal do SQLAlchemy
-└── main.py
-
-alembic/
-├── versions/
-│   ├── ..._cria_tabela_usuarios.py       # Migration inicial (schema)
-│   ├── ..._seed_usuario_inicial.py       # Migration de dado: insere 1 usuário inicial
-│   └── ..._hash_senha_seed_usuario.py    # Migration de dado: corrige o hash do usuário inicial
-└── env.py                          # Usa Base.metadata e DATABASE_URL do projeto
-
+│   ├── inbound/api/       # Rotas, schemas HTTP e autenticação das requisições
+│   └── outbound/          # Persistência e implementações de segurança
+├── infrastructure/       # Configuração e acesso ao banco
+└── main.py               # Criação da aplicação FastAPI
+alembic/                  # Migrações do banco de dados
 tests/
-├── conftest.py                     # Fixtures: db_session (real Postgres) e email_teste
-├── domain/
-│   └── test_usuario.py             # Validações da entidade Usuario
-├── application/
-│   ├── test_criar_usuario.py       # CriarUsuario + UsuarioRepositoryMemory (sem banco)
-│   └── test_autenticar_usuario.py  # AutenticarUsuario + UsuarioRepositoryMemory (sem banco)
-└── integration/
-    ├── test_usuario_repository_sqlalchemy.py  # SQLAlchemyUsuarioRepository + Postgres real
-    ├── test_usuario_api.py                    # POST /usuarios via FastAPI TestClient + Postgres real
-    └── test_auth_api.py                       # POST /auth/login e GET /usuarios/me via TestClient + Postgres real
-
-docker-compose.yml    # Sobe PostgreSQL (db) e a API (api) em containers
-Dockerfile             # Imagem da API
-pytest.ini              # Config do pytest (pythonpath)
-.env.example           # Modelo das variáveis de ambiente
-requirements.txt
+├── domain/               # Validações da entidade Usuario
+├── application/          # Casos de uso com repositório em memória
+└── integration/          # API e persistência com PostgreSQL
 ```
 
-## Status atual
+## Execução local
 
-| Status | Item |
-|---|---|
-| ✅ | FastAPI + Uvicorn executando |
-| ✅ | GET /health |
-| ✅ | Estrutura domain/application/adapters/infrastructure |
-| ✅ | Entidade `Usuario` |
-| ✅ | Port `UsuarioRepository` |
-| ✅ | Use case `CriarUsuario` |
-| ✅ | `UsuarioRepositoryMemory` (adapter de saída em memória) |
-| ✅ | `POST /usuarios` via FastAPI |
-| ✅ | PostgreSQL configurado via Docker Compose (`docker-compose.yml`, `config.py`, `database.py`) |
-| ✅ | `UsuarioModel` (modelo SQLAlchemy da tabela `usuarios`) |
-| ✅ | `SQLAlchemyUsuarioRepository` — API agora persiste usuários no PostgreSQL |
-| ✅ | Alembic (migrations) — tabela `usuarios` + seed de um usuário inicial |
-| ✅ | Dockerfile da API / `docker compose up --build` completo |
-| ✅ | Hashing de senha (bcrypt) |
-| ✅ | Autenticação via JWT (`POST /auth/login`, `GET /usuarios/me` protegido) |
-| ✅ | Testes automatizados (unitários e de integração) |
+Com Docker e Docker Compose disponíveis, crie um arquivo `.env` a partir de `.env.example` e execute, na raiz deste repositório:
 
-A API já persiste usuários no PostgreSQL via `SQLAlchemyUsuarioRepository`
-(`UsuarioRepositoryMemory` continua no projeto como adapter alternativo, útil para testes).
-A tabela `usuarios` é criada e populada com um usuário inicial via Alembic
-(ver seção [Migrations](#migrations-alembic)).
-
-## Autenticação e documentação Swagger
-
-A documentação interativa (Swagger UI) é gerada automaticamente pelo FastAPI a partir
-das rotas e dos schemas Pydantic, e fica em `http://localhost:8000/docs`
-(o schema OpenAPI cru fica em `/openapi.json`).
-
-Endpoints disponíveis hoje:
-
-| Método | Rota | Autenticação | Descrição |
-|---|---|---|---|
-| GET | `/health` | Pública | Liveness check |
-| POST | `/usuarios` | Pública | Cria um novo usuário (`nome`, `email`, `senha`) |
-| POST | `/auth/login` | Pública | Autentica (`email`, `senha`) e retorna um `access_token` (JWT) |
-| GET | `/usuarios/me` | **JWT** | Retorna os dados do usuário autenticado |
-
-Regra geral: **todo endpoint novo que não seja de cadastro/login deve ser protegido**
-com a dependency `get_usuario_atual` (`app/adapters/inbound/api/security.py`), o mesmo
-padrão usado em `GET /usuarios/me`:
-
-```python
-from app.adapters.inbound.api.security import get_usuario_atual
-
-@router.get("/algum-recurso")
-def endpoint_protegido(usuario_atual: Usuario = Depends(get_usuario_atual)):
-    ...
-```
-
-Fluxo para testar pelo Swagger UI:
-
-1. `POST /usuarios` com `nome`, `email` e `senha` (texto puro — o backend faz o hash com bcrypt).
-2. `POST /auth/login` com o mesmo `email`/`senha` → recebe `access_token`.
-3. Clicar em **Authorize** (topo da página) e colar `Bearer <access_token>`.
-4. Chamar `GET /usuarios/me` → retorna os dados do usuário autenticado.
-
-Variáveis de ambiente relacionadas (ver `.env.example`):
-
-| Variável | Descrição |
-|---|---|
-| `JWT_SECRET_KEY` | Chave usada para assinar/validar os tokens. Trocar em qualquer ambiente que não seja dev local. |
-| `JWT_EXPIRE_MINUTES` | Tempo de expiração do access token, em minutos (padrão: 60). |
-
-## Como rodar
-
-### Opção A — tudo via Docker (recomendado)
-
-Dois containers: `db` (PostgreSQL) e `api` (FastAPI). A `api` espera o `db` ficar
-saudável, roda `alembic upgrade head` automaticamente e sobe com `--reload`
-(o código de `app/` e `alembic/` é montado como volume, então editar localmente
-já reflete no container, sem rebuild).
-
-```bash
-cp .env.example .env
+```sh
 docker compose up -d --build
-docker compose ps         # confirma que os dois estão "healthy"/"running"
 ```
 
-A documentação interativa fica em `http://localhost:8000/docs`.
+O Compose inicia o PostgreSQL, aguarda o banco ficar saudável, aplica as migrações e disponibiliza a API na porta `8000`. O ambiente utiliza recarga automática ao editar os arquivos da aplicação.
 
-```bash
-docker compose down       # derruba os containers, mantém os dados no volume
-docker compose down -v    # derruba e apaga os dados (cuidado)
-```
-
-### Opção B — API local (fora do Docker), banco via Docker
-
-Útil para debugar/rodar a API diretamente na sua IDE.
-
-```bash
-cp .env.example .env
-docker compose up -d db   # sobe só o Postgres
-
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-
-alembic upgrade head      # cria a tabela usuarios e insere o usuário inicial
-uvicorn app.main:app --reload
-```
-
-## Migrations (Alembic)
-
-O schema do banco é versionado com Alembic (`alembic/versions/`). `env.py` usa o
-`DATABASE_URL` de `config.py` e o `Base.metadata` de `database.py`, então não é preciso
-configurar nada além do `.env` para rodar.
-
-```bash
-alembic upgrade head                              # aplica todas as migrations pendentes
-alembic revision --autogenerate -m "mensagem"     # gera uma nova migration a partir de mudanças nos models
-alembic downgrade -1                              # desfaz a última migration
-```
-
-A migration inicial (`..._cria_tabela_usuarios.py`) cria a tabela `usuarios`. A segunda
-(`..._seed_usuario_inicial.py`) insere um usuário de exemplo (`usuario@viajajunto.com`,
-senha `changeme123`) para facilitar testes manuais. A terceira
-(`..._hash_senha_seed_usuario.py`) atualiza esse registro para um hash bcrypt real da
-mesma senha, já que a introdução do hashing (passo 5 do roadmap) tornou o hash de
-texto puro do seed original incompatível com o login.
+A configuração da API utiliza `DATABASE_URL`, `JWT_SECRET_KEY` e `JWT_EXPIRE_MINUTES`. O Compose fornece `DATABASE_URL` diretamente ao container da API. Na configuração atual, as variáveis JWT do `.env` não são repassadas ao container, que usa os valores padrão; para personalizá-las nesse modo de execução, é necessário incluí-las no ambiente do serviço `api`. A chave padrão é destinada ao desenvolvimento local.
 
 ## Testes
 
-```bash
-pip install -r requirements.txt   # já inclui pytest e httpx2
-pytest                             # roda toda a suíte
-pytest tests/domain tests/application   # só os testes unitários, sem precisar de banco
+A suíte contempla validações da entidade, regras dos casos de uso, autenticação, gerenciamento de conta e persistência. Os testes de domínio e aplicação usam o repositório em memória; os testes de integração dependem de PostgreSQL acessível e do schema criado pelas migrações.
+
+Com as dependências instaladas no ambiente Python, a suíte pode ser executada com `pytest`. Para executar somente os testes sem banco:
+
+```sh
+pytest tests/domain tests/application
 ```
 
-- `tests/domain` e `tests/application` são testes unitários puros (entidade `Usuario`, os
-  use cases `CriarUsuario`/`AutenticarUsuario` com `UsuarioRepositoryMemory` e os adapters
-  reais `BcryptPasswordHasher`/`PyJWTTokenService`) — não dependem de banco de dados e
-  mostram a vantagem da arquitetura hexagonal: o núcleo é testável sem subir nada externo.
-- `tests/integration` valida `SQLAlchemyUsuarioRepository` e os endpoints `POST /usuarios`,
-  `POST /auth/login` e `GET /usuarios/me` contra um PostgreSQL real. Precisa do banco
-  rodando (`docker compose up -d db`); se não estiver acessível, esses testes são pulados
-  automaticamente (`pytest.skip`) em vez de falhar.
-- Os testes de integração usam emails únicos com prefixo `teste-` e o `conftest.py` apaga
-  esses registros ao final de cada teste, então não sujam o banco de desenvolvimento.
+Quando o banco está indisponível, os testes de integração são marcados como ignorados (`skip`). Portanto, uma execução sem falhas nessas condições não comprova a integração com PostgreSQL.
 
-## Próximos passos
+## Escopo e evolução
 
-1. ~~Criar o modelo de persistência de `Usuario` em SQLAlchemy~~
-2. ~~Implementar `SQLAlchemyUsuarioRepository` e trocar o adapter usado pela API~~
-3. ~~Adicionar Alembic e a migration inicial da tabela de usuários~~
-4. ~~Dockerizar a API (Dockerfile + serviço no `docker-compose.yml`)~~
-5. ~~Tratar senha corretamente (port de hashing + adapter concreto)~~
-6. ~~Adicionar testes unitários (repository em memória) e de integração (API + persistência)~~
-7. ~~Autenticação via JWT (login + dependency de proteção de rotas)~~
-8. Implementar as demais entidades do `architecture.md` (viagem, destino, atividade,
-   orçamento, avaliação) seguindo o mesmo padrão hexagonal, protegendo cada endpoint
-   novo com `get_usuario_atual`
+O módulo de usuários estabelece a base de autenticação, persistência e organização arquitetural do ViajaJunto. A evolução prevista contempla os módulos descritos nos requisitos, incluindo autorização por viagem e as integrações de catálogo e mapas previstas na arquitetura.
+
+Este repositório contém apenas o backend. A interface web e os recursos de colaboração no planejamento de viagens ainda não estão presentes nesta implementação.
+
+Estão fora do escopo da versão especificada: reservas de hotéis, voos e ingressos por APIs externas; chat em tempo real; aplicativo mobile nativo; pagamentos e divisão de custos; edição simultânea em tempo real; e gamificação de avaliações. A integração de catálogo com Google Places prevista na arquitetura não corresponde a uma integração de reservas.
+
+## Referências de especificação
+
+Esta descrição considera os documentos oficiais fornecidos pela equipe: `index.md` (visão geral), `requirements.md` (requisitos e regras de negócio) e `architecture.md` (arquitetura e modelo de dados). Os documentos de requisitos e arquitetura identificam a revisão inicial como versão 0.1, de 25/08/2026. Esses arquivos foram consultados externamente e não estão incluídos neste repositório.
+
+Além da divergência de stack, há pontos que precisam de alinhamento entre os documentos: a visão geral e algumas regras mencionam avaliações de destinos, enquanto RF22–RF24 e o modelo relacional descrevem avaliações de atividades; o identificador de viagem é descrito como string/código de convite, mas as chaves estrangeiras correspondentes aparecem como inteiros. Este README registra essas diferenças sem definir uma solução que ainda não foi formalizada pela equipe.
