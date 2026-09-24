@@ -1,10 +1,8 @@
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
-
 from app.adapters.outbound.persistence.usuario_model import UsuarioModel  # noqa: F401
 from app.infrastructure.config import settings
 from app.infrastructure.database import Base
