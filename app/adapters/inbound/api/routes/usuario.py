@@ -19,7 +19,6 @@ from app.application.use_cases.excluir_usuario import ExcluirUsuario
 from app.domain.entities.usuario import Usuario
 from app.infrastructure.database import get_db
 
-
 router = APIRouter(
     prefix="/usuarios",
     tags=["Usuarios"],

@@ -4,7 +4,6 @@ from app.adapters.inbound.api.routes.auth import router as auth_router
 from app.adapters.inbound.api.routes.health import router as health_router
 from app.adapters.inbound.api.routes.usuario import router as usuario_router
 
-
 app = FastAPI(
     title="ViajaJunto API",
     description=(
@@ -24,3 +23,5 @@ app = FastAPI(
 app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(usuario_router)
+
+#ola
