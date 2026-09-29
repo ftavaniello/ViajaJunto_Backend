@@ -167,6 +167,21 @@ pytest tests/domain tests/application
 
 Quando o banco está indisponível, os testes de integração são marcados como ignorados (`skip`). Portanto, uma execução sem falhas nessas condições não comprova a integração com PostgreSQL.
 
+## Validação do contrato OpenAPI
+
+O workflow `.github/workflows/spectral.yml` executa em pushes e pull requests para
+`main`. Ele exporta o contrato diretamente de `app.openapi()` e o valida com
+`stoplightio/spectral-action`, usando o arquivo `.spectral.yaml`, que estende
+`spectral:oas`. A exportação não precisa iniciar o servidor nem conectar ao banco.
+
+Erros de validação fazem o check **Spectral** falhar. Os avisos seguem as
+severidades padrão do conjunto de regras. Depois da primeira execução no GitHub,
+adicione **Spectral** aos checks obrigatórios na regra de proteção da `main`.
+
+O Spectral CLI também executa a validação para garantir a falha do job mesmo se
+a action não conseguir publicar suas anotações no GitHub. Em PRs de forks,
+somente o CLI executa, pois o token desses PRs não permite escrever checks.
+
 ## Escopo e evolução
 
 O módulo de usuários estabelece a base de autenticação, persistência e organização arquitetural do ViajaJunto. A evolução prevista contempla os módulos descritos nos requisitos, incluindo autorização por viagem e as integrações de catálogo e mapas previstas na arquitetura.
