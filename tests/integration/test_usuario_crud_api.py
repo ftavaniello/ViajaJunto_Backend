@@ -40,9 +40,7 @@ def test_atualizar_me_rejeita_email_ja_utilizado(db_session, email_teste):
     client = _client_com_sessao_de_teste(db_session)
     token = _cadastrar_e_logar(client, email_teste)
     outro_email = email_teste.replace("@", "-outro@")
-    client.post(
-        "/usuarios", json={"nome": "Outro", "email": outro_email, "senha": "senha123"}
-    )
+    client.post("/usuarios", json={"nome": "Outro", "email": outro_email, "senha": "senha123"})
 
     response = client.patch(
         "/usuarios/me",

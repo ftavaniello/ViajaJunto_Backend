@@ -9,6 +9,7 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str = Field(
         examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."],
-        description="JWT a ser enviado no header 'Authorization: Bearer <access_token>' dos endpoints protegidos.",
+        description="""JWT a ser enviado no header 'Authorization:
+        Bearer <access_token>' dos endpoints protegidos.""",
     )
     token_type: str = Field(default="bearer", examples=["bearer"])

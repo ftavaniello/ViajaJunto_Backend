@@ -45,9 +45,7 @@ def test_nao_permite_atualizar_para_email_de_outro_usuario():
     )
 
     with pytest.raises(ValueError, match="Já existe um usuário com este email"):
-        AtualizarUsuario(repository).execute(
-            usuario_id=1, nome=None, email="outro@example.com"
-        )
+        AtualizarUsuario(repository).execute(usuario_id=1, nome=None, email="outro@example.com")
 
 
 def test_usuario_inexistente_levanta_erro():

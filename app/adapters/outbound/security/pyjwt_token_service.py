@@ -7,11 +7,8 @@ from app.infrastructure.config import settings
 
 
 class PyJWTTokenService(TokenService):
-
     def gerar_token(self, usuario_id: int) -> str:
-        expira_em = datetime.now(timezone.utc) + timedelta(
-            minutes=settings.JWT_EXPIRE_MINUTES
-        )
+        expira_em = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
         payload = {"sub": str(usuario_id), "exp": expira_em}
 
         return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)

@@ -34,11 +34,7 @@ class SQLAlchemyUsuarioRepository(UsuarioRepository):
         return self._to_entity(model) if model else None
 
     def buscar_por_email(self, email: str) -> Usuario | None:
-        model = (
-            self.db.query(UsuarioModel)
-            .filter(UsuarioModel.email == email)
-            .first()
-        )
+        model = self.db.query(UsuarioModel).filter(UsuarioModel.email == email).first()
 
         return self._to_entity(model) if model else None
 

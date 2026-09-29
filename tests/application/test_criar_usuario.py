@@ -27,6 +27,4 @@ def test_nao_permite_email_duplicado():
     criar_usuario.execute(nome="Livia", email="livia@example.com", senha="senha123")
 
     with pytest.raises(ValueError, match="Já existe um usuário com este email"):
-        criar_usuario.execute(
-            nome="Livia 2", email="livia@example.com", senha="senha456"
-        )
+        criar_usuario.execute(nome="Livia 2", email="livia@example.com", senha="senha456")

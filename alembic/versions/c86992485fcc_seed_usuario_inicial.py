@@ -5,6 +5,7 @@ Revises: afb2f0e1885d
 Create Date: 2026-09-15 18:46:11.820018
 
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa
@@ -12,8 +13,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = 'c86992485fcc'
-down_revision: Union[str, Sequence[str], None] = 'afb2f0e1885d'
+revision: str = "c86992485fcc"
+down_revision: Union[str, Sequence[str], None] = "afb2f0e1885d"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -42,6 +43,4 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.execute(
-        usuarios.delete().where(usuarios.c.email == "usuario@viajajunto.com")
-    )
+    op.execute(usuarios.delete().where(usuarios.c.email == "usuario@viajajunto.com"))
