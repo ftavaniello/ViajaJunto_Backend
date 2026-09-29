@@ -44,7 +44,7 @@ jobs:
         run: alembic upgrade head
 
       - name: Run tests with coverage
-        run: pytest --cov=app --cov-report=term-missing --cov-report=xml --cov-report=html
+        run: pytest --cov --cov-report=term-missing --cov-report=xml --cov-report=html
 
       - name: Upload coverage report
         if: always()
@@ -54,3 +54,36 @@ jobs:
           path: |
             coverage.xml
             htmlcov/
+
+  sonarqube:
+    name: SonarQube Quality Gate
+    needs: pytest
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download test coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+
+      - name: Check analysis prerequisites
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "::error::Configure the SONAR_TOKEN repository secret."
+            exit 1
+          fi
+          test -s coverage.xml
+
+      - name: SonarQube scan and Quality Gate
+        uses: SonarSource/sonarqube-scan-action@v8.2.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io

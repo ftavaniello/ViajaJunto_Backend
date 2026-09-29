@@ -4,3 +4,7 @@ target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
+
+[tool.coverage.run]
+source = ["app"]
+relative_files = true

@@ -182,6 +182,32 @@ O Spectral CLI também executa a validação para garantir a falha do job mesmo 
 a action não conseguir publicar suas anotações no GitHub. Em PRs de forks,
 somente o CLI executa, pois o token desses PRs não permite escrever checks.
 
+## SonarQube e Quality Gate
+
+O workflow de testes executa o job **SonarQube Quality Gate** após os testes
+passarem, em PRs para `main` e pushes nessa branch. O job baixa o `coverage.xml`
+da mesma execução e usa `SonarSource/sonarqube-scan-action` para analisar `app/`
+e identificar `tests/` como código de teste. A cobertura usa caminhos relativos
+para permitir a leitura do relatório em outro job.
+
+O arquivo `sonar-project.properties` identifica o projeto
+`ftavaniello_ViajaJunto_Backend`, na organização `ftavaniello`. A opção
+`sonar.qualitygate.wait=true` faz o scanner aguardar até 300 segundos pelo
+resultado do Quality Gate; reprovação ou falha na análise faz o job falhar.
+
+Configuração externa necessária:
+
+1. No projeto do SonarQube Cloud, desative **Automatic Analysis** em
+   **Administration → Analysis Method** para usar a análise pelo CI.
+2. Gere um token de análise e cadastre-o no GitHub em
+   **Settings → Secrets and variables → Actions**, como secret **SONAR_TOKEN**.
+   Nunca coloque o token no repositório.
+3. Após a primeira execução, inclua **SonarQube Quality Gate** e o check de testes
+   entre os checks obrigatórios da proteção da `main`.
+
+O job falha explicitamente se o token estiver ausente. PRs de forks normalmente
+não recebem secrets e, portanto, não conseguem executar essa análise autenticada.
+
 ## Escopo e evolução
 
 O módulo de usuários estabelece a base de autenticação, persistência e organização arquitetural do ViajaJunto. A evolução prevista contempla os módulos descritos nos requisitos, incluindo autorização por viagem e as integrações de catálogo e mapas previstas na arquitetura.
