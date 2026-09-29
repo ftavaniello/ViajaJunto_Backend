@@ -7,18 +7,14 @@ from app.domain.entities.usuario import Usuario
 def test_salvar_persiste_e_gera_id(db_session, email_teste):
     repository = SQLAlchemyUsuarioRepository(db_session)
 
-    usuario = repository.salvar(
-        Usuario(nome="Livia", email=email_teste, senha_hash="hash123")
-    )
+    usuario = repository.salvar(Usuario(nome="Livia", email=email_teste, senha_hash="hash123"))
 
     assert usuario.id is not None
 
 
 def test_buscar_por_id_encontra_usuario_salvo(db_session, email_teste):
     repository = SQLAlchemyUsuarioRepository(db_session)
-    salvo = repository.salvar(
-        Usuario(nome="Livia", email=email_teste, senha_hash="hash123")
-    )
+    salvo = repository.salvar(Usuario(nome="Livia", email=email_teste, senha_hash="hash123"))
 
     encontrado = repository.buscar_por_id(salvo.id)
 
@@ -44,9 +40,7 @@ def test_buscar_por_email_inexistente_retorna_none(db_session):
 
 def test_deletar_remove_usuario_salvo(db_session, email_teste):
     repository = SQLAlchemyUsuarioRepository(db_session)
-    salvo = repository.salvar(
-        Usuario(nome="Livia", email=email_teste, senha_hash="hash123")
-    )
+    salvo = repository.salvar(Usuario(nome="Livia", email=email_teste, senha_hash="hash123"))
 
     repository.deletar(salvo.id)
 

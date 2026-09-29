@@ -4,7 +4,6 @@ from app.domain.entities.usuario import Usuario
 
 
 class UsuarioRepository(ABC):
-
     @abstractmethod
     def salvar(self, usuario: Usuario) -> Usuario:
         pass

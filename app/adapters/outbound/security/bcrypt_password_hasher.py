@@ -4,7 +4,6 @@ from app.domain.ports.password_hasher import PasswordHasher
 
 
 class BcryptPasswordHasher(PasswordHasher):
-
     def hash(self, senha: str) -> str:
         return bcrypt.hashpw(senha.encode(), bcrypt.gensalt()).decode()
 
