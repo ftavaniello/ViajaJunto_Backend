@@ -1,0 +1,28 @@
+# ... existing code ...
+
+    steps:
+      # ... passos anteriores (ex: checkout, setup de dependências) ...
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image (local)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true # Carrega a imagem no daemon local do Docker para ser escaneada
+          tags: ${{ github.repository }}:${{ github.sha }}
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ github.repository }}:${{ github.sha }}'
+          format: 'table'
+          exit-code: '1'           # Faz o pipeline falhar se encontrar vulnerabilidades
+          ignore-unfixed: true     # Opcional: ignora vulnerabilidades que ainda não possuem correção
+          vuln-type: 'os,library'  # Verifica pacotes do SO e dependências da aplicação
+          severity: 'HIGH,CRITICAL'
+
+      # ... passos posteriores (ex: push da imagem para registro, deploy) ...
+
+# ... rest of code ...
