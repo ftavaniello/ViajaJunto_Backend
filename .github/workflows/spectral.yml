@@ -1,0 +1,56 @@
+name: OpenAPI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  spectral:
+    name: Spectral
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Export OpenAPI contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          from app.main import app
+
+          Path("openapi.json").write_text(
+              json.dumps(app.openapi(), ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # Enforce failure even when the action cannot publish GitHub annotations.
+      - name: Validate OpenAPI with Spectral CLI
+        run: npx --yes @stoplight/spectral-cli@6.15.0 lint openapi.json --ruleset .spectral.yaml --fail-severity error
+
+      - name: Publish Spectral annotations
+        if: ${{ !cancelled() && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: stoplightio/spectral-action@v0.8.13
+        with:
+          file_glob: openapi.json
+          spectral_ruleset: .spectral.yaml
