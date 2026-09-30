@@ -6,7 +6,11 @@ RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 # 2. Define o diretório de trabalho
 WORKDIR /app
 
-# 3. Copia os arquivos de dependências e instala as versões atualizadas
+
+# 3. Atualiza o pip e setuptools para versões seguras antes de instalar as dependências
+RUN pip install --no-cache-dir --upgrade pip setuptools msgpack urllib3
+
+# Em seguida, instala o restante das dependências do projeto
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
