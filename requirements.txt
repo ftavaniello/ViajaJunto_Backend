@@ -18,7 +18,7 @@ idna==3.19
 iniconfig==2.3.0
 Mako==1.4.1
 MarkupSafe==3.0.3
-msgpack>=1.2.1
+msgpack==1.2.1
 packaging==26.3
 pluggy==1.6.0
 psycopg2-binary==2.9.10
@@ -31,13 +31,13 @@ pytest-cov==7.1.0
 python-dotenv==1.2.3
 PyYAML==6.0.3
 ruff==0.16.9
-setuptools>=78.1.1
+setuptools==78.1.1
 SQLAlchemy==2.0.44
 starlette==1.6.0
 truststore==0.10.4
 typing-inspection==0.4.4
 typing_extensions==4.16.0
-urllib3>=2.8.0
+urllib3==2.8.0
 uvicorn==0.53.0
 uvloop==0.22.1
 watchfiles==1.2.0

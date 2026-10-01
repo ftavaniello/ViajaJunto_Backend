@@ -6,16 +6,15 @@ RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 # 2. Define o diretório de trabalho
 WORKDIR /app
 
+# 3. Atualiza o pip para a versão mais recente
+RUN pip install --no-cache-dir --upgrade pip
 
-# 3. Atualiza o pip e setuptools para versões seguras antes de instalar as dependências
-RUN pip install --no-cache-dir --upgrade pip setuptools msgpack urllib3
-
-# Em seguida, instala o restante das dependências do projeto
+# 4. Copia os requisitos e força o upgrade completo de todas as dependências listadas
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
-# 4. Copia o restante do código da aplicação
+# 5. Copia o restante do código da aplicação
 COPY . .
 
-# 5. Comando de inicialização
+# 6. Comando de inicialização
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
