@@ -208,6 +208,18 @@ Configuração externa necessária:
 O job falha explicitamente se o token estiver ausente. PRs de forks normalmente
 não recebem secrets e, portanto, não conseguem executar essa análise autenticada.
 
+## Build e verificação da imagem Docker
+
+O workflow `.github/workflows/ci.yml` constrói a imagem Docker e executa o Trivy
+em pushes e pull requests para `main` e `develop`. O check `build-and-scan`
+falha quando encontra vulnerabilidades HIGH ou CRITICAL nos pacotes do sistema
+operacional ou nas dependências da aplicação, inclusive sem correção disponível.
+Vulnerabilidades sem correção não são ignoradas para fazer o CI passar.
+
+Inclua `build-and-scan` nos checks obrigatórios da proteção da `main`.
+Esse workflow constrói e verifica a imagem; a publicação no Docker Hub é uma
+etapa separada, ainda não configurada.
+
 ## Escopo e evolução
 
 O módulo de usuários estabelece a base de autenticação, persistência e organização arquitetural do ViajaJunto. A evolução prevista contempla os módulos descritos nos requisitos, incluindo autorização por viagem e as integrações de catálogo e mapas previstas na arquitetura.
