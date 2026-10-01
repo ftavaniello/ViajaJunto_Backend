@@ -3,8 +3,12 @@ name: CI Workflow
 on:
   push:
     branches: [ "main", "develop" ]
+    tags: [ "v*" ]
   pull_request:
     branches: [ "main", "develop" ]
+
+permissions:
+  contents: read
 
 jobs:
   build-and-scan:
@@ -13,6 +17,25 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Validate release version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          python - <<'PY'
+          import os
+          import re
+
+          version = os.environ["GITHUB_REF_NAME"]
+          number = r"(?:0|[1-9][0-9]*)"
+          identifier = rf"(?:{number}|[0-9]*[A-Za-z-][0-9A-Za-z-]*)"
+          pattern = (
+              rf"v{number}\.{number}\.{number}"
+              rf"(?:-{identifier}(?:\.{identifier})*)?"
+              r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?"
+          )
+          if not re.fullmatch(pattern, version):
+              raise SystemExit("Release tags must use SemVer, for example v1.2.3")
+          PY
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -35,3 +58,34 @@ jobs:
           scanners: 'vuln'
           vuln-type: 'os,library'
           severity: 'HIGH,CRITICAL'
+
+      - name: Generate Docker Hub tags
+        id: meta
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        uses: docker/metadata-action@v6
+        with:
+          images: ftavaniello/viajajunto-backend
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=semver,pattern={{version}}
+            type=sha,format=long
+
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Publish exactly the local image that passed Trivy, without rebuilding it.
+      - name: Push scanned image to Docker Hub
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        env:
+          SOURCE_IMAGE: viajajunto-backend:${{ github.sha }}
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          while IFS= read -r tag; do
+            [ -n "$tag" ] || continue
+            docker tag "$SOURCE_IMAGE" "$tag"
+            docker push "$tag"
+          done <<< "$IMAGE_TAGS"
