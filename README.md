@@ -238,8 +238,48 @@ operacional ou nas dependências da aplicação, inclusive sem correção dispon
 Vulnerabilidades sem correção não são ignoradas para fazer o CI passar.
 
 Inclua `build-and-scan` nos checks obrigatórios da proteção da `main`.
-Esse workflow constrói e verifica a imagem; a publicação no Docker Hub é uma
-etapa separada, ainda não configurada.
+O workflow também executa em tags `v*` e publica a imagem aprovada pelo Trivy
+conforme as regras abaixo.
+
+## Publicação no Docker Hub
+
+Destino: `ftavaniello/viajajunto-backend`.
+A publicação usa a mesma imagem local verificada pelo Trivy, sem reconstruí-la.
+Se o build ou o scan falhar, as etapas de login e publicação não executam.
+
+| Evento | Tags publicadas |
+|---|---|
+| Push na `main` (inclusive merge de PR) | `latest` e `sha-<SHA completo>` |
+| Push de versão estável, por exemplo `v1.2.3` | `1.2.3`, `latest` e `sha-<SHA completo>` |
+| Push de pré-lançamento, por exemplo `v1.2.3-rc.1` | `1.2.3-rc.1` e `sha-<SHA completo>` |
+| Push na `develop` ou pull request | Somente build e scan; não publica |
+
+Use tags Git no formato SemVer `vMAJOR.MINOR.PATCH`, com sufixo de
+pré-lançamento opcional. A tag `latest` é atualizada por pushes na `main` e por
+versões estáveis; ela não é um identificador imutável. Use a versão ou SHA para
+selecionar uma publicação específica.
+
+Configure dois **Repository secrets** em
+**Settings → Secrets and variables → Actions** no GitHub:
+
+- `DOCKERHUB_USERNAME`: `ftavaniello`.
+- `DOCKERHUB_TOKEN`: Access Token do Docker Hub com permissão de leitura e
+  escrita no repositório da imagem. Não use a senha da conta nem salve o token
+  em arquivos do projeto.
+
+Após o merge na `main`, a publicação de `latest` será automática. Para publicar
+uma versão, crie e envie a tag correspondente a um commit aprovado da `main`:
+
+```sh
+git switch main
+git pull --ff-only origin main
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+O exemplo usa `v1.0.0`; escolha a versão real do projeto. O workflow de imagem
+não espera os outros workflows independentes, por isso mantenha os checks
+obrigatórios da `main` e publique versões a partir de commits já aprovados.
 
 ## Escopo e evolução
 
