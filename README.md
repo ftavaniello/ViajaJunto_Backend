@@ -208,6 +208,39 @@ Configuração externa necessária:
 O job falha explicitamente se o token estiver ausente. PRs de forks normalmente
 não recebem secrets e, portanto, não conseguem executar essa análise autenticada.
 
+## Build e verificação da imagem Docker
+
+O Dockerfile usa uma etapa de instalação separada e transfere o ambiente Python
+para a imagem final sem `pip`, `setuptools` ou `wheel`. Essas ferramentas e suas
+dependências internas não são necessárias para iniciar a API ou aplicar as
+migrações. Para mudar dependências, reconstrua a imagem; não instale pacotes
+manualmente no container em execução.
+
+A base é `python:3.13-alpine`, com atualizações do Alpine e bibliotecas de
+execução para PostgreSQL. As dependências são instaladas como pacotes binários
+(`--only-binary=:all:`); uma nova dependência sem pacote compatível exigirá
+revisar o build. A mudança de Debian para Alpine foi validada em Linux amd64.
+
+Somente `app/`, `alembic/` e `alembic.ini` são copiados para a imagem final.
+Os testes continuam no repositório e podem ser montados no container para
+validação. O CI usa `pull: true` para consultar a imagem-base atualizada.
+
+Na validação local de 01/10/2026, a imagem passou nos 34 testes, nas migrações e
+na inicialização do Uvicorn com resposta HTTP 200 em `/health`. O Trivy 0.75.0
+não encontrou HIGH ou CRITICAL na imagem Alpine com a base de vulnerabilidades
+utilizada nessa execução. Novos builds devem repetir o scan: esse resultado
+não garante ausência de vulnerabilidades futuras ou de outras severidades.
+
+O workflow `.github/workflows/ci.yml` constrói a imagem Docker e executa o Trivy
+em pushes e pull requests para `main` e `develop`. O check `build-and-scan`
+falha quando encontra vulnerabilidades HIGH ou CRITICAL nos pacotes do sistema
+operacional ou nas dependências da aplicação, inclusive sem correção disponível.
+Vulnerabilidades sem correção não são ignoradas para fazer o CI passar.
+
+Inclua `build-and-scan` nos checks obrigatórios da proteção da `main`.
+Esse workflow constrói e verifica a imagem; a publicação no Docker Hub é uma
+etapa separada, ainda não configurada.
+
 ## Escopo e evolução
 
 O módulo de usuários estabelece a base de autenticação, persistência e organização arquitetural do ViajaJunto. A evolução prevista contempla os módulos descritos nos requisitos, incluindo autorização por viagem e as integrações de catálogo e mapas previstas na arquitetura.
