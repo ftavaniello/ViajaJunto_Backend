@@ -1,20 +1,28 @@
-FROM python:3.13-slim
+ARG PYTHON_IMAGE=python:3.13-alpine
+FROM ${PYTHON_IMAGE} AS builder
 
-# 1. Atualiza os pacotes do sistema operacional para corrigir as vulnerabilidades do Debian/OpenSSL
-RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
-
-# 2. Define o diretório de trabalho
-WORKDIR /app
-
-# 3. Atualiza o pip para a versão mais recente
-RUN pip install --no-cache-dir --upgrade pip
-
-# 4. Copia os requisitos e força o upgrade completo de todas as dependências listadas
+WORKDIR /build
+RUN python -m venv /opt/venv
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade -r requirements.txt
+RUN /opt/venv/bin/python -m pip install --no-cache-dir --upgrade pip \
+    && /opt/venv/bin/python -m pip install --no-cache-dir --only-binary=:all: -r requirements.txt \
+    && /opt/venv/bin/python -m pip check \
+    && /opt/venv/bin/python -m pip uninstall -y setuptools wheel pip
 
-# 5. Copia o restante do código da aplicação
-COPY . .
+FROM ${PYTHON_IMAGE} AS runtime
 
-# 6. Comando de inicialização
+RUN apk upgrade --no-cache && apk add --no-cache libpq libstdc++
+# Installation tools belong to the build stage, not the running API.
+RUN python -m pip uninstall -y setuptools wheel pip \
+    && python -c "import shutil, sysconfig; shutil.rmtree(sysconfig.get_path('stdlib') + '/ensurepip')"
+
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+WORKDIR /app
+COPY --from=builder /opt/venv /opt/venv
+COPY app ./app
+COPY alembic ./alembic
+COPY alembic.ini ./alembic.ini
+
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -210,6 +210,27 @@ não recebem secrets e, portanto, não conseguem executar essa análise autentic
 
 ## Build e verificação da imagem Docker
 
+O Dockerfile usa uma etapa de instalação separada e transfere o ambiente Python
+para a imagem final sem `pip`, `setuptools` ou `wheel`. Essas ferramentas e suas
+dependências internas não são necessárias para iniciar a API ou aplicar as
+migrações. Para mudar dependências, reconstrua a imagem; não instale pacotes
+manualmente no container em execução.
+
+A base é `python:3.13-alpine`, com atualizações do Alpine e bibliotecas de
+execução para PostgreSQL. As dependências são instaladas como pacotes binários
+(`--only-binary=:all:`); uma nova dependência sem pacote compatível exigirá
+revisar o build. A mudança de Debian para Alpine foi validada em Linux amd64.
+
+Somente `app/`, `alembic/` e `alembic.ini` são copiados para a imagem final.
+Os testes continuam no repositório e podem ser montados no container para
+validação. O CI usa `pull: true` para consultar a imagem-base atualizada.
+
+Na validação local de 01/10/2026, a imagem passou nos 34 testes, nas migrações e
+na inicialização do Uvicorn com resposta HTTP 200 em `/health`. O Trivy 0.75.0
+não encontrou HIGH ou CRITICAL na imagem Alpine com a base de vulnerabilidades
+utilizada nessa execução. Novos builds devem repetir o scan: esse resultado
+não garante ausência de vulnerabilidades futuras ou de outras severidades.
+
 O workflow `.github/workflows/ci.yml` constrói a imagem Docker e executa o Trivy
 em pushes e pull requests para `main` e `develop`. O check `build-and-scan`
 falha quando encontra vulnerabilidades HIGH ou CRITICAL nos pacotes do sistema

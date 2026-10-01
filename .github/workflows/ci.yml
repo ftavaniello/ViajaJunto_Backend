@@ -21,6 +21,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          pull: true
           load: true
           tags: viajajunto-backend:${{ github.sha }}
 
