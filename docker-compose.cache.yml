@@ -1,21 +1,10 @@
 # Local infrastructure only. Can be combined with docker-compose.yml.
 services:
-  ministack-state:
-    image: redis:7-alpine
-    networks: [cache]
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
   ministack:
     image: ministackorg/ministack:1.5.21
     ports:
       - "127.0.0.1:4566:4566"
     environment:
-      REDIS_HOST: ministack-state
-      REDIS_PORT: "6379"
       DOCKER_NETWORK: viajajunto-cache-local
       MINISTACK_HOSTNAME: viajajunto-cache-local
       PERSIST_STATE: "1"
@@ -24,9 +13,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ministack-state:/tmp/ministack-state
     networks: [cache]
-    depends_on:
-      ministack-state:
-        condition: service_healthy
     healthcheck:
       test:
         - CMD
@@ -38,15 +24,16 @@ services:
       retries: 30
       start_period: 15s
 
-  cache-init:
-    build:
-      context: ./infra
-      dockerfile: Dockerfile
-    entrypoint: ["python", "/infra/cache_local.py"]
-    command: ["deploy"]
+  aws-cli:
+    image: amazon/aws-cli:2.37.10
+    entrypoint: ["/bin/sh", "/infra/deploy.sh"]
+    command: []
     environment:
-      PYTHONDONTWRITEBYTECODE: "1"
-      PYTHONUNBUFFERED: "1"
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_EC2_METADATA_DISABLED: "true"
+      AWS_PAGER: ""
     volumes:
       - ./infra:/infra:ro
     networks: [cache]

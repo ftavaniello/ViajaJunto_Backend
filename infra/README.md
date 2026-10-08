@@ -1,76 +1,69 @@
-# ElastiCache local com CloudFormation e MiniStack
+﻿# ElastiCache local com MiniStack e CloudFormation
 
-ElastiCache e um servico AWS de armazenamento em memoria. Um cache guarda dados
-temporarios para reutilizacao e pode reduzir consultas ao banco. TTL limita o
-tempo de vida; invalidacao remove dados quando deixam de representar a origem.
-O PostgreSQL continua sendo a fonte persistente e nao precisa estar no RDS.
+ElastiCache oferece armazenamento em memoria para dados temporarios. TTL limita
+sua validade; invalidacao remove dados desatualizados. PostgreSQL permanece como
+fonte persistente, sem exigir RDS. MiniStack emula a AWS localmente e cria um
+Redis real a partir do template CloudFormation `elasticache.yaml`.
 
-CloudFormation declara a infraestrutura em YAML. Aqui, o MiniStack recebe essa
-declaracao e cria um Redis real em um container Docker para emular ElastiCache.
-Isso demonstra provisionamento local, sem criar recursos na AWS.
+## Inicializacao
 
-## Componentes
-
-- `elasticache.yaml`: declara `AWS::ElastiCache::CacheCluster` e exporta endpoint.
-- `../docker-compose.yml`: inicia API, PostgreSQL e infraestrutura do cache juntos.
-- `../docker-compose.cache.yml`: define os servicos de cache reutilizados pelo Compose principal.
-- `ministack-state`: Redis interno do emulador; nao e o cache da aplicacao.
-- `cache_local.py`: cria/atualiza a stack e testa o Redis criado por ela.
-
-O MiniStack usa o socket Docker para criar o container de cache na rede
-`viajajunto-cache-local`. Esta configuracao e destinada ao ambiente local.
-Credenciais `test` sao ficticias, e o endpoint do script aponta apenas ao MiniStack.
-
-## Executar na raiz do repositorio
-
-Com Docker Desktop em modo Linux:
+Na raiz do repositorio, com Docker Desktop em modo Linux:
 
 ```powershell
 docker compose up -d --build
 ```
 
-O Compose espera o Redis interno ficar saudavel, inicia o MiniStack e aguarda
-seu healthcheck. Entao `cache-init` cria/atualiza a stack CloudFormation e confirma
-que o cache responde a PING. A API so inicia depois que esse provisionador termina
-com sucesso (`service_completed_successfully`) e o PostgreSQL fica saudavel.
-Nao e necessario executar `deploy` separadamente. Se o provisionamento falhar,
-a inicializacao da API e bloqueada; consulte os logs de `cache-init`.
+Ordem definida com `depends_on`:
 
-Para conferir o provisionamento e executar a demonstracao opcional:
+1. MiniStack inicia e passa no healthcheck.
+2. AWS CLI executa `cloudformation deploy` no endpoint local, consulta o ElastiCache
+   para restaurar o Redis apos reinicios e aguarda o cluster ficar disponivel.
+3. Apos sucesso do deploy, PostgreSQL inicia e passa no healthcheck.
+4. O container da API executa `alembic upgrade head`.
+5. Somente se as migracoes passarem, Uvicorn inicia a API.
+
+AWS CLI e uma tarefa temporaria: `Exited (0)` significa sucesso. O deploy aceita
+uma stack existente sem alteracoes. Falhas no deploy bloqueiam a inicializacao
+dos dependentes. As migracoes rodam no proprio container da API.
+
+Ficam em execucao MiniStack, PostgreSQL, API e o Redis criado pelo ElastiCache.
+Nao ha Redis auxiliar nem provisionador Python. O volume `ministack-state`
+guarda snapshots do emulador; volume nao e container. O MiniStack usa o socket
+Docker para criar o cache na rede `viajajunto-cache-local`.
+As credenciais `test` sao ficticias; esta configuracao e para uso local.
+
+## Conferir
 
 ```powershell
-docker compose logs cache-init
-docker compose run --rm cache-init demo
+docker compose ps -a
+docker compose logs aws-cli api
+docker compose run --rm aws-cli --endpoint-url=http://ministack:4566 cloudformation describe-stacks --stack-name viajajunto-cache
+docker compose run --rm aws-cli --endpoint-url=http://ministack:4566 elasticache describe-cache-clusters --show-cache-node-info
 ```
 
-O provisionador deve terminar com codigo zero. A demonstracao verifica MISS,
-HIT, expiracao por TTL e invalidacao. Sao operacoes Redis isoladas: esta etapa
-ainda nao integra cache aos endpoints nem comprova reducao de consultas da API.
-Nenhuma dependencia e adicionada ao requirements da aplicacao.
+Confira `CREATE_COMPLETE` ou `UPDATE_COMPLETE` e outputs `CacheHost`/`CachePort`.
+Para reaplicar somente o template: `docker compose run --rm aws-cli`.
 
-Para reaplicar o template ou consultar a stack:
+O antigo `cache-init demo` foi removido. O cache ainda nao esta integrado aos
+endpoints. Provisionar infraestrutura nao comprova HIT/MISS em requisicoes da API.
 
-```powershell
-docker compose run --rm cache-init deploy
-docker compose run --rm cache-init describe
-```
+## Encerrar
 
-Para remover a infraestrutura, exclua primeiro a stack para que o MiniStack
-remova o container que criou:
+Exclua a stack enquanto MiniStack ainda esta rodando:
 
 ```powershell
-docker compose run --rm cache-init destroy
+docker compose run --rm aws-cli --endpoint-url=http://ministack:4566 cloudformation delete-stack --stack-name viajajunto-cache
+docker compose run --rm aws-cli --endpoint-url=http://ministack:4566 cloudformation wait stack-delete-complete --stack-name viajajunto-cache
 docker compose down
 ```
 
-## Roteiro da apresentacao
+Nao use `down -v` se quiser preservar os dados do PostgreSQL.
 
-1. Explicar cache, TTL, invalidacao e o papel do banco como fonte persistente.
-2. Mostrar o recurso CloudFormation e os outputs do endpoint.
-3. Mostrar a stack criada e o container Redis provisionado pelo MiniStack.
-4. Executar `demo` e explicar cada resultado.
-5. Explicar que a emulacao local nao demonstra alta disponibilidade, desempenho
-   ou controles de seguranca de um ambiente AWS de producao.
+## Apresentacao
 
-Referencias: [MiniStack CloudFormation](https://ministack.org/docs/cloudformation)
-e [suporte ElastiCache introduzido em 1.5.20](https://ministack.org/blog/changelog-v1-5-20).
+Explique cache, TTL, invalidacao e banco como fonte persistente. Mostre o template,
+o deploy pelo AWS CLI, os outputs e o Redis criado. A emulacao nao demonstra alta
+disponibilidade ou desempenho de um ambiente AWS de producao.
+
+Referencias: [MiniStack](https://ministack.org/docs/cloudformation) e
+[AWS CLI em Docker](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-docker.html).

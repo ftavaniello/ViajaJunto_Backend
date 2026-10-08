@@ -1,23 +1,21 @@
 services:
-  ministack-state:
-    extends:
-      file: docker-compose.cache.yml
-      service: ministack-state
-
   ministack:
     extends:
       file: docker-compose.cache.yml
       service: ministack
 
-  cache-init:
+  aws-cli:
     extends:
       file: docker-compose.cache.yml
-      service: cache-init
+      service: aws-cli
 
   db:
     image: postgres:16
     container_name: viajajunto_db
     restart: unless-stopped
+    depends_on:
+      aws-cli:
+        condition: service_completed_successfully
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-viajajunto}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-viajajunto}
@@ -39,7 +37,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      cache-init:
+      aws-cli:
         condition: service_completed_successfully
     networks: [default, cache]
     environment:
