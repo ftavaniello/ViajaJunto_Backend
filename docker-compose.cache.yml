@@ -1,0 +1,63 @@
+# Local infrastructure only. Can be combined with docker-compose.yml.
+services:
+  ministack-state:
+    image: redis:7-alpine
+    networks: [cache]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  ministack:
+    image: ministackorg/ministack:1.5.21
+    ports:
+      - "127.0.0.1:4566:4566"
+    environment:
+      REDIS_HOST: ministack-state
+      REDIS_PORT: "6379"
+      DOCKER_NETWORK: viajajunto-cache-local
+      MINISTACK_HOSTNAME: viajajunto-cache-local
+      PERSIST_STATE: "1"
+      STATE_DIR: /tmp/ministack-state
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ministack-state:/tmp/ministack-state
+    networks: [cache]
+    depends_on:
+      ministack-state:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:4566/_ministack/health')"
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 15s
+
+  cache-init:
+    build:
+      context: ./infra
+      dockerfile: Dockerfile
+    entrypoint: ["python", "/infra/cache_local.py"]
+    command: ["deploy"]
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./infra:/infra:ro
+    networks: [cache]
+    depends_on:
+      ministack:
+        condition: service_healthy
+    restart: "no"
+
+networks:
+  cache:
+    name: viajajunto-cache-local
+
+volumes:
+  ministack-state:

@@ -1,0 +1,17 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: ElastiCache local do ViajaJunto, provisionado pelo MiniStack.
+
+Resources:
+  Cache:
+    Type: AWS::ElastiCache::CacheCluster
+    Properties:
+      ClusterName: viajajunto-demo-cache
+      Engine: redis
+      CacheNodeType: cache.t3.micro
+      NumCacheNodes: 1
+
+Outputs:
+  CacheHost:
+    Value: !GetAtt Cache.RedisEndpoint.Address
+  CachePort:
+    Value: !GetAtt Cache.RedisEndpoint.Port

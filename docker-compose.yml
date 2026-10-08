@@ -1,4 +1,19 @@
 services:
+  ministack-state:
+    extends:
+      file: docker-compose.cache.yml
+      service: ministack-state
+
+  ministack:
+    extends:
+      file: docker-compose.cache.yml
+      service: ministack
+
+  cache-init:
+    extends:
+      file: docker-compose.cache.yml
+      service: cache-init
+
   db:
     image: postgres:16
     container_name: viajajunto_db
@@ -24,6 +39,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      cache-init:
+        condition: service_completed_successfully
+    networks: [default, cache]
     environment:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-viajajunto}:${POSTGRES_PASSWORD:-viajajunto}@db:5432/${POSTGRES_DB:-viajajunto}
     ports:
@@ -35,3 +53,9 @@ services:
 
 volumes:
   viajajunto_db_data:
+  ministack-state:
+
+networks:
+  default:
+  cache:
+    name: viajajunto-cache-local

@@ -82,6 +82,11 @@ O domínio e os casos de uso não dependem de FastAPI, Pydantic ou SQLAlchemy. A
 
 ## Tecnologias
 
+O comando `docker compose up -d --build` tambem inicia o MiniStack e provisiona
+o ElastiCache local via CloudFormation. A API aguarda o banco ficar saudavel e
+o provisionamento do cache terminar com sucesso. O cache ainda nao e utilizado
+pelos endpoints. Veja o [roteiro de infraestrutura e demonstracao](infra/README.md).
+
 | Tecnologia | Papel |
 |---|---|
 | Python | Linguagem do backend; a imagem Docker utiliza Python 3.13 |
