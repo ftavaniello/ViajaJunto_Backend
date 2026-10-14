@@ -17,6 +17,10 @@ class UsuarioResponse(BaseModel):
     email: EmailStr = Field(examples=["livia@example.com"])
 
 
+class ResumoUsuariosResponse(BaseModel):
+    total_usuarios: int = Field(ge=0, examples=[5], description="Total de contas cadastradas.")
+
+
 class AtualizarUsuarioRequest(BaseModel):
     nome: str | None = Field(
         default=None,

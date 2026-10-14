@@ -26,5 +26,8 @@ class UsuarioRepositoryMemory(UsuarioRepository):
 
         return None
 
+    def contar(self) -> int:
+        return len(self.usuarios)
+
     def deletar(self, usuario_id: int) -> None:
         self.usuarios.pop(usuario_id, None)

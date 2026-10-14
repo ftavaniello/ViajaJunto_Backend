@@ -85,8 +85,9 @@ O domínio e os casos de uso não dependem de FastAPI, Pydantic ou SQLAlchemy. A
 O comando `docker compose up -d --build` tambem inicia o MiniStack e provisiona
 o ElastiCache local via AWS CLI e CloudFormation. Apos o deploy, o PostgreSQL inicia;
 a API aguarda o banco ficar saudavel e executa as migracoes antes do servidor.
-O cache ainda nao e utilizado
-pelos endpoints. Veja o [roteiro de infraestrutura e demonstracao](infra/README.md).
+O endpoint protegido `GET /usuarios/resumo` usa o Redis para guardar o total de usuarios
+por 60 segundos. Cadastro e exclusao invalidam essa contagem. `X-Cache` indica HIT, MISS
+ou BYPASS; a autenticacao continua consultando o banco. Veja o [roteiro de infraestrutura e demonstracao](infra/README.md).
 
 | Tecnologia | Papel |
 |---|---|
@@ -97,7 +98,8 @@ pelos endpoints. Veja o [roteiro de infraestrutura e demonstracao](infra/README.
 | Alembic | Versionamento e aplicação de alterações no banco |
 | bcrypt | Geração e verificação de hashes de senha |
 | PyJWT | Emissão e validação de tokens JWT |
-| Docker Compose | Execução da API e do PostgreSQL em containers |
+| Redis / ElastiCache local | Cache da contagem de usuarios, provisionado via CloudFormation no MiniStack |
+| Docker Compose | Inicializacao do MiniStack, deploy AWS CLI, PostgreSQL e API |
 | pytest | Testes automatizados de domínio, aplicação e integração |
 
 ## API HTTP
@@ -107,6 +109,7 @@ pelos endpoints. Veja o [roteiro de infraestrutura e demonstracao](infra/README.
 | `GET` | `/health` | Público | Verifica se a API está respondendo |
 | `POST` | `/usuarios` | Público | Cadastra um usuário |
 | `POST` | `/auth/login` | Público | Autentica e retorna o token de acesso |
+| `GET` | `/usuarios/resumo` | JWT | Consulta o total de usuarios, com cache Redis e header X-Cache |
 | `GET` | `/usuarios/me` | JWT | Consulta o perfil autenticado |
 | `PATCH` | `/usuarios/me` | JWT | Atualiza nome e/ou email |
 | `PATCH` | `/usuarios/me/senha` | JWT | Altera a senha da conta |

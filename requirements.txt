@@ -30,6 +30,7 @@ pytest==9.1.1
 pytest-cov==7.1.0
 python-dotenv==1.2.3
 PyYAML==6.0.3
+redis==8.1.0
 ruff==0.16.9
 setuptools==78.1.1
 SQLAlchemy==2.0.44

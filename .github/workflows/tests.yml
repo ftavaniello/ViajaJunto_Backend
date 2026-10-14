@@ -11,6 +11,15 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
       db:
         image: postgres:16
         env:
@@ -28,6 +37,7 @@ jobs:
     env:
       DATABASE_URL: postgresql+psycopg2://viajajunto:viajajunto@localhost:5432/viajajunto
       JWT_SECRET_KEY: ci-test-secret-key
+      TEST_REDIS_URL: redis://localhost:6379/15
 
     steps:
       - uses: actions/checkout@v4

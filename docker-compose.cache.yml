@@ -36,6 +36,7 @@ services:
       AWS_PAGER: ""
     volumes:
       - ./infra:/infra:ro
+      - cache-endpoint:/run/cache
     networks: [cache]
     depends_on:
       ministack:
@@ -48,3 +49,4 @@ networks:
 
 volumes:
   ministack-state:
+  cache-endpoint:

@@ -41,10 +41,13 @@ services:
         condition: service_completed_successfully
     networks: [default, cache]
     environment:
+      REDIS_URL_FILE: /run/cache/redis-url
+      CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-60}
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-viajajunto}:${POSTGRES_PASSWORD:-viajajunto}@db:5432/${POSTGRES_DB:-viajajunto}
     ports:
       - "8000:8000"
     volumes:
+      - cache-endpoint:/run/cache:ro
       - ./app:/app/app
       - ./alembic:/app/alembic
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
@@ -52,6 +55,7 @@ services:
 volumes:
   viajajunto_db_data:
   ministack-state:
+  cache-endpoint:
 
 networks:
   default:

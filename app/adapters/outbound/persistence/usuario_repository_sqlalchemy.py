@@ -1,3 +1,4 @@
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.adapters.outbound.persistence.usuario_model import UsuarioModel
@@ -37,6 +38,9 @@ class SQLAlchemyUsuarioRepository(UsuarioRepository):
         model = self.db.query(UsuarioModel).filter(UsuarioModel.email == email).first()
 
         return self._to_entity(model) if model else None
+
+    def contar(self) -> int:
+        return self.db.scalar(select(func.count()).select_from(UsuarioModel))
 
     def deletar(self, usuario_id: int) -> None:
         model = self.db.get(UsuarioModel, usuario_id)
