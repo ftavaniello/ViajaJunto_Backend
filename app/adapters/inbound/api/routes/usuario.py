@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from app.adapters.inbound.api.schemas.usuario_schema import (
     AlterarSenhaRequest,
     AtualizarUsuarioRequest,
     CriarUsuarioRequest,
+    ResumoUsuariosResponse,
     UsuarioResponse,
 )
 from app.adapters.inbound.api.security import get_usuario_atual
@@ -14,9 +15,12 @@ from app.adapters.outbound.persistence.usuario_repository_sqlalchemy import (
 from app.adapters.outbound.security.bcrypt_password_hasher import BcryptPasswordHasher
 from app.application.use_cases.alterar_senha import AlterarSenha
 from app.application.use_cases.atualizar_usuario import AtualizarUsuario
+from app.application.use_cases.consultar_resumo_usuarios import ConsultarResumoUsuarios
 from app.application.use_cases.criar_usuario import CriarUsuario
 from app.application.use_cases.excluir_usuario import ExcluirUsuario
 from app.domain.entities.usuario import Usuario
+from app.domain.ports.total_usuarios_cache import TotalUsuariosCache
+from app.infrastructure.cache import get_total_usuarios_cache
 from app.infrastructure.database import get_db
 
 router = APIRouter(
@@ -39,7 +43,11 @@ router = APIRouter(
         400: {"description": "Já existe um usuário com este email"},
     },
 )
-def criar(request: CriarUsuarioRequest, db: Session = Depends(get_db)):
+def criar(
+    request: CriarUsuarioRequest,
+    db: Session = Depends(get_db),
+    cache: TotalUsuariosCache = Depends(get_total_usuarios_cache),
+):
     try:
         repository = SQLAlchemyUsuarioRepository(db)
         criar_usuario = CriarUsuario(repository, BcryptPasswordHasher())
@@ -49,6 +57,7 @@ def criar(request: CriarUsuarioRequest, db: Session = Depends(get_db)):
             email=request.email,
             senha=request.senha,
         )
+        cache.invalidar()
 
         return UsuarioResponse(
             id=usuario.id,
@@ -61,6 +70,34 @@ def criar(request: CriarUsuarioRequest, db: Session = Depends(get_db)):
             status_code=400,
             detail=str(error),
         )
+
+
+@router.get(
+    "/resumo",
+    response_model=ResumoUsuariosResponse,
+    summary="Consulta o total de usuarios cadastrados",
+    description=(
+        "Requer JWT. Cacheia somente a contagem; a autenticacao continua consultando o banco. "
+        "X-Cache indica HIT (Redis), MISS (banco e cache preenchido) ou BYPASS (sem cache)."
+    ),
+    responses={
+        200: {"description": "Total de usuarios", "headers": {
+            "X-Cache": {"description": "Origem da contagem",
+                        "schema": {"type": "string", "enum": ["HIT", "MISS", "BYPASS"]}},
+        }},
+        401: {"description": "Token ausente, invalido, expirado ou conta excluida"},
+    },
+)
+def resumo(
+    response: Response,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+    cache: TotalUsuariosCache = Depends(get_total_usuarios_cache),
+):
+    total, origem = ConsultarResumoUsuarios(SQLAlchemyUsuarioRepository(db), cache).execute()
+    response.headers["X-Cache"] = origem
+    response.headers["Cache-Control"] = "no-store"
+    return ResumoUsuariosResponse(total_usuarios=total)
 
 
 @router.get(
@@ -168,6 +205,8 @@ def alterar_senha(
 def excluir_me(
     usuario_atual: Usuario = Depends(get_usuario_atual),
     db: Session = Depends(get_db),
+    cache: TotalUsuariosCache = Depends(get_total_usuarios_cache),
 ):
     repository = SQLAlchemyUsuarioRepository(db)
     ExcluirUsuario(repository).execute(usuario_atual.id)
+    cache.invalidar()
