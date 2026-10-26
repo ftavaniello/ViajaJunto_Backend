@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import jwt
 
+from app.domain.errors import NaoAutenticado
 from app.domain.ports.token_service import TokenService
 from app.infrastructure.config import settings
 
@@ -19,7 +20,8 @@ class PyJWTTokenService(TokenService):
                 token,
                 settings.JWT_SECRET_KEY,
                 algorithms=[settings.JWT_ALGORITHM],
+                options={"require": ["sub", "exp"]},
             )
             return int(payload["sub"])
-        except jwt.PyJWTError as error:
-            raise ValueError("Token inválido ou expirado") from error
+        except (jwt.PyJWTError, ValueError, TypeError, KeyError) as error:
+            raise NaoAutenticado("Token inválido ou expirado") from error

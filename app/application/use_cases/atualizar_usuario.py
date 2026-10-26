@@ -1,4 +1,5 @@
 from app.domain.entities.usuario import Usuario
+from app.domain.errors import EmailDuplicado, UsuarioNaoEncontrado
 from app.domain.ports.usuario_repository import UsuarioRepository
 
 
@@ -10,18 +11,18 @@ class AtualizarUsuario:
         usuario = self.repository.buscar_por_id(usuario_id)
 
         if usuario is None:
-            raise ValueError("Usuário não encontrado")
+            raise UsuarioNaoEncontrado("Usuário não encontrado")
 
         if email and email != usuario.email:
             usuario_existente = self.repository.buscar_por_email(email)
 
             if usuario_existente:
-                raise ValueError("Já existe um usuário com este email")
+                raise EmailDuplicado("Já existe um usuário com este email")
 
         usuario_atualizado = Usuario(
             id=usuario.id,
-            nome=nome or usuario.nome,
-            email=email or usuario.email,
+            nome=usuario.nome if nome is None else nome,
+            email=usuario.email if email is None else email,
             senha_hash=usuario.senha_hash,
         )
 

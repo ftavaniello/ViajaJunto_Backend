@@ -1,3 +1,7 @@
+from app.domain.errors import DadosInvalidos
+from app.domain.validation import validar_email, validar_nome
+
+
 class Usuario:
     def __init__(
         self,
@@ -6,14 +10,10 @@ class Usuario:
         senha_hash: str,
         id: int | None = None,
     ):
-        if not nome.strip():
-            raise ValueError("Nome não pode ser vazio")
-
-        if not email.strip():
-            raise ValueError("Email não pode ser vazio")
-
+        validar_nome(nome)
+        validar_email(email)
         if not senha_hash.strip():
-            raise ValueError("Senha não pode ser vazia")
+            raise DadosInvalidos("Senha n\u00e3o pode ser vazia")
 
         self.id = id
         self.nome = nome

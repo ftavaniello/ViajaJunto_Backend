@@ -1,14 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends
 
 from app.adapters.inbound.api.schemas.auth_schema import LoginRequest, TokenResponse
-from app.adapters.outbound.persistence.usuario_repository_sqlalchemy import (
-    SQLAlchemyUsuarioRepository,
-)
-from app.adapters.outbound.security.bcrypt_password_hasher import BcryptPasswordHasher
-from app.adapters.outbound.security.pyjwt_token_service import PyJWTTokenService
 from app.application.use_cases.autenticar_usuario import AutenticarUsuario
-from app.infrastructure.database import get_db
+from app.infrastructure.dependencies import (
+    get_autenticar_usuario,
+)
 
 router = APIRouter(
     prefix="/auth",
@@ -29,21 +25,8 @@ router = APIRouter(
         401: {"description": "Email ou senha inválidos"},
     },
 )
-def login(request: LoginRequest, db: Session = Depends(get_db)):
-    try:
-        repository = SQLAlchemyUsuarioRepository(db)
-        autenticar_usuario = AutenticarUsuario(
-            repository=repository,
-            password_hasher=BcryptPasswordHasher(),
-            token_service=PyJWTTokenService(),
-        )
-
-        token = autenticar_usuario.execute(email=request.email, senha=request.senha)
-
-        return TokenResponse(access_token=token)
-
-    except ValueError as error:
-        raise HTTPException(
-            status_code=401,
-            detail=str(error),
-        )
+def login(
+    request: LoginRequest,
+    caso: AutenticarUsuario = Depends(get_autenticar_usuario),
+):
+    return TokenResponse(access_token=caso.execute(email=request.email, senha=request.senha))

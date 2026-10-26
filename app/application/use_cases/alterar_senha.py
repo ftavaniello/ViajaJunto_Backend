@@ -1,6 +1,8 @@
 from app.domain.entities.usuario import Usuario
+from app.domain.errors import DadosInvalidos, UsuarioNaoEncontrado
 from app.domain.ports.password_hasher import PasswordHasher
 from app.domain.ports.usuario_repository import UsuarioRepository
+from app.domain.validation import validar_senha
 
 
 class AlterarSenha:
@@ -12,10 +14,12 @@ class AlterarSenha:
         usuario = self.repository.buscar_por_id(usuario_id)
 
         if usuario is None:
-            raise ValueError("Usuário não encontrado")
+            raise UsuarioNaoEncontrado("Usuário não encontrado")
 
         if not self.password_hasher.verificar(senha_atual, usuario.senha_hash):
-            raise ValueError("Senha atual incorreta")
+            raise DadosInvalidos("Senha atual incorreta")
+
+        validar_senha(senha_nova)
 
         usuario_atualizado = Usuario(
             id=usuario.id,
