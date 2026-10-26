@@ -1,8 +1,10 @@
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.adapters.outbound.persistence.usuario_model import UsuarioModel
 from app.domain.entities.usuario import Usuario
+from app.domain.errors import EmailDuplicado
 from app.domain.ports.usuario_repository import UsuarioRepository
 
 
@@ -24,7 +26,13 @@ class SQLAlchemyUsuarioRepository(UsuarioRepository):
             model.email = usuario.email
             model.senha_hash = usuario.senha_hash
 
-        self.db.commit()
+        try:
+            self.db.commit()
+        except IntegrityError as error:
+            # A unicidade do email e garantida pelo banco; a verificacao previa no
+            # caso de uso nao elimina a condicao de corrida entre requisicoes.
+            self.db.rollback()
+            raise EmailDuplicado("Já existe um usuário com este email") from error
         self.db.refresh(model)
 
         return self._to_entity(model)

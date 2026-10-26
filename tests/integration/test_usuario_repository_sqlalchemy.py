@@ -1,7 +1,10 @@
+import pytest
+
 from app.adapters.outbound.persistence.usuario_repository_sqlalchemy import (
     SQLAlchemyUsuarioRepository,
 )
 from app.domain.entities.usuario import Usuario
+from app.domain.errors import EmailDuplicado
 
 
 def test_salvar_persiste_e_gera_id(db_session, email_teste):
@@ -45,3 +48,14 @@ def test_deletar_remove_usuario_salvo(db_session, email_teste):
     repository.deletar(salvo.id)
 
     assert repository.buscar_por_id(salvo.id) is None
+
+
+def test_email_duplicado_no_banco_vira_erro_de_dominio(db_session, email_teste):
+    repository = SQLAlchemyUsuarioRepository(db_session)
+    repository.salvar(Usuario(nome="Livia", email=email_teste, senha_hash="hash123"))
+
+    # Simula a corrida: o caso de uso nao viu o primeiro registro, mas o banco rejeita.
+    with pytest.raises(EmailDuplicado):
+        repository.salvar(Usuario(nome="Outra", email=email_teste, senha_hash="hash456"))
+
+    assert repository.buscar_por_email(email_teste) is not None

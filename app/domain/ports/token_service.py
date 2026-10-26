@@ -8,5 +8,5 @@ class TokenService(ABC):
 
     @abstractmethod
     def verificar_token(self, token: str) -> int:
-        """Retorna o id do usuário dono do token, ou levanta ValueError se inválido/expirado."""
+        """Retorna o id do usuário dono do token, ou levanta NaoAutenticado se inválido/expirado."""
         pass

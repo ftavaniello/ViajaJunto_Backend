@@ -10,8 +10,8 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
+from app.adapters.outbound.cache.redis_total_usuarios_cache import RedisTotalUsuariosCache
 from app.adapters.outbound.persistence.usuario_model import UsuarioModel
-from app.adapters.outbound.redis_total_usuarios_cache import RedisTotalUsuariosCache
 from app.infrastructure.cache import get_total_usuarios_cache
 from app.infrastructure.database import get_db
 from app.main import app
