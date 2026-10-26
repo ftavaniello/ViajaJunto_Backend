@@ -3,16 +3,15 @@ import pytest
 from app.adapters.outbound.persistence.usuario_repository_memory import (
     UsuarioRepositoryMemory,
 )
-from app.adapters.outbound.security.bcrypt_password_hasher import BcryptPasswordHasher
-from app.adapters.outbound.security.pyjwt_token_service import PyJWTTokenService
 from app.application.use_cases.autenticar_usuario import AutenticarUsuario
 from app.application.use_cases.criar_usuario import CriarUsuario
+from tests.application.fakes import FakePasswordHasher, FakeTokenService
 
 
 def _autenticar_usuario():
     repository = UsuarioRepositoryMemory()
-    password_hasher = BcryptPasswordHasher()
-    token_service = PyJWTTokenService()
+    password_hasher = FakePasswordHasher()
+    token_service = FakeTokenService()
 
     CriarUsuario(repository, password_hasher).execute(
         nome="Livia",

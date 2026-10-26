@@ -6,7 +6,7 @@ from redis import Redis
 from redis.backoff import NoBackoff
 from redis.retry import Retry
 
-from app.adapters.outbound.redis_total_usuarios_cache import RedisTotalUsuariosCache
+from app.adapters.outbound.cache.redis_total_usuarios_cache import RedisTotalUsuariosCache
 from app.infrastructure.config import settings
 
 logger = logging.getLogger(__name__)

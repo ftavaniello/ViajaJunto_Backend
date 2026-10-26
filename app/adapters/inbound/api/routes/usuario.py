@@ -72,7 +72,7 @@ def resumo(
     caso: ConsultarResumoUsuarios = Depends(get_consultar_resumo),
 ):
     total, origem = caso.execute()
-    response.headers["X-Cache"] = origem
+    response.headers["X-Cache"] = origem.value
     response.headers["Cache-Control"] = "no-store"
     return ResumoUsuariosResponse(total_usuarios=total)
 

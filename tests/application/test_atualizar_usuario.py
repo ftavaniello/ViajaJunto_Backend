@@ -3,14 +3,14 @@ import pytest
 from app.adapters.outbound.persistence.usuario_repository_memory import (
     UsuarioRepositoryMemory,
 )
-from app.adapters.outbound.security.bcrypt_password_hasher import BcryptPasswordHasher
 from app.application.use_cases.atualizar_usuario import AtualizarUsuario
 from app.application.use_cases.criar_usuario import CriarUsuario
+from tests.application.fakes import FakePasswordHasher
 
 
 def _repository_com_usuario() -> UsuarioRepositoryMemory:
     repository = UsuarioRepositoryMemory()
-    CriarUsuario(repository, BcryptPasswordHasher()).execute(
+    CriarUsuario(repository, FakePasswordHasher()).execute(
         nome="Livia",
         email="livia@example.com",
         senha="senha123",
@@ -40,7 +40,7 @@ def test_campos_omitidos_permanecem_inalterados():
 
 def test_nao_permite_atualizar_para_email_de_outro_usuario():
     repository = _repository_com_usuario()
-    CriarUsuario(repository, BcryptPasswordHasher()).execute(
+    CriarUsuario(repository, FakePasswordHasher()).execute(
         nome="Outro", email="outro@example.com", senha="senha123"
     )
 

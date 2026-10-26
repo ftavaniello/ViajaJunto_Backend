@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 from redis import ConnectionError
 
-from app.adapters.outbound.redis_total_usuarios_cache import RedisTotalUsuariosCache
+from app.adapters.outbound.cache.redis_total_usuarios_cache import RedisTotalUsuariosCache
 from app.infrastructure.cache import get_total_usuarios_cache
 from app.infrastructure.config import settings
 
