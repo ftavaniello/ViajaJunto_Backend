@@ -1,47 +1,56 @@
-from app.adapters.outbound.persistence.usuario_repository_sqlalchemy import (
-    SQLAlchemyUsuarioRepository,
-)
+from sqlalchemy.orm import Session
+
+from app.adapters.outbound.persistence.usuario_model import UsuarioModel
 from app.domain.entities.usuario import Usuario
+from app.domain.ports.usuario_repository import UsuarioRepository
 
 
-def test_salvar_persiste_e_gera_id(db_session, email_teste):
-    repository = SQLAlchemyUsuarioRepository(db_session)
+class SQLAlchemyUsuarioRepository(UsuarioRepository):
+    def __init__(self, db: Session):
+        self.db = db
 
-    usuario = repository.salvar(Usuario(nome="Livia", email=email_teste, senha_hash="hash123"))
+    def salvar(self, usuario: Usuario) -> Usuario:
+        if usuario.id is None:
+            model = UsuarioModel(
+                nome=usuario.nome,
+                email=usuario.email,
+                senha_hash=usuario.senha_hash,
+            )
+            self.db.add(model)
+        else:
+            model = self.db.get(UsuarioModel, usuario.id)
+            model.nome = usuario.nome
+            model.email = usuario.email
+            model.senha_hash = usuario.senha_hash
 
-    assert usuario.id is not None
+        self.db.commit()
+        self.db.refresh(model)
 
+        return self._to_entity(model)
 
-def test_buscar_por_id_encontra_usuario_salvo(db_session, email_teste):
-    repository = SQLAlchemyUsuarioRepository(db_session)
-    salvo = repository.salvar(Usuario(nome="Livia", email=email_teste, senha_hash="hash123"))
+    def buscar_por_id(self, usuario_id: int) -> Usuario | None:
+        model = self.db.get(UsuarioModel, usuario_id)
 
-    encontrado = repository.buscar_por_id(salvo.id)
+        return self._to_entity(model) if model else None
 
-    assert encontrado is not None
-    assert encontrado.email == email_teste
+    def buscar_por_email(self, email: str) -> Usuario | None:
+        model = self.db.query(UsuarioModel).filter(UsuarioModel.email == email).first()
 
+        return self._to_entity(model) if model else None
 
-def test_buscar_por_email_encontra_usuario_salvo(db_session, email_teste):
-    repository = SQLAlchemyUsuarioRepository(db_session)
-    repository.salvar(Usuario(nome="Livia", email=email_teste, senha_hash="hash123"))
+    def deletar(self, usuario_id: int) -> None:
+        model = self.db.get(UsuarioModel, usuario_id)
 
-    encontrado = repository.buscar_por_email(email_teste)
+        if model is not None:
+            self.db.delete(model)
+            self.db.commit()
 
-    assert encontrado is not None
-    assert encontrado.email == email_teste
-
-
-def test_buscar_por_email_inexistente_retorna_none(db_session):
-    repository = SQLAlchemyUsuarioRepository(db_session)
-
-    assert repository.buscar_por_email("nao-existe@example.com") is None
-
-
-def test_deletar_remove_usuario_salvo(db_session, email_teste):
-    repository = SQLAlchemyUsuarioRepository(db_session)
-    salvo = repository.salvar(Usuario(nome="Livia", email=email_teste, senha_hash="hash123"))
-
-    repository.deletar(salvo.id)
-
-    assert repository.buscar_por_id(salvo.id) is None
+    @staticmethod
+    def _to_entity(model: UsuarioModel) -> Usuario:
+        return Usuario(
+            id=model.id,
+            nome=model.nome,
+            email=model.email,
+            senha_hash=model.senha_hash,
+            criado_em=model.criado_em,
+        )

@@ -1,3 +1,6 @@
+from datetime import datetime
+
+
 class Usuario:
     def __init__(
         self,
@@ -5,6 +8,7 @@ class Usuario:
         email: str,
         senha_hash: str,
         id: int | None = None,
+        criado_em: datetime | None = None,
     ):
         if not nome.strip():
             raise ValueError("Nome não pode ser vazio")
@@ -19,3 +23,4 @@ class Usuario:
         self.nome = nome
         self.email = email
         self.senha_hash = senha_hash
+        self.criado_em = criado_em

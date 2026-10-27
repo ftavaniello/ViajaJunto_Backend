@@ -1,3 +1,4 @@
+
 from sqlalchemy.orm import Session
 
 from app.adapters.outbound.persistence.usuario_model import UsuarioModel
@@ -47,9 +48,10 @@ class SQLAlchemyUsuarioRepository(UsuarioRepository):
 
     @staticmethod
     def _to_entity(model: UsuarioModel) -> Usuario:
-        return Usuario(
+               return Usuario(
             id=model.id,
             nome=model.nome,
             email=model.email,
             senha_hash=model.senha_hash,
+            criado_em=model.criado_em,
         )
