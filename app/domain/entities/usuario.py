@@ -9,6 +9,7 @@ class Usuario:
         email: str,
         senha_hash: str,
         id: int | None = None,
+        criado_em: datetime | None = None,
     ):
         validar_nome(nome)
         validar_email(email)
@@ -19,3 +20,4 @@ class Usuario:
         self.nome = nome
         self.email = email
         self.senha_hash = senha_hash
+        self.criado_em = criado_em

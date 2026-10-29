@@ -4,7 +4,7 @@ O ViajaJunto é uma aplicação web de planejamento colaborativo de viagens, des
 
 A plataforma foi especificada para reunir viagens com múltiplos destinos, datas, atividades e orçamento, além de visualização geográfica e descoberta de locais e atividades com avaliações da comunidade. A colaboração é o eixo do produto: o criador de uma viagem pode convidar outros usuários e definir quem pode editar ou apenas consultar o planejamento.
 
-Este repositório contém a API do projeto. Atualmente, o backend implementa o módulo de usuários: cadastro, autenticação e gerenciamento da própria conta. As funcionalidades de planejamento de viagens fazem parte da evolução prevista e ainda não estão implementadas.
+Este repositório contém a API do projeto. Atualmente, o backend implementa o módulo de usuários: cadastro, autenticação e gerenciamento da própria conta. As funcionalidades de planejamento de viagens fazem parte da evolução prevista e ainda não estão implementadas; o esquema do banco para elas, porém, já foi definido e criado (ver [Dados e persistência](#dados-e-persistência)).
 
 ## Visão do produto
 
@@ -22,6 +22,8 @@ O criador compartilha a viagem por código de convite e administra os colaborado
 
 O acesso aos dados de uma viagem deve ser restrito ao criador e aos colaboradores convidados. Os recursos públicos de catálogo e avaliações constituem um acesso separado do planejamento privado.
 
+A matriz detalhada de permissões (quem edita dados gerais e status, quem exclui a viagem, quem avalia), as regras de convite e as demais decisões de produto estão em [`docs/decisoes-de-produto.md`](docs/decisoes-de-produto.md).
+
 ## Escopo especificado e implementação atual
 
 | Área | Previsão nos requisitos | Situação neste backend |
@@ -33,6 +35,8 @@ O acesso aos dados de uma viagem deve ser restrito ao criador e aos colaboradore
 | Orçamento — RF15–RF17 | Limite total, custos previstos e resumo financeiro por categoria | Ainda não implementado |
 | Colaboração — RF18–RF21 | Convite por código, permissões de Editor/Visualizador e notificações in-app | Ainda não implementado |
 | Avaliação e descoberta — RF22–RF25 | Avaliações, páginas públicas, catálogo com filtros e destaques | Ainda não implementado |
+
+Nas áreas marcadas como "Ainda não implementado", o que existe hoje é apenas o esquema do banco (tabelas e migração), sem casos de uso, rotas ou repositórios.
 
 A especificação também estabelece interface responsiva e acessível, carregamento das páginas principais em menos de três segundos em condições normais, autenticação por token, senhas com hash e separação entre frontend e backend. Esses são requisitos do produto; este README não representa uma validação de atendimento a todos eles.
 
@@ -70,7 +74,7 @@ Essa separação permite exercitar os casos de uso com um repositório em memór
 
 | Camada | Responsabilidade no projeto |
 |---|---|
-| `domain` | Define a entidade `Usuario` e os contratos `UsuarioRepository`, `PasswordHasher` e `TokenService` |
+| `domain` | Define a entidade `Usuario`, os contratos `UsuarioRepository`, `PasswordHasher` e `TokenService`, o vocabulário fechado do domínio (`enums.py`: papéis, status, categorias, tipos de notificação) e as constantes das regras de negócio (`regras.py`) |
 | `application` | Coordena os casos de uso de criação, autenticação, atualização, alteração de senha e exclusão de usuários |
 | `adapters/inbound` | Recebe requisições HTTP, valida contratos com Pydantic e converte resultados em respostas da API |
 | `adapters/outbound` | Implementa persistência com SQLAlchemy ou memória, hash com bcrypt e tokens com PyJWT |
@@ -94,7 +98,7 @@ ou BYPASS; a autenticacao continua consultando o banco. Veja o [roteiro de infra
 | Python | Linguagem do backend; a imagem Docker utiliza Python 3.13 |
 | FastAPI e Uvicorn | API HTTP e servidor da aplicação |
 | Pydantic | Validação dos dados de entrada e definição dos contratos de resposta |
-| SQLAlchemy e PostgreSQL | Mapeamento e armazenamento relacional dos usuários |
+| SQLAlchemy e PostgreSQL | Mapeamento e armazenamento relacional dos dados |
 | Alembic | Versionamento e aplicação de alterações no banco |
 | bcrypt | Geração e verificação de hashes de senha |
 | PyJWT | Emissão e validação de tokens JWT |
@@ -121,15 +125,15 @@ A proteção das rotas de conta é feita pela dependência `get_usuario_atual`. 
 
 ## Dados e persistência
 
-A entidade `Usuario` representa a conta e contém `id`, `nome`, `email` e `senha_hash`. Ela rejeita nome, email e hash vazios. A validação do formato do email e dos contratos HTTP fica nos schemas Pydantic; a verificação de email duplicado ocorre nos casos de uso de cadastro e atualização.
+A entidade `Usuario` representa a conta e contém `id`, `nome`, `email`, `senha_hash` e `criado_em` (preenchido pelo banco na criação). Ela rejeita nome, email e hash vazios. A validação do formato do email e dos contratos HTTP fica nos schemas Pydantic; a verificação de email duplicado ocorre nos casos de uso de cadastro e atualização.
 
-Na persistência, a tabela `usuarios` possui identificador inteiro gerado automaticamente e uma restrição de unicidade para o email. A API utiliza `SQLAlchemyUsuarioRepository`; a implementação `UsuarioRepositoryMemory` está disponível como alternativa para testes.
+Na persistência, a tabela `usuarios` possui identificador inteiro gerado automaticamente, uma restrição de unicidade para o email e a data de criação (`criado_em`, `TIMESTAMPTZ`). A API utiliza `SQLAlchemyUsuarioRepository`; a implementação `UsuarioRepositoryMemory` está disponível como alternativa para testes.
 
-As migrações em `alembic/versions/` criam a tabela, inserem um usuário de exemplo e atualizam a senha desse registro para um hash bcrypt. No ambiente Docker Compose, as migrações pendentes são aplicadas antes da inicialização da API. Os dados do PostgreSQL são mantidos em um volume Docker.
+As migrações em `alembic/versions/` criam a tabela de usuários, inserem um usuário de exemplo, atualizam a senha desse registro para um hash bcrypt e, por fim, criam o esquema de viagens descrito abaixo (migração `a3f1c9d27b45`). No ambiente Docker Compose, as migrações pendentes são aplicadas antes da inicialização da API. Os dados do PostgreSQL são mantidos em um volume Docker.
 
 O modelo oficial prevê também `viagem`, `membro_viagem`, `destino_catalogo`, `destino_viagem`, `catalogo_atividade`, `atividade_viagem`, `orcamento` e `avaliacao`. Ele distingue os dados reutilizáveis do catálogo das informações de cada viagem: por exemplo, a atividade do catálogo descreve um local ou experiência, enquanto sua associação à viagem registra horário, custo previsto e status. Cada viagem possui um orçamento, e as avaliações se vinculam às atividades do catálogo.
 
-Essas entidades ainda não possuem implementação ou migrações neste backend. Mesmo o usuário tem uma diferença em relação ao modelo especificado: a tabela atual se chama `usuarios` e ainda não possui o campo `criado_em` previsto no documento.
+Essas tabelas, mais `notificacoes` e `tokens_recuperacao_senha`, foram criadas pela migração `a3f1c9d27b45` conforme as decisões de [`docs/decisoes-de-produto.md`](docs/decisoes-de-produto.md): identificadores inteiros com o código de convite em coluna própria, avaliação de atividades com ranking de destinos derivado, papéis, validade de convites, datas, moeda e efeitos das exclusões. Por enquanto é apenas o esquema: não há casos de uso, rotas nem repositórios para elas. A tabela `usuarios` ganhou o campo `criado_em` previsto no documento; ela mantém o nome `usuarios` em vez de `usuario`.
 
 ## Organização do repositório
 
@@ -146,10 +150,11 @@ app/
 ├── infrastructure/       # Configuração e acesso ao banco
 └── main.py               # Criação da aplicação FastAPI
 alembic/                  # Migrações do banco de dados
+docs/                     # Decisões de produto e modelo de dados
 tests/
 ├── domain/               # Validações da entidade Usuario
 ├── application/          # Casos de uso com repositório em memória
-└── integration/          # API e persistência com PostgreSQL
+└── integration/          # API, persistência e modelo de dados com PostgreSQL
 ```
 
 ## Execução local
