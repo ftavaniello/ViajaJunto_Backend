@@ -28,7 +28,7 @@ A matriz detalhada de permissões (quem edita dados gerais e status, quem exclui
 
 | Área | Previsão nos requisitos | Situação neste backend |
 |---|---|---|
-| Autenticação e perfil — RF01–RF03 | Cadastro, login, logout e recuperação de senha por email | Cadastro e login implementados, além de consulta, edição, troca de senha e exclusão da conta; não há endpoint de logout/revogação nem recuperação por email |
+| Autenticação e perfil — RF01–RF03 | Cadastro, login, logout e recuperação de senha por email | Cadastro, login, logout (com revogação do token no servidor) e recuperação de senha por email implementados, além de consulta, edição, troca de senha e exclusão da conta |
 | Viagens — RF04–RF07 | Criação, edição, exclusão, painel pessoal e status de planejamento | Criação, consulta, listagem, edição, exclusão e status (RF04, RF05, RF07), com acesso restrito ao criador e colaboradores (RN06); o painel com resumo (RF06) ainda não |
 | Destinos — RF08–RF11 | Múltiplos destinos ordenados, informações da estadia, pesquisa e mapa de países visitados | Ainda não implementado |
 | Atividades — RF12–RF14 | Atividades por destino, horários, duração, custos e status | Ainda não implementado |
@@ -50,15 +50,21 @@ As operações de conta usam a rota `/usuarios/me`: o usuário é identificado p
 
 O usuário autenticado pode consultar seu perfil, alterar nome e email, trocar a senha mediante confirmação da senha atual e excluir sua conta. Após a exclusão, o token deixa de permitir acesso às rotas protegidas, pois a conta não é mais encontrada.
 
+No logout (`POST /auth/logout`), o servidor revoga o token enviado: ele e qualquer cópia dele deixam de funcionar imediatamente, enquanto outras sessões do usuário continuam válidas. A troca de senha encerra todas as sessões, inclusive a atual. A política completa está em [`docs/sessoes-e-logout.md`](docs/sessoes-e-logout.md).
+
+Quem esqueceu a senha pede um link em `POST /auth/recuperar-senha`. A resposta é sempre a mesma, exista ou não a conta. O link chega por email, vale por 60 minutos e só pode ser usado uma vez; `POST /auth/redefinir-senha` troca a senha e encerra todas as sessões. No Docker Compose os emails ficam no Mailpit, em <http://localhost:8025>. Detalhes, configuração e passo a passo em [`docs/recuperacao-de-senha.md`](docs/recuperacao-de-senha.md).
+
 ## Funcionalidades disponíveis
 
 | Funcionalidade | Comportamento |
 |---|---|
 | Cadastro | Cria uma conta com email único e senha de pelo menos oito caracteres no contrato da API |
 | Autenticação | Valida email e senha e retorna um token JWT |
+| Logout | Revoga no servidor o token usado; cópias dele também passam a receber 401 |
 | Consulta de perfil | Retorna os dados da própria conta |
 | Atualização de perfil | Altera nome e/ou email; campos omitidos ou nulos permanecem inalterados |
-| Alteração de senha | Exige a senha atual e uma nova senha de pelo menos oito caracteres |
+| Alteração de senha | Exige a senha atual e uma nova senha de pelo menos oito caracteres; encerra todas as sessões |
+| Recuperação de senha | Envia por email um link de uso único, válido por 60 minutos, sem revelar se o email tem conta; a redefinição encerra todas as sessões |
 | Exclusão de conta | Remove permanentemente o usuário autenticado |
 | Verificação de disponibilidade | Expõe uma rota pública de liveness da API |
 
@@ -75,9 +81,9 @@ Essa separação permite exercitar os casos de uso com um repositório em memór
 | Camada | Responsabilidade no projeto |
 |---|---|
 | `domain` | Define as entidades `Usuario` e `Viagem`, a matriz de permissões por viagem (`permissoes.py`), os contratos `UsuarioRepository`, `ViagemRepository`, `MembroViagemRepository`, `PasswordHasher` e `TokenService`, o vocabulário fechado do domínio (`enums.py`: papéis, status, categorias, tipos de notificação) e as constantes das regras de negócio (`regras.py`) |
-| `application` | Coordena os casos de uso de usuários e de viagens; `PoliticaAcessoViagem` centraliza a autorização das operações sobre uma viagem |
+| `application` | Coordena os casos de uso de usuários (incluindo logout e recuperação de senha) e de viagens; `PoliticaAcessoViagem` centraliza a autorização das operações sobre uma viagem |
 | `adapters/inbound` | Recebe requisições HTTP, valida contratos com Pydantic e converte resultados em respostas da API |
-| `adapters/outbound` | Implementa persistência com SQLAlchemy ou memória, hash com bcrypt e tokens com PyJWT |
+| `adapters/outbound` | Implementa persistência com SQLAlchemy ou memória, hash com bcrypt, tokens com PyJWT e envio de email por SMTP |
 | `infrastructure` | Centraliza configurações, conexão e sessões do banco de dados |
 
 Em uma operação de cadastro, por exemplo, a rota recebe os dados e chama `CriarUsuario`. O caso de uso consulta o repositório para verificar duplicidade de email, solicita o hash da senha e salva a entidade. As implementações concretas de persistência e hashing são fornecidas ao caso de uso pela camada de entrada.
@@ -104,6 +110,7 @@ ou BYPASS; a autenticacao continua consultando o banco. Veja o [roteiro de infra
 | PyJWT | Emissão e validação de tokens JWT |
 | Redis / ElastiCache local | Cache da contagem de usuarios, provisionado via CloudFormation no MiniStack |
 | Docker Compose | Inicializacao do MiniStack, deploy AWS CLI, PostgreSQL e API |
+| Mailpit | Servidor SMTP falso do ambiente local: captura os emails da API e os exibe em http://localhost:8025 |
 | pytest | Testes automatizados de domínio, aplicação e integração |
 
 ## API HTTP
@@ -113,6 +120,9 @@ ou BYPASS; a autenticacao continua consultando o banco. Veja o [roteiro de infra
 | `GET` | `/health` | Público | Verifica se a API está respondendo |
 | `POST` | `/usuarios` | Público | Cadastra um usuário |
 | `POST` | `/auth/login` | Público | Autentica e retorna o token de acesso |
+| `POST` | `/auth/logout` | JWT | Encerra a sessão do token enviado |
+| `POST` | `/auth/recuperar-senha` | Público | Envia por email um link de redefinição de senha |
+| `POST` | `/auth/redefinir-senha` | Público | Define uma nova senha com o token recebido por email |
 | `GET` | `/usuarios/resumo` | JWT | Consulta o total de usuarios, com cache Redis e header X-Cache |
 | `GET` | `/usuarios/me` | JWT | Consulta o perfil autenticado |
 | `PATCH` | `/usuarios/me` | JWT | Atualiza nome e/ou email |
@@ -126,7 +136,7 @@ ou BYPASS; a autenticacao continua consultando o banco. Veja o [roteiro de infra
 
 Os contratos completos, exemplos e respostas estão disponíveis no Swagger UI em [http://localhost:8000/docs](http://localhost:8000/docs), com a aplicação em execução. O documento OpenAPI fica em `/openapi.json`.
 
-A proteção das rotas de conta é feita pela dependência `get_usuario_atual`. Tokens ausentes, inválidos ou expirados e tokens de contas excluídas resultam em resposta `401`. O JWT utiliza o algoritmo HS256 e tem validade padrão de 60 minutos. A troca de senha não revoga tokens já emitidos; eles continuam sujeitos à expiração e à existência da conta.
+A proteção das rotas de conta é feita pela dependência `get_usuario_atual`. Tokens ausentes, inválidos, expirados, encerrados por logout ou por troca de senha e tokens de contas excluídas resultam em resposta `401`. O JWT utiliza o algoritmo HS256, tem validade padrão de 60 minutos e carrega `jti` (identificador da sessão) e `ver` (versão das sessões do usuário). A lista de tokens revogados fica no PostgreSQL, não no Redis, e uma falha ao consultá-la nunca autoriza a requisição. Detalhes em [`docs/sessoes-e-logout.md`](docs/sessoes-e-logout.md).
 
 ### Viagens e permissões
 
@@ -149,11 +159,11 @@ A entidade `Usuario` representa a conta e contém `id`, `nome`, `email`, `senha_
 
 Na persistência, a tabela `usuarios` possui identificador inteiro gerado automaticamente, uma restrição de unicidade para o email e a data de criação (`criado_em`, `TIMESTAMPTZ`). A API utiliza `SQLAlchemyUsuarioRepository`; a implementação `UsuarioRepositoryMemory` está disponível como alternativa para testes.
 
-As migrações em `alembic/versions/` criam a tabela de usuários, inserem um usuário de exemplo, atualizam a senha desse registro para um hash bcrypt e, por fim, criam o esquema de viagens descrito abaixo (migração `a3f1c9d27b45`). No ambiente Docker Compose, as migrações pendentes são aplicadas antes da inicialização da API. Os dados do PostgreSQL são mantidos em um volume Docker.
+As migrações em `alembic/versions/` criam a tabela de usuários, inserem um usuário de exemplo, atualizam a senha desse registro para um hash bcrypt e, por fim, criam o esquema de viagens descrito abaixo (migração `a3f1c9d27b45`) e, em seguida, a tabela `tokens_revogados` e a coluna `usuarios.versao_sessao`, usadas pelo logout e pela troca de senha (migração `b7e4d2a91c03`). No ambiente Docker Compose, as migrações pendentes são aplicadas antes da inicialização da API. Os dados do PostgreSQL são mantidos em um volume Docker.
 
 O modelo oficial prevê também `viagem`, `membro_viagem`, `destino_catalogo`, `destino_viagem`, `catalogo_atividade`, `atividade_viagem`, `orcamento` e `avaliacao`. Ele distingue os dados reutilizáveis do catálogo das informações de cada viagem: por exemplo, a atividade do catálogo descreve um local ou experiência, enquanto sua associação à viagem registra horário, custo previsto e status. Cada viagem possui um orçamento, e as avaliações se vinculam às atividades do catálogo.
 
-Essas tabelas, mais `notificacoes` e `tokens_recuperacao_senha`, foram criadas pela migração `a3f1c9d27b45` conforme as decisões de [`docs/decisoes-de-produto.md`](docs/decisoes-de-produto.md): identificadores inteiros com o código de convite em coluna própria, avaliação de atividades com ranking de destinos derivado, papéis, validade de convites, datas, moeda e efeitos das exclusões. Viagens e membros já têm repositórios (`SQLAlchemyViagemRepository`, `SQLAlchemyMembroViagemRepository`); as demais tabelas ainda são apenas esquema. A migração `e2c7a4f19d36` alinhou os status de viagem ao RF07 (`planejando`, `confirmada`, `concluida`). A tabela `usuarios` ganhou o campo `criado_em` previsto no documento; ela mantém o nome `usuarios` em vez de `usuario`.
+Essas tabelas, mais `notificacoes` e `tokens_recuperacao_senha`, foram criadas pela migração `a3f1c9d27b45` conforme as decisões de [`docs/decisoes-de-produto.md`](docs/decisoes-de-produto.md): identificadores inteiros com o código de convite em coluna própria, avaliação de atividades com ranking de destinos derivado, papéis, validade de convites, datas, moeda e efeitos das exclusões. Viagens e membros já têm repositórios (`SQLAlchemyViagemRepository`, `SQLAlchemyMembroViagemRepository`); `tokens_recuperacao_senha` é usada pela recuperação de senha; as demais tabelas ainda são apenas esquema. A migração `e2c7a4f19d36` alinhou os status de viagem ao RF07 (`planejando`, `confirmada`, `concluida`). A tabela `usuarios` ganhou o campo `criado_em` previsto no documento; ela mantém o nome `usuarios` em vez de `usuario`.
 
 ## Organização do repositório
 
@@ -170,7 +180,7 @@ app/
 ├── infrastructure/       # Configuração e acesso ao banco
 └── main.py               # Criação da aplicação FastAPI
 alembic/                  # Migrações do banco de dados
-docs/                     # Decisões de produto e modelo de dados
+docs/                     # Decisões de produto, modelo de dados, sessões e recuperação de senha
 tests/
 ├── domain/               # Validações da entidade Usuario
 ├── application/          # Casos de uso com repositório em memória
@@ -185,7 +195,7 @@ Com Docker e Docker Compose disponíveis, crie um arquivo `.env` a partir de `.e
 docker compose up -d --build
 ```
 
-O Compose inicia o PostgreSQL, aguarda o banco ficar saudável, aplica as migrações e disponibiliza a API na porta `8000`. O ambiente utiliza recarga automática ao editar os arquivos da aplicação.
+O Compose inicia o PostgreSQL, aguarda o banco ficar saudável, aplica as migrações e disponibiliza a API na porta `8000`. O ambiente utiliza recarga automática ao editar os arquivos da aplicação. Também sobe o Mailpit: os emails enviados pela API (recuperação de senha) aparecem em [http://localhost:8025](http://localhost:8025) e nunca saem para a internet. Veja [`docs/recuperacao-de-senha.md`](docs/recuperacao-de-senha.md#como-ver-os-emails-no-ambiente-de-teste).
 
 A configuração da API utiliza `DATABASE_URL`, `JWT_SECRET_KEY` e `JWT_EXPIRE_MINUTES`. O Compose fornece `DATABASE_URL` diretamente ao container da API. Na configuração atual, as variáveis JWT do `.env` não são repassadas ao container, que usa os valores padrão; para personalizá-las nesse modo de execução, é necessário incluí-las no ambiente do serviço `api`. A chave padrão é destinada ao desenvolvimento local.
 

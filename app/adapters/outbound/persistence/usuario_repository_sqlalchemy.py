@@ -20,6 +20,7 @@ class SQLAlchemyUsuarioRepository(UsuarioRepository):
                 nome=usuario.nome,
                 email=usuario.email,
                 senha_hash=usuario.senha_hash,
+                versao_sessao=usuario.versao_sessao,
             )
             self.db.add(model)
         else:
@@ -27,6 +28,7 @@ class SQLAlchemyUsuarioRepository(UsuarioRepository):
             model.nome = usuario.nome
             model.email = usuario.email
             model.senha_hash = usuario.senha_hash
+            model.versao_sessao = usuario.versao_sessao
 
         try:
             # flush envia o INSERT/UPDATE sem confirmar: gera o id e expoe violacoes
@@ -68,4 +70,5 @@ class SQLAlchemyUsuarioRepository(UsuarioRepository):
             email=model.email,
             senha_hash=model.senha_hash,
             criado_em=model.criado_em,
+            versao_sessao=model.versao_sessao,
         )

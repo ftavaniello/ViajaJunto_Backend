@@ -9,6 +9,12 @@ from sqlalchemy.orm import Session
 from app.adapters.outbound.persistence.membro_viagem_repository_sqlalchemy import (
     SQLAlchemyMembroViagemRepository,
 )
+from app.adapters.outbound.persistence.token_recuperacao_senha_repository_sqlalchemy import (
+    SQLAlchemyTokenRecuperacaoSenhaRepository,
+)
+from app.adapters.outbound.persistence.token_revogado_repository_sqlalchemy import (
+    SQLAlchemyTokenRevogadoRepository,
+)
 from app.adapters.outbound.persistence.unit_of_work_sqlalchemy import SQLAlchemyUnitOfWork
 from app.adapters.outbound.persistence.usuario_repository_sqlalchemy import (
     SQLAlchemyUsuarioRepository,
@@ -28,14 +34,19 @@ from app.application.use_cases.consultar_usuario_autenticado import ConsultarUsu
 from app.application.use_cases.consultar_viagem import ConsultarViagem
 from app.application.use_cases.criar_usuario import CriarUsuario
 from app.application.use_cases.criar_viagem import CriarViagem
+from app.application.use_cases.encerrar_sessao import EncerrarSessao
 from app.application.use_cases.excluir_usuario import ExcluirUsuario
 from app.application.use_cases.excluir_viagem import ExcluirViagem
 from app.application.use_cases.listar_viagens import ListarViagens
+from app.application.use_cases.redefinir_senha import RedefinirSenha
+from app.application.use_cases.solicitar_recuperacao_senha import SolicitarRecuperacaoSenha
+from app.domain.ports.email_sender import EmailSender
 from app.domain.ports.token_service import TokenService
 from app.domain.ports.total_usuarios_cache import TotalUsuariosCache
 from app.infrastructure.cache import get_total_usuarios_cache
 from app.infrastructure.config import settings
 from app.infrastructure.database import get_db
+from app.infrastructure.email import get_email_sender
 
 
 def get_token_service() -> TokenService:
@@ -83,7 +94,18 @@ def get_consultar_usuario_autenticado(
     db: Session = Depends(get_db),
     token_service: TokenService = Depends(get_token_service),
 ) -> ConsultarUsuarioAutenticado:
-    return ConsultarUsuarioAutenticado(SQLAlchemyUsuarioRepository(db), token_service)
+    return ConsultarUsuarioAutenticado(
+        SQLAlchemyUsuarioRepository(db), token_service, SQLAlchemyTokenRevogadoRepository(db)
+    )
+
+
+def get_encerrar_sessao(
+    db: Session = Depends(get_db),
+    token_service: TokenService = Depends(get_token_service),
+) -> EncerrarSessao:
+    return EncerrarSessao(
+        token_service, SQLAlchemyTokenRevogadoRepository(db), SQLAlchemyUnitOfWork(db)
+    )
 
 
 def get_consultar_resumo(
@@ -120,4 +142,26 @@ def get_atualizar_viagem(db: Session = Depends(get_db)) -> AtualizarViagem:
 def get_excluir_viagem(db: Session = Depends(get_db)) -> ExcluirViagem:
     return ExcluirViagem(
         SQLAlchemyViagemRepository(db), _politica_acesso_viagem(db), SQLAlchemyUnitOfWork(db)
+    )
+
+
+def get_solicitar_recuperacao_senha(
+    db: Session = Depends(get_db),
+    email_sender: EmailSender = Depends(get_email_sender),
+) -> SolicitarRecuperacaoSenha:
+    return SolicitarRecuperacaoSenha(
+        SQLAlchemyUsuarioRepository(db),
+        SQLAlchemyTokenRecuperacaoSenhaRepository(db),
+        email_sender,
+        SQLAlchemyUnitOfWork(db),
+        url_redefinicao=settings.RECUPERACAO_SENHA_URL,
+    )
+
+
+def get_redefinir_senha(db: Session = Depends(get_db)) -> RedefinirSenha:
+    return RedefinirSenha(
+        SQLAlchemyUsuarioRepository(db),
+        SQLAlchemyTokenRecuperacaoSenhaRepository(db),
+        BcryptPasswordHasher(),
+        SQLAlchemyUnitOfWork(db),
     )

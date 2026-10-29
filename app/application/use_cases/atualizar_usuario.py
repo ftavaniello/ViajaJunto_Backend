@@ -26,6 +26,7 @@ class AtualizarUsuario:
             nome=usuario.nome if nome is None else nome,
             email=usuario.email if email is None else email,
             senha_hash=usuario.senha_hash,
+            versao_sessao=usuario.versao_sessao,
         )
 
         with self.uow:

@@ -6,7 +6,7 @@ CHECK: `em_andamento` vira `confirmada` e `cancelada` vira `concluida` (viagem
 encerrada). Até esta revisão nenhuma rota gravava viagens.
 
 Revision ID: e2c7a4f19d36
-Revises: a3f1c9d27b45
+Revises: b7e4d2a91c03
 Create Date: 2026-10-29 15:00:00.000000
 
 """
@@ -17,7 +17,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "e2c7a4f19d36"
-down_revision: Union[str, Sequence[str], None] = "a3f1c9d27b45"
+down_revision: Union[str, Sequence[str], None] = "b7e4d2a91c03"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

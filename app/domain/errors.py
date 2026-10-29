@@ -24,3 +24,7 @@ class ViagemNaoEncontrada(ErroNegocio):
 
 class AcessoNegado(ErroNegocio):
     """Participante da viagem sem permissao para a acao."""
+
+
+class TokenRecuperacaoInvalido(ErroNegocio):
+    """Token de recuperacao inexistente, expirado ou ja utilizado (mesma mensagem)."""

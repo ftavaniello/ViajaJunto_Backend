@@ -25,4 +25,4 @@ class AutenticarUsuario:
         if credenciais_invalidas:
             raise NaoAutenticado("Email ou senha inválidos")
 
-        return self.token_service.gerar_token(usuario.id)
+        return self.token_service.gerar_token(usuario.id, usuario.versao_sessao)
