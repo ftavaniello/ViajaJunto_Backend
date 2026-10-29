@@ -50,6 +50,17 @@ services:
       timeout: 5s
       retries: 5
 
+  # Servidor SMTP falso para desenvolvimento e testes manuais: captura todos os
+  # emails enviados pela API (nada sai para a internet). Caixa de entrada em
+  # http://localhost:8025. Ver docs/recuperacao-de-senha.md.
+  mailpit:
+    image: axllent/mailpit:v1.27.0
+    container_name: viajajunto_mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"  # interface web e API HTTP
+      - "1025:1025"  # SMTP
+
   api:
     build: .
     container_name: viajajunto_api
@@ -59,11 +70,17 @@ services:
         condition: service_healthy
       aws-cli:
         condition: service_completed_successfully
+      mailpit:
+        condition: service_started
     networks: [default, cache]
     environment:
       REDIS_URL_FILE: /run/cache/redis-url
       CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-60}
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-viajajunto}:${POSTGRES_PASSWORD:-viajajunto}@db:5432/${POSTGRES_DB:-viajajunto}
+      EMAIL_BACKEND: smtp
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      RECUPERACAO_SENHA_URL: ${RECUPERACAO_SENHA_URL:-http://localhost:3000/redefinir-senha}
     ports:
       - "8000:8000"
     volumes:
