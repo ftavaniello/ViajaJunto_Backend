@@ -10,8 +10,8 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
+from app.adapters.outbound.cache.redis_total_usuarios_cache import RedisTotalUsuariosCache
 from app.adapters.outbound.persistence.usuario_model import UsuarioModel
-from app.adapters.outbound.redis_total_usuarios_cache import RedisTotalUsuariosCache
 from app.infrastructure.cache import get_total_usuarios_cache
 from app.infrastructure.database import get_db
 from app.main import app
@@ -22,7 +22,8 @@ def resumo_api():
     # Isolated SQL database: no production users or shared cache keys are changed.
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False},
                            poolclass=StaticPool)
-    UsuarioModel.metadata.create_all(engine)
+    # So a tabela usada aqui: as demais tem constraints que o SQLite nao suporta.
+    UsuarioModel.__table__.create(engine)
     queries = []
     event.listen(engine, "before_cursor_execute",
                  lambda conn, cursor, statement, params, context, many: queries.append(statement))

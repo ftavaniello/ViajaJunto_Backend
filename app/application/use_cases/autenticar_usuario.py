@@ -1,3 +1,4 @@
+from app.domain.errors import NaoAutenticado
 from app.domain.ports.password_hasher import PasswordHasher
 from app.domain.ports.token_service import TokenService
 from app.domain.ports.usuario_repository import UsuarioRepository
@@ -22,6 +23,6 @@ class AutenticarUsuario:
         )
 
         if credenciais_invalidas:
-            raise ValueError("Email ou senha inválidos")
+            raise NaoAutenticado("Email ou senha inválidos")
 
         return self.token_service.gerar_token(usuario.id)

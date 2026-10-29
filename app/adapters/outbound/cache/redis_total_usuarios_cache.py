@@ -2,10 +2,12 @@ import logging
 
 from redis import Redis, RedisError
 
+from app.domain.ports.total_usuarios_cache import TotalUsuariosCache
+
 logger = logging.getLogger(__name__)
 
 
-class RedisTotalUsuariosCache:
+class RedisTotalUsuariosCache(TotalUsuariosCache):
     def __init__(self, client: Redis | None, ttl: int = 60,
                  key: str = "viajajunto:usuarios:total:v1"):
         self.client = client
