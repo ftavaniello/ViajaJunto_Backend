@@ -24,11 +24,14 @@ class AlterarSenha:
 
         validar_senha(senha_nova)
 
+        # Nova versao de sessao: todos os tokens emitidos antes da troca, inclusive
+        # o usado nesta requisicao, deixam de valer. O usuario precisa logar de novo.
         usuario_atualizado = Usuario(
             id=usuario.id,
             nome=usuario.nome,
             email=usuario.email,
             senha_hash=self.password_hasher.hash(senha_nova),
+            versao_sessao=usuario.versao_sessao + 1,
         )
 
         with self.uow:
