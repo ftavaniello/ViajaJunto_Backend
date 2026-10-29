@@ -30,6 +30,7 @@ def test_altera_senha_com_sucesso():
     usuario = repository.buscar_por_id(1)
     assert password_hasher.verificar("senhaNova456", usuario.senha_hash)
     assert not password_hasher.verificar("senha123", usuario.senha_hash)
+    assert usuario.versao_sessao == 1
 
 
 def test_rejeita_senha_atual_incorreta():
