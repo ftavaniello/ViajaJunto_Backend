@@ -28,7 +28,7 @@ A matriz detalhada de permissões (quem edita dados gerais e status, quem exclui
 
 | Área | Previsão nos requisitos | Situação neste backend |
 |---|---|---|
-| Autenticação e perfil — RF01–RF03 | Cadastro, login, logout e recuperação de senha por email | Cadastro e login implementados, além de consulta, edição, troca de senha e exclusão da conta; não há endpoint de logout/revogação nem recuperação por email |
+| Autenticação e perfil — RF01–RF03 | Cadastro, login, logout e recuperação de senha por email | Cadastro, login e logout (com revogação do token no servidor) implementados, além de consulta, edição, troca de senha e exclusão da conta; não há recuperação por email |
 | Viagens — RF04–RF07 | Criação, edição, exclusão, painel pessoal e status de planejamento | Ainda não implementado |
 | Destinos — RF08–RF11 | Múltiplos destinos ordenados, informações da estadia, pesquisa e mapa de países visitados | Ainda não implementado |
 | Atividades — RF12–RF14 | Atividades por destino, horários, duração, custos e status | Ainda não implementado |
@@ -50,15 +50,18 @@ As operações de conta usam a rota `/usuarios/me`: o usuário é identificado p
 
 O usuário autenticado pode consultar seu perfil, alterar nome e email, trocar a senha mediante confirmação da senha atual e excluir sua conta. Após a exclusão, o token deixa de permitir acesso às rotas protegidas, pois a conta não é mais encontrada.
 
+No logout (`POST /auth/logout`), o servidor revoga o token enviado: ele e qualquer cópia dele deixam de funcionar imediatamente, enquanto outras sessões do usuário continuam válidas. A troca de senha encerra todas as sessões, inclusive a atual. A política completa está em [`docs/sessoes-e-logout.md`](docs/sessoes-e-logout.md).
+
 ## Funcionalidades disponíveis
 
 | Funcionalidade | Comportamento |
 |---|---|
 | Cadastro | Cria uma conta com email único e senha de pelo menos oito caracteres no contrato da API |
 | Autenticação | Valida email e senha e retorna um token JWT |
+| Logout | Revoga no servidor o token usado; cópias dele também passam a receber 401 |
 | Consulta de perfil | Retorna os dados da própria conta |
 | Atualização de perfil | Altera nome e/ou email; campos omitidos ou nulos permanecem inalterados |
-| Alteração de senha | Exige a senha atual e uma nova senha de pelo menos oito caracteres |
+| Alteração de senha | Exige a senha atual e uma nova senha de pelo menos oito caracteres; encerra todas as sessões |
 | Exclusão de conta | Remove permanentemente o usuário autenticado |
 | Verificação de disponibilidade | Expõe uma rota pública de liveness da API |
 
@@ -113,6 +116,7 @@ ou BYPASS; a autenticacao continua consultando o banco. Veja o [roteiro de infra
 | `GET` | `/health` | Público | Verifica se a API está respondendo |
 | `POST` | `/usuarios` | Público | Cadastra um usuário |
 | `POST` | `/auth/login` | Público | Autentica e retorna o token de acesso |
+| `POST` | `/auth/logout` | JWT | Encerra a sessão do token enviado |
 | `GET` | `/usuarios/resumo` | JWT | Consulta o total de usuarios, com cache Redis e header X-Cache |
 | `GET` | `/usuarios/me` | JWT | Consulta o perfil autenticado |
 | `PATCH` | `/usuarios/me` | JWT | Atualiza nome e/ou email |
@@ -121,7 +125,7 @@ ou BYPASS; a autenticacao continua consultando o banco. Veja o [roteiro de infra
 
 Os contratos completos, exemplos e respostas estão disponíveis no Swagger UI em [http://localhost:8000/docs](http://localhost:8000/docs), com a aplicação em execução. O documento OpenAPI fica em `/openapi.json`.
 
-A proteção das rotas de conta é feita pela dependência `get_usuario_atual`. Tokens ausentes, inválidos ou expirados e tokens de contas excluídas resultam em resposta `401`. O JWT utiliza o algoritmo HS256 e tem validade padrão de 60 minutos. A troca de senha não revoga tokens já emitidos; eles continuam sujeitos à expiração e à existência da conta.
+A proteção das rotas de conta é feita pela dependência `get_usuario_atual`. Tokens ausentes, inválidos, expirados, encerrados por logout ou por troca de senha e tokens de contas excluídas resultam em resposta `401`. O JWT utiliza o algoritmo HS256, tem validade padrão de 60 minutos e carrega `jti` (identificador da sessão) e `ver` (versão das sessões do usuário). A lista de tokens revogados fica no PostgreSQL, não no Redis, e uma falha ao consultá-la nunca autoriza a requisição. Detalhes em [`docs/sessoes-e-logout.md`](docs/sessoes-e-logout.md).
 
 ## Dados e persistência
 
@@ -129,7 +133,7 @@ A entidade `Usuario` representa a conta e contém `id`, `nome`, `email`, `senha_
 
 Na persistência, a tabela `usuarios` possui identificador inteiro gerado automaticamente, uma restrição de unicidade para o email e a data de criação (`criado_em`, `TIMESTAMPTZ`). A API utiliza `SQLAlchemyUsuarioRepository`; a implementação `UsuarioRepositoryMemory` está disponível como alternativa para testes.
 
-As migrações em `alembic/versions/` criam a tabela de usuários, inserem um usuário de exemplo, atualizam a senha desse registro para um hash bcrypt e, por fim, criam o esquema de viagens descrito abaixo (migração `a3f1c9d27b45`). No ambiente Docker Compose, as migrações pendentes são aplicadas antes da inicialização da API. Os dados do PostgreSQL são mantidos em um volume Docker.
+As migrações em `alembic/versions/` criam a tabela de usuários, inserem um usuário de exemplo, atualizam a senha desse registro para um hash bcrypt e, por fim, criam o esquema de viagens descrito abaixo (migração `a3f1c9d27b45`) e, em seguida, a tabela `tokens_revogados` e a coluna `usuarios.versao_sessao`, usadas pelo logout e pela troca de senha (migração `b7e4d2a91c03`). No ambiente Docker Compose, as migrações pendentes são aplicadas antes da inicialização da API. Os dados do PostgreSQL são mantidos em um volume Docker.
 
 O modelo oficial prevê também `viagem`, `membro_viagem`, `destino_catalogo`, `destino_viagem`, `catalogo_atividade`, `atividade_viagem`, `orcamento` e `avaliacao`. Ele distingue os dados reutilizáveis do catálogo das informações de cada viagem: por exemplo, a atividade do catálogo descreve um local ou experiência, enquanto sua associação à viagem registra horário, custo previsto e status. Cada viagem possui um orçamento, e as avaliações se vinculam às atividades do catálogo.
 
@@ -150,7 +154,7 @@ app/
 ├── infrastructure/       # Configuração e acesso ao banco
 └── main.py               # Criação da aplicação FastAPI
 alembic/                  # Migrações do banco de dados
-docs/                     # Decisões de produto e modelo de dados
+docs/                     # Decisões de produto, modelo de dados e política de sessões
 tests/
 ├── domain/               # Validações da entidade Usuario
 ├── application/          # Casos de uso com repositório em memória

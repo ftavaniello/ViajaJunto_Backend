@@ -1,8 +1,8 @@
 """Testes do modelo de dados contra o PostgreSQL (decisões D1–D10).
 
 Cada teste prova uma regra registrada em docs/decisoes-de-produto.md. Como os
-demais testes de integração, são ignorados (skip) quando o banco não está
-acessível (ver `db_session` em conftest.py).
+demais testes de integração, rodam no banco exclusivo de testes e falham quando
+ele não está acessível (ver `db_session` em conftest.py).
 """
 
 import uuid
@@ -263,6 +263,9 @@ def test_ordem_dos_destinos_e_unica_mas_permite_trocar_posicoes(db_session):
     # Trocar 1 <-> 2 na mesma transação: só funciona porque a unicidade é adiada.
     a.ordem, b.ordem = 2, 1
     db_session.commit()
+    # Nos testes o commit vira SAVEPOINT, que nao verifica constraints adiadas;
+    # IMMEDIATE faz agora a verificacao que o COMMIT real faria.
+    db_session.execute(text("SET CONSTRAINTS ALL IMMEDIATE"))
     assert (a.ordem, b.ordem) == (2, 1)
 
     # Duplicar a posição continua proibido no commit.
