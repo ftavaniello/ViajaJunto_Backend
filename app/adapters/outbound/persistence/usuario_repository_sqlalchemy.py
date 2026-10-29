@@ -9,6 +9,8 @@ from app.domain.ports.usuario_repository import UsuarioRepository
 
 
 class SQLAlchemyUsuarioRepository(UsuarioRepository):
+    """Grava na transacao corrente da Session; quem confirma ou desfaz e a UnitOfWork."""
+
     def __init__(self, db: Session):
         self.db = db
 
@@ -27,11 +29,12 @@ class SQLAlchemyUsuarioRepository(UsuarioRepository):
             model.senha_hash = usuario.senha_hash
 
         try:
-            self.db.commit()
+            # flush envia o INSERT/UPDATE sem confirmar: gera o id e expoe violacoes
+            # de constraint ainda dentro da transacao da operacao.
+            self.db.flush()
         except IntegrityError as error:
             # A unicidade do email e garantida pelo banco; a verificacao previa no
             # caso de uso nao elimina a condicao de corrida entre requisicoes.
-            self.db.rollback()
             raise EmailDuplicado("Já existe um usuário com este email") from error
         self.db.refresh(model)
 
@@ -55,11 +58,11 @@ class SQLAlchemyUsuarioRepository(UsuarioRepository):
 
         if model is not None:
             self.db.delete(model)
-            self.db.commit()
+            self.db.flush()
 
     @staticmethod
     def _to_entity(model: UsuarioModel) -> Usuario:
-               return Usuario(
+        return Usuario(
             id=model.id,
             nome=model.nome,
             email=model.email,

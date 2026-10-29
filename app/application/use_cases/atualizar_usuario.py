@@ -1,11 +1,13 @@
 from app.domain.entities.usuario import Usuario
 from app.domain.errors import EmailDuplicado, UsuarioNaoEncontrado
+from app.domain.ports.unit_of_work import UnitOfWork
 from app.domain.ports.usuario_repository import UsuarioRepository
 
 
 class AtualizarUsuario:
-    def __init__(self, repository: UsuarioRepository):
+    def __init__(self, repository: UsuarioRepository, uow: UnitOfWork):
         self.repository = repository
+        self.uow = uow
 
     def execute(self, usuario_id: int, nome: str | None, email: str | None) -> Usuario:
         usuario = self.repository.buscar_por_id(usuario_id)
@@ -26,4 +28,8 @@ class AtualizarUsuario:
             senha_hash=usuario.senha_hash,
         )
 
-        return self.repository.salvar(usuario_atualizado)
+        with self.uow:
+            salvo = self.repository.salvar(usuario_atualizado)
+            self.uow.commit()
+
+        return salvo

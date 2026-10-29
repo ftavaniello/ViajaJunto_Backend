@@ -1,5 +1,6 @@
 import pytest
 
+from app.adapters.outbound.persistence.unit_of_work_memory import UnitOfWorkMemory
 from app.adapters.outbound.persistence.usuario_repository_memory import (
     UsuarioRepositoryMemory,
 )
@@ -13,7 +14,7 @@ def _autenticar_usuario():
     password_hasher = FakePasswordHasher()
     token_service = FakeTokenService()
 
-    CriarUsuario(repository, password_hasher).execute(
+    CriarUsuario(repository, password_hasher, UnitOfWorkMemory()).execute(
         nome="Livia",
         email="livia@example.com",
         senha="senha123",

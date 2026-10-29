@@ -1,7 +1,12 @@
-"""Monta adaptadores e injeta portas nos casos de uso."""
+"""Monta adaptadores e injeta portas nos casos de uso.
+
+Repositorios e UnitOfWork de uma requisicao recebem a mesma Session, para que as
+gravacoes de um caso de uso fiquem na mesma transacao.
+"""
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
+from app.adapters.outbound.persistence.unit_of_work_sqlalchemy import SQLAlchemyUnitOfWork
 from app.adapters.outbound.persistence.usuario_repository_sqlalchemy import (
     SQLAlchemyUsuarioRepository,
 )
@@ -33,22 +38,26 @@ def get_criar_usuario(
     db: Session = Depends(get_db),
     cache: TotalUsuariosCache = Depends(get_total_usuarios_cache),
 ) -> CriarUsuario:
-    return CriarUsuario(SQLAlchemyUsuarioRepository(db), BcryptPasswordHasher(), cache)
+    return CriarUsuario(
+        SQLAlchemyUsuarioRepository(db), BcryptPasswordHasher(), SQLAlchemyUnitOfWork(db), cache
+    )
 
 
 def get_excluir_usuario(
     db: Session = Depends(get_db),
     cache: TotalUsuariosCache = Depends(get_total_usuarios_cache),
 ) -> ExcluirUsuario:
-    return ExcluirUsuario(SQLAlchemyUsuarioRepository(db), cache)
+    return ExcluirUsuario(SQLAlchemyUsuarioRepository(db), SQLAlchemyUnitOfWork(db), cache)
 
 
 def get_atualizar_usuario(db: Session = Depends(get_db)) -> AtualizarUsuario:
-    return AtualizarUsuario(SQLAlchemyUsuarioRepository(db))
+    return AtualizarUsuario(SQLAlchemyUsuarioRepository(db), SQLAlchemyUnitOfWork(db))
 
 
 def get_alterar_senha(db: Session = Depends(get_db)) -> AlterarSenha:
-    return AlterarSenha(SQLAlchemyUsuarioRepository(db), BcryptPasswordHasher())
+    return AlterarSenha(
+        SQLAlchemyUsuarioRepository(db), BcryptPasswordHasher(), SQLAlchemyUnitOfWork(db)
+    )
 
 
 def get_autenticar_usuario(
