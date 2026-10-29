@@ -4,6 +4,7 @@ from app.adapters.inbound.api.errors import tratar_erro_negocio
 from app.adapters.inbound.api.routes.auth import router as auth_router
 from app.adapters.inbound.api.routes.health import router as health_router
 from app.adapters.inbound.api.routes.usuario import router as usuario_router
+from app.adapters.inbound.api.routes.viagem import router as viagem_router
 from app.domain.errors import ErroNegocio
 
 app = FastAPI(
@@ -18,6 +19,10 @@ app = FastAPI(
     openapi_tags=[
         {"name": "Autenticação", "description": "Login e emissão de tokens JWT."},
         {"name": "Usuarios", "description": "Cadastro e dados do usuário autenticado."},
+        {
+            "name": "Viagens",
+            "description": "Viagens do usuário; acesso restrito ao criador e colaboradores.",
+        },
         {"name": "Health", "description": "Verificação de disponibilidade da API."},
     ],
 )
@@ -27,4 +32,5 @@ app.add_exception_handler(ErroNegocio, tratar_erro_negocio)
 app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(usuario_router)
+app.include_router(viagem_router)
 

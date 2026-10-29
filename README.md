@@ -4,7 +4,7 @@ O ViajaJunto é uma aplicação web de planejamento colaborativo de viagens, des
 
 A plataforma foi especificada para reunir viagens com múltiplos destinos, datas, atividades e orçamento, além de visualização geográfica e descoberta de locais e atividades com avaliações da comunidade. A colaboração é o eixo do produto: o criador de uma viagem pode convidar outros usuários e definir quem pode editar ou apenas consultar o planejamento.
 
-Este repositório contém a API do projeto. Atualmente, o backend implementa o módulo de usuários: cadastro, autenticação e gerenciamento da própria conta. As funcionalidades de planejamento de viagens fazem parte da evolução prevista e ainda não estão implementadas; o esquema do banco para elas, porém, já foi definido e criado (ver [Dados e persistência](#dados-e-persistência)).
+Este repositório contém a API do projeto. Atualmente, o backend implementa o módulo de usuários (cadastro, autenticação e gerenciamento da própria conta) e o cadastro de viagens com a política central de acesso por viagem. As demais funcionalidades de planejamento fazem parte da evolução prevista; o esquema do banco para elas, porém, já foi definido e criado (ver [Dados e persistência](#dados-e-persistência)).
 
 ## Visão do produto
 
@@ -29,7 +29,7 @@ A matriz detalhada de permissões (quem edita dados gerais e status, quem exclui
 | Área | Previsão nos requisitos | Situação neste backend |
 |---|---|---|
 | Autenticação e perfil — RF01–RF03 | Cadastro, login, logout e recuperação de senha por email | Cadastro e login implementados, além de consulta, edição, troca de senha e exclusão da conta; não há endpoint de logout/revogação nem recuperação por email |
-| Viagens — RF04–RF07 | Criação, edição, exclusão, painel pessoal e status de planejamento | Ainda não implementado |
+| Viagens — RF04–RF07 | Criação, edição, exclusão, painel pessoal e status de planejamento | Criação, consulta, listagem, edição, exclusão e status (RF04, RF05, RF07), com acesso restrito ao criador e colaboradores (RN06); o painel com resumo (RF06) ainda não |
 | Destinos — RF08–RF11 | Múltiplos destinos ordenados, informações da estadia, pesquisa e mapa de países visitados | Ainda não implementado |
 | Atividades — RF12–RF14 | Atividades por destino, horários, duração, custos e status | Ainda não implementado |
 | Orçamento — RF15–RF17 | Limite total, custos previstos e resumo financeiro por categoria | Ainda não implementado |
@@ -74,8 +74,8 @@ Essa separação permite exercitar os casos de uso com um repositório em memór
 
 | Camada | Responsabilidade no projeto |
 |---|---|
-| `domain` | Define a entidade `Usuario`, os contratos `UsuarioRepository`, `PasswordHasher` e `TokenService`, o vocabulário fechado do domínio (`enums.py`: papéis, status, categorias, tipos de notificação) e as constantes das regras de negócio (`regras.py`) |
-| `application` | Coordena os casos de uso de criação, autenticação, atualização, alteração de senha e exclusão de usuários |
+| `domain` | Define as entidades `Usuario` e `Viagem`, a matriz de permissões por viagem (`permissoes.py`), os contratos `UsuarioRepository`, `ViagemRepository`, `MembroViagemRepository`, `PasswordHasher` e `TokenService`, o vocabulário fechado do domínio (`enums.py`: papéis, status, categorias, tipos de notificação) e as constantes das regras de negócio (`regras.py`) |
+| `application` | Coordena os casos de uso de usuários e de viagens; `PoliticaAcessoViagem` centraliza a autorização das operações sobre uma viagem |
 | `adapters/inbound` | Recebe requisições HTTP, valida contratos com Pydantic e converte resultados em respostas da API |
 | `adapters/outbound` | Implementa persistência com SQLAlchemy ou memória, hash com bcrypt e tokens com PyJWT |
 | `infrastructure` | Centraliza configurações, conexão e sessões do banco de dados |
@@ -118,10 +118,30 @@ ou BYPASS; a autenticacao continua consultando o banco. Veja o [roteiro de infra
 | `PATCH` | `/usuarios/me` | JWT | Atualiza nome e/ou email |
 | `PATCH` | `/usuarios/me/senha` | JWT | Altera a senha da conta |
 | `DELETE` | `/usuarios/me` | JWT | Exclui a conta autenticada |
+| `POST` | `/viagens` | JWT | Cria uma viagem; o criador é o usuário do token |
+| `GET` | `/viagens` | JWT | Lista as viagens criadas pelo usuário ou das quais ele é colaborador |
+| `GET` | `/viagens/{viagem_id}` | JWT + participante | Consulta uma viagem |
+| `PATCH` | `/viagens/{viagem_id}` | JWT + criador ou editor | Altera nome, descrição, datas e/ou status |
+| `DELETE` | `/viagens/{viagem_id}` | JWT + criador | Exclui a viagem com colaboradores, roteiro e orçamento |
 
 Os contratos completos, exemplos e respostas estão disponíveis no Swagger UI em [http://localhost:8000/docs](http://localhost:8000/docs), com a aplicação em execução. O documento OpenAPI fica em `/openapi.json`.
 
 A proteção das rotas de conta é feita pela dependência `get_usuario_atual`. Tokens ausentes, inválidos ou expirados e tokens de contas excluídas resultam em resposta `401`. O JWT utiliza o algoritmo HS256 e tem validade padrão de 60 minutos. A troca de senha não revoga tokens já emitidos; eles continuam sujeitos à expiração e à existência da conta.
+
+### Viagens e permissões
+
+O usuário autenticado cria uma viagem com nome, descrição opcional e datas de início e fim; a data de fim não pode ser anterior à de início. Toda viagem nasce com status `planejando` e pode passar livremente para `confirmada` ou `concluida` (RF07). O criador é sempre o usuário do token: um `criador_id` enviado no corpo é ignorado. Na criação também é gerado o código de convite, que ainda não é exposto pela API.
+
+A autorização fica em `PoliticaAcessoViagem` (aplicação), que consulta a matriz de `app/domain/permissoes.py`. Os próximos módulos (destinos, atividades, orçamento, membros) devem usar a mesma política.
+
+| Ação | Criador | Editor | Visualizador | Outro usuário |
+|---|---|---|---|---|
+| Consultar a viagem | Sim | Sim | Sim | `404` |
+| Editar dados gerais e status | Sim | Sim | `403` | `404` |
+| Excluir a viagem | Sim | `403` | `403` | `404` |
+| Gerenciar membros (futuro) | Sim | `403` | `403` | `404` |
+
+Quem não participa da viagem recebe `404`, a mesma resposta de uma viagem inexistente, para não revelar ids de viagens alheias. A exclusão remove colaboradores, roteiro e orçamento pela cascata do banco, na mesma transação.
 
 ## Dados e persistência
 
@@ -133,7 +153,7 @@ As migrações em `alembic/versions/` criam a tabela de usuários, inserem um us
 
 O modelo oficial prevê também `viagem`, `membro_viagem`, `destino_catalogo`, `destino_viagem`, `catalogo_atividade`, `atividade_viagem`, `orcamento` e `avaliacao`. Ele distingue os dados reutilizáveis do catálogo das informações de cada viagem: por exemplo, a atividade do catálogo descreve um local ou experiência, enquanto sua associação à viagem registra horário, custo previsto e status. Cada viagem possui um orçamento, e as avaliações se vinculam às atividades do catálogo.
 
-Essas tabelas, mais `notificacoes` e `tokens_recuperacao_senha`, foram criadas pela migração `a3f1c9d27b45` conforme as decisões de [`docs/decisoes-de-produto.md`](docs/decisoes-de-produto.md): identificadores inteiros com o código de convite em coluna própria, avaliação de atividades com ranking de destinos derivado, papéis, validade de convites, datas, moeda e efeitos das exclusões. Por enquanto é apenas o esquema: não há casos de uso, rotas nem repositórios para elas. A tabela `usuarios` ganhou o campo `criado_em` previsto no documento; ela mantém o nome `usuarios` em vez de `usuario`.
+Essas tabelas, mais `notificacoes` e `tokens_recuperacao_senha`, foram criadas pela migração `a3f1c9d27b45` conforme as decisões de [`docs/decisoes-de-produto.md`](docs/decisoes-de-produto.md): identificadores inteiros com o código de convite em coluna própria, avaliação de atividades com ranking de destinos derivado, papéis, validade de convites, datas, moeda e efeitos das exclusões. Viagens e membros já têm repositórios (`SQLAlchemyViagemRepository`, `SQLAlchemyMembroViagemRepository`); as demais tabelas ainda são apenas esquema. A migração `e2c7a4f19d36` alinhou os status de viagem ao RF07 (`planejando`, `confirmada`, `concluida`). A tabela `usuarios` ganhou o campo `criado_em` previsto no documento; ela mantém o nome `usuarios` em vez de `usuario`.
 
 ## Organização do repositório
 

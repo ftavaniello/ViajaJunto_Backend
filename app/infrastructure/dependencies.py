@@ -6,19 +6,31 @@ gravacoes de um caso de uso fiquem na mesma transacao.
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
+from app.adapters.outbound.persistence.membro_viagem_repository_sqlalchemy import (
+    SQLAlchemyMembroViagemRepository,
+)
 from app.adapters.outbound.persistence.unit_of_work_sqlalchemy import SQLAlchemyUnitOfWork
 from app.adapters.outbound.persistence.usuario_repository_sqlalchemy import (
     SQLAlchemyUsuarioRepository,
 )
+from app.adapters.outbound.persistence.viagem_repository_sqlalchemy import (
+    SQLAlchemyViagemRepository,
+)
 from app.adapters.outbound.security.bcrypt_password_hasher import BcryptPasswordHasher
 from app.adapters.outbound.security.pyjwt_token_service import PyJWTTokenService
+from app.application.acesso_viagem import PoliticaAcessoViagem
 from app.application.use_cases.alterar_senha import AlterarSenha
 from app.application.use_cases.atualizar_usuario import AtualizarUsuario
+from app.application.use_cases.atualizar_viagem import AtualizarViagem
 from app.application.use_cases.autenticar_usuario import AutenticarUsuario
 from app.application.use_cases.consultar_resumo_usuarios import ConsultarResumoUsuarios
 from app.application.use_cases.consultar_usuario_autenticado import ConsultarUsuarioAutenticado
+from app.application.use_cases.consultar_viagem import ConsultarViagem
 from app.application.use_cases.criar_usuario import CriarUsuario
+from app.application.use_cases.criar_viagem import CriarViagem
 from app.application.use_cases.excluir_usuario import ExcluirUsuario
+from app.application.use_cases.excluir_viagem import ExcluirViagem
+from app.application.use_cases.listar_viagens import ListarViagens
 from app.domain.ports.token_service import TokenService
 from app.domain.ports.total_usuarios_cache import TotalUsuariosCache
 from app.infrastructure.cache import get_total_usuarios_cache
@@ -79,3 +91,33 @@ def get_consultar_resumo(
     cache: TotalUsuariosCache = Depends(get_total_usuarios_cache),
 ) -> ConsultarResumoUsuarios:
     return ConsultarResumoUsuarios(SQLAlchemyUsuarioRepository(db), cache)
+
+
+def _politica_acesso_viagem(db: Session) -> PoliticaAcessoViagem:
+    return PoliticaAcessoViagem(
+        SQLAlchemyViagemRepository(db), SQLAlchemyMembroViagemRepository(db)
+    )
+
+
+def get_criar_viagem(db: Session = Depends(get_db)) -> CriarViagem:
+    return CriarViagem(SQLAlchemyViagemRepository(db), SQLAlchemyUnitOfWork(db))
+
+
+def get_listar_viagens(db: Session = Depends(get_db)) -> ListarViagens:
+    return ListarViagens(SQLAlchemyViagemRepository(db))
+
+
+def get_consultar_viagem(db: Session = Depends(get_db)) -> ConsultarViagem:
+    return ConsultarViagem(_politica_acesso_viagem(db))
+
+
+def get_atualizar_viagem(db: Session = Depends(get_db)) -> AtualizarViagem:
+    return AtualizarViagem(
+        SQLAlchemyViagemRepository(db), _politica_acesso_viagem(db), SQLAlchemyUnitOfWork(db)
+    )
+
+
+def get_excluir_viagem(db: Session = Depends(get_db)) -> ExcluirViagem:
+    return ExcluirViagem(
+        SQLAlchemyViagemRepository(db), _politica_acesso_viagem(db), SQLAlchemyUnitOfWork(db)
+    )
