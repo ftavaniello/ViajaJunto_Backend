@@ -1,8 +1,21 @@
 services:
+  ministack:
+    extends:
+      file: docker-compose.cache.yml
+      service: ministack
+
+  aws-cli:
+    extends:
+      file: docker-compose.cache.yml
+      service: aws-cli
+
   db:
     image: postgres:16
     container_name: viajajunto_db
     restart: unless-stopped
+    depends_on:
+      aws-cli:
+        condition: service_completed_successfully
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-viajajunto}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-viajajunto}
@@ -24,14 +37,27 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      aws-cli:
+        condition: service_completed_successfully
+    networks: [default, cache]
     environment:
+      REDIS_URL_FILE: /run/cache/redis-url
+      CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-60}
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-viajajunto}:${POSTGRES_PASSWORD:-viajajunto}@db:5432/${POSTGRES_DB:-viajajunto}
     ports:
       - "8000:8000"
     volumes:
+      - cache-endpoint:/run/cache:ro
       - ./app:/app/app
       - ./alembic:/app/alembic
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
 volumes:
   viajajunto_db_data:
+  ministack-state:
+  cache-endpoint:
+
+networks:
+  default:
+  cache:
+    name: viajajunto-cache-local

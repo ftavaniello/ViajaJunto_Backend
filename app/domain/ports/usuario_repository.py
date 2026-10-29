@@ -5,6 +5,10 @@ from app.domain.entities.usuario import Usuario
 
 class UsuarioRepository(ABC):
     @abstractmethod
+    def contar(self) -> int:
+        pass
+
+    @abstractmethod
     def salvar(self, usuario: Usuario) -> Usuario:
         pass
 

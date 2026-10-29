@@ -4,3 +4,10 @@ __pycache__
 *.pyc
 .git
 .env
+.cache
+.pytest_cache
+.ruff_cache
+.scannerwork
+htmlcov
+coverage.xml
+.coverage

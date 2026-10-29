@@ -14,6 +14,9 @@ class Settings:
         "JWT_SECRET_KEY",
         "changeme-super-secret-key-dev-only",
     )
+    REDIS_URL: str = os.getenv("REDIS_URL", "")
+    REDIS_URL_FILE: str = os.getenv("REDIS_URL_FILE", "")
+    CACHE_TTL_SECONDS: int = max(1, int(os.getenv("CACHE_TTL_SECONDS", "60")))
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = int(os.getenv("JWT_EXPIRE_MINUTES", "60"))
 

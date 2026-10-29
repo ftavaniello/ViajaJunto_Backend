@@ -1,23 +1,26 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, Response
 
 from app.adapters.inbound.api.schemas.usuario_schema import (
     AlterarSenhaRequest,
     AtualizarUsuarioRequest,
     CriarUsuarioRequest,
+    ResumoUsuariosResponse,
     UsuarioResponse,
 )
 from app.adapters.inbound.api.security import get_usuario_atual
-from app.adapters.outbound.persistence.usuario_repository_sqlalchemy import (
-    SQLAlchemyUsuarioRepository,
-)
-from app.adapters.outbound.security.bcrypt_password_hasher import BcryptPasswordHasher
 from app.application.use_cases.alterar_senha import AlterarSenha
 from app.application.use_cases.atualizar_usuario import AtualizarUsuario
+from app.application.use_cases.consultar_resumo_usuarios import ConsultarResumoUsuarios
 from app.application.use_cases.criar_usuario import CriarUsuario
 from app.application.use_cases.excluir_usuario import ExcluirUsuario
 from app.domain.entities.usuario import Usuario
-from app.infrastructure.database import get_db
+from app.infrastructure.dependencies import (
+    get_alterar_senha,
+    get_atualizar_usuario,
+    get_consultar_resumo,
+    get_criar_usuario,
+    get_excluir_usuario,
+)
 
 router = APIRouter(
     prefix="/usuarios",
@@ -39,28 +42,39 @@ router = APIRouter(
         400: {"description": "Já existe um usuário com este email"},
     },
 )
-def criar(request: CriarUsuarioRequest, db: Session = Depends(get_db)):
-    try:
-        repository = SQLAlchemyUsuarioRepository(db)
-        criar_usuario = CriarUsuario(repository, BcryptPasswordHasher())
+def criar(
+    request: CriarUsuarioRequest,
+    caso: CriarUsuario = Depends(get_criar_usuario),
+):
+    usuario = caso.execute(nome=request.nome, email=request.email, senha=request.senha)
+    return UsuarioResponse(id=usuario.id, nome=usuario.nome, email=usuario.email)
 
-        usuario = criar_usuario.execute(
-            nome=request.nome,
-            email=request.email,
-            senha=request.senha,
-        )
 
-        return UsuarioResponse(
-            id=usuario.id,
-            nome=usuario.nome,
-            email=usuario.email,
-        )
-
-    except ValueError as error:
-        raise HTTPException(
-            status_code=400,
-            detail=str(error),
-        )
+@router.get(
+    "/resumo",
+    response_model=ResumoUsuariosResponse,
+    summary="Consulta o total de usuarios cadastrados",
+    description=(
+        "Requer JWT. Cacheia somente a contagem; a autenticacao continua consultando o banco. "
+        "X-Cache indica HIT (Redis), MISS (banco e cache preenchido) ou BYPASS (sem cache)."
+    ),
+    responses={
+        200: {"description": "Total de usuarios", "headers": {
+            "X-Cache": {"description": "Origem da contagem",
+                        "schema": {"type": "string", "enum": ["HIT", "MISS", "BYPASS"]}},
+        }},
+        401: {"description": "Token ausente, invalido, expirado ou conta excluida"},
+    },
+)
+def resumo(
+    response: Response,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    caso: ConsultarResumoUsuarios = Depends(get_consultar_resumo),
+):
+    total, origem = caso.execute()
+    response.headers["X-Cache"] = origem.value
+    response.headers["Cache-Control"] = "no-store"
+    return ResumoUsuariosResponse(total_usuarios=total)
 
 
 @router.get(
@@ -99,29 +113,10 @@ def me(usuario_atual: Usuario = Depends(get_usuario_atual)):
 def atualizar_me(
     request: AtualizarUsuarioRequest,
     usuario_atual: Usuario = Depends(get_usuario_atual),
-    db: Session = Depends(get_db),
+    caso: AtualizarUsuario = Depends(get_atualizar_usuario),
 ):
-    try:
-        repository = SQLAlchemyUsuarioRepository(db)
-        atualizar_usuario = AtualizarUsuario(repository)
-
-        usuario = atualizar_usuario.execute(
-            usuario_id=usuario_atual.id,
-            nome=request.nome,
-            email=request.email,
-        )
-
-        return UsuarioResponse(
-            id=usuario.id,
-            nome=usuario.nome,
-            email=usuario.email,
-        )
-
-    except ValueError as error:
-        raise HTTPException(
-            status_code=400,
-            detail=str(error),
-        )
+    usuario = caso.execute(usuario_id=usuario_atual.id, nome=request.nome, email=request.email)
+    return UsuarioResponse(id=usuario.id, nome=usuario.nome, email=usuario.email)
 
 
 @router.patch(
@@ -137,23 +132,11 @@ def atualizar_me(
 def alterar_senha(
     request: AlterarSenhaRequest,
     usuario_atual: Usuario = Depends(get_usuario_atual),
-    db: Session = Depends(get_db),
+    caso: AlterarSenha = Depends(get_alterar_senha),
 ):
-    try:
-        repository = SQLAlchemyUsuarioRepository(db)
-        alterar_senha_use_case = AlterarSenha(repository, BcryptPasswordHasher())
-
-        alterar_senha_use_case.execute(
-            usuario_id=usuario_atual.id,
-            senha_atual=request.senha_atual,
-            senha_nova=request.senha_nova,
-        )
-
-    except ValueError as error:
-        raise HTTPException(
-            status_code=400,
-            detail=str(error),
-        )
+    caso.execute(
+        usuario_id=usuario_atual.id, senha_atual=request.senha_atual, senha_nova=request.senha_nova,
+    )
 
 
 @router.delete(
@@ -167,7 +150,6 @@ def alterar_senha(
 )
 def excluir_me(
     usuario_atual: Usuario = Depends(get_usuario_atual),
-    db: Session = Depends(get_db),
+    caso: ExcluirUsuario = Depends(get_excluir_usuario),
 ):
-    repository = SQLAlchemyUsuarioRepository(db)
-    ExcluirUsuario(repository).execute(usuario_atual.id)
+    caso.execute(usuario_atual.id)

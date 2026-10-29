@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 
+from app.adapters.inbound.api.errors import tratar_erro_negocio
 from app.adapters.inbound.api.routes.auth import router as auth_router
 from app.adapters.inbound.api.routes.health import router as health_router
 from app.adapters.inbound.api.routes.usuario import router as usuario_router
+from app.domain.errors import ErroNegocio
 
 app = FastAPI(
     title="ViajaJunto API",
@@ -20,8 +22,9 @@ app = FastAPI(
     ],
 )
 
+app.add_exception_handler(ErroNegocio, tratar_erro_negocio)
+
 app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(usuario_router)
 
-# ola

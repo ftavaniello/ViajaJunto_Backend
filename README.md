@@ -86,6 +86,13 @@ O domínio e os casos de uso não dependem de FastAPI, Pydantic ou SQLAlchemy. A
 
 ## Tecnologias
 
+O comando `docker compose up -d --build` tambem inicia o MiniStack e provisiona
+o ElastiCache local via AWS CLI e CloudFormation. Apos o deploy, o PostgreSQL inicia;
+a API aguarda o banco ficar saudavel e executa as migracoes antes do servidor.
+O endpoint protegido `GET /usuarios/resumo` usa o Redis para guardar o total de usuarios
+por 60 segundos. Cadastro e exclusao invalidam essa contagem. `X-Cache` indica HIT, MISS
+ou BYPASS; a autenticacao continua consultando o banco. Veja o [roteiro de infraestrutura e demonstracao](infra/README.md).
+
 | Tecnologia | Papel |
 |---|---|
 | Python | Linguagem do backend; a imagem Docker utiliza Python 3.13 |
@@ -95,7 +102,8 @@ O domínio e os casos de uso não dependem de FastAPI, Pydantic ou SQLAlchemy. A
 | Alembic | Versionamento e aplicação de alterações no banco |
 | bcrypt | Geração e verificação de hashes de senha |
 | PyJWT | Emissão e validação de tokens JWT |
-| Docker Compose | Execução da API e do PostgreSQL em containers |
+| Redis / ElastiCache local | Cache da contagem de usuarios, provisionado via CloudFormation no MiniStack |
+| Docker Compose | Inicializacao do MiniStack, deploy AWS CLI, PostgreSQL e API |
 | pytest | Testes automatizados de domínio, aplicação e integração |
 
 ## API HTTP
@@ -105,6 +113,7 @@ O domínio e os casos de uso não dependem de FastAPI, Pydantic ou SQLAlchemy. A
 | `GET` | `/health` | Público | Verifica se a API está respondendo |
 | `POST` | `/usuarios` | Público | Cadastra um usuário |
 | `POST` | `/auth/login` | Público | Autentica e retorna o token de acesso |
+| `GET` | `/usuarios/resumo` | JWT | Consulta o total de usuarios, com cache Redis e header X-Cache |
 | `GET` | `/usuarios/me` | JWT | Consulta o perfil autenticado |
 | `PATCH` | `/usuarios/me` | JWT | Atualiza nome e/ou email |
 | `PATCH` | `/usuarios/me/senha` | JWT | Altera a senha da conta |
@@ -158,4 +167,144 @@ docker compose up -d --build
 
 O Compose inicia o PostgreSQL, aguarda o banco ficar saudável, aplica as migrações e disponibiliza a API na porta `8000`. O ambiente utiliza recarga automática ao editar os arquivos da aplicação.
 
-A configuração da API utiliza
+A configuração da API utiliza `DATABASE_URL`, `JWT_SECRET_KEY` e `JWT_EXPIRE_MINUTES`. O Compose fornece `DATABASE_URL` diretamente ao container da API. Na configuração atual, as variáveis JWT do `.env` não são repassadas ao container, que usa os valores padrão; para personalizá-las nesse modo de execução, é necessário incluí-las no ambiente do serviço `api`. A chave padrão é destinada ao desenvolvimento local.
+
+## Testes
+
+A suíte contempla validações da entidade, regras dos casos de uso, autenticação, gerenciamento de conta e persistência. Os testes de domínio e aplicação usam o repositório em memória; os testes de integração dependem de PostgreSQL acessível e do schema criado pelas migrações.
+
+Com as dependências instaladas no ambiente Python, a suíte pode ser executada com `pytest`. Para executar somente os testes sem banco:
+
+```sh
+pytest tests/domain tests/application
+```
+
+Quando o banco está indisponível, os testes de integração são marcados como ignorados (`skip`). Portanto, uma execução sem falhas nessas condições não comprova a integração com PostgreSQL.
+
+## Validação do contrato OpenAPI
+
+O workflow `.github/workflows/spectral.yml` executa em pushes e pull requests para
+`main`. Ele exporta o contrato diretamente de `app.openapi()` e o valida com
+`stoplightio/spectral-action`, usando o arquivo `.spectral.yaml`, que estende
+`spectral:oas`. A exportação não precisa iniciar o servidor nem conectar ao banco.
+
+Erros de validação fazem o check **Spectral** falhar. Os avisos seguem as
+severidades padrão do conjunto de regras. Depois da primeira execução no GitHub,
+adicione **Spectral** aos checks obrigatórios na regra de proteção da `main`.
+
+O Spectral CLI também executa a validação para garantir a falha do job mesmo se
+a action não conseguir publicar suas anotações no GitHub. Em PRs de forks,
+somente o CLI executa, pois o token desses PRs não permite escrever checks.
+
+## SonarQube e Quality Gate
+
+O workflow de testes executa o job **SonarQube Quality Gate** após os testes
+passarem, em PRs para `main` e pushes nessa branch. O job baixa o `coverage.xml`
+da mesma execução e usa `SonarSource/sonarqube-scan-action` para analisar `app/`
+e identificar `tests/` como código de teste. A cobertura usa caminhos relativos
+para permitir a leitura do relatório em outro job.
+
+O arquivo `sonar-project.properties` identifica o projeto
+`ftavaniello_ViajaJunto_Backend`, na organização `ftavaniello`. A opção
+`sonar.qualitygate.wait=true` faz o scanner aguardar até 300 segundos pelo
+resultado do Quality Gate; reprovação ou falha na análise faz o job falhar.
+
+Configuração externa necessária:
+
+1. No projeto do SonarQube Cloud, desative **Automatic Analysis** em
+   **Administration → Analysis Method** para usar a análise pelo CI.
+2. Gere um token de análise e cadastre-o no GitHub em
+   **Settings → Secrets and variables → Actions**, como secret **SONAR_TOKEN**.
+   Nunca coloque o token no repositório.
+3. Após a primeira execução, inclua **SonarQube Quality Gate** e o check de testes
+   entre os checks obrigatórios da proteção da `main`.
+
+O job falha explicitamente se o token estiver ausente. PRs de forks normalmente
+não recebem secrets e, portanto, não conseguem executar essa análise autenticada.
+
+## Build e verificação da imagem Docker
+
+O Dockerfile usa uma etapa de instalação separada e transfere o ambiente Python
+para a imagem final sem `pip`, `setuptools` ou `wheel`. Essas ferramentas e suas
+dependências internas não são necessárias para iniciar a API ou aplicar as
+migrações. Para mudar dependências, reconstrua a imagem; não instale pacotes
+manualmente no container em execução.
+
+A base é `python:3.13-alpine`, com atualizações do Alpine e bibliotecas de
+execução para PostgreSQL. As dependências são instaladas como pacotes binários
+(`--only-binary=:all:`); uma nova dependência sem pacote compatível exigirá
+revisar o build. A mudança de Debian para Alpine foi validada em Linux amd64.
+
+Somente `app/`, `alembic/` e `alembic.ini` são copiados para a imagem final.
+Os testes continuam no repositório e podem ser montados no container para
+validação. O CI usa `pull: true` para consultar a imagem-base atualizada.
+
+Na validação local de 01/10/2026, a imagem passou nos 34 testes, nas migrações e
+na inicialização do Uvicorn com resposta HTTP 200 em `/health`. O Trivy 0.75.0
+não encontrou HIGH ou CRITICAL na imagem Alpine com a base de vulnerabilidades
+utilizada nessa execução. Novos builds devem repetir o scan: esse resultado
+não garante ausência de vulnerabilidades futuras ou de outras severidades.
+
+O workflow `.github/workflows/ci.yml` constrói a imagem Docker e executa o Trivy
+em pushes e pull requests para `main` e `develop`. O check `build-and-scan`
+falha quando encontra vulnerabilidades HIGH ou CRITICAL nos pacotes do sistema
+operacional ou nas dependências da aplicação, inclusive sem correção disponível.
+Vulnerabilidades sem correção não são ignoradas para fazer o CI passar.
+
+Inclua `build-and-scan` nos checks obrigatórios da proteção da `main`.
+O workflow também executa em tags `v*` e publica a imagem aprovada pelo Trivy
+conforme as regras abaixo.
+
+## Publicação no Docker Hub
+
+Destino: `ftavaniello/viajajunto-backend`.
+A publicação usa a mesma imagem local verificada pelo Trivy, sem reconstruí-la.
+Se o build ou o scan falhar, as etapas de login e publicação não executam.
+
+| Evento | Tags publicadas |
+|---|---|
+| Push na `main` (inclusive merge de PR) | `latest` e `sha-<SHA completo>` |
+| Push de versão estável, por exemplo `v1.2.3` | `1.2.3`, `latest` e `sha-<SHA completo>` |
+| Push de pré-lançamento, por exemplo `v1.2.3-rc.1` | `1.2.3-rc.1` e `sha-<SHA completo>` |
+| Push na `develop` ou pull request | Somente build e scan; não publica |
+
+Use tags Git no formato SemVer `vMAJOR.MINOR.PATCH`, com sufixo de
+pré-lançamento opcional. A tag `latest` é atualizada por pushes na `main` e por
+versões estáveis; ela não é um identificador imutável. Use a versão ou SHA para
+selecionar uma publicação específica.
+
+Configure dois **Repository secrets** em
+**Settings → Secrets and variables → Actions** no GitHub:
+
+- `DOCKERHUB_USERNAME`: `ftavaniello`.
+- `DOCKERHUB_TOKEN`: Access Token do Docker Hub com permissão de leitura e
+  escrita no repositório da imagem. Não use a senha da conta nem salve o token
+  em arquivos do projeto.
+
+Após o merge na `main`, a publicação de `latest` será automática. Para publicar
+uma versão, crie e envie a tag correspondente a um commit aprovado da `main`:
+
+```sh
+git switch main
+git pull --ff-only origin main
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+O exemplo usa `v1.0.0`; escolha a versão real do projeto. O workflow de imagem
+não espera os outros workflows independentes, por isso mantenha os checks
+obrigatórios da `main` e publique versões a partir de commits já aprovados.
+
+## Escopo e evolução
+
+O módulo de usuários estabelece a base de autenticação, persistência e organização arquitetural do ViajaJunto. A evolução prevista contempla os módulos descritos nos requisitos, incluindo autorização por viagem e as integrações de catálogo e mapas previstas na arquitetura.
+
+Este repositório contém apenas o backend. A interface web e os recursos de colaboração no planejamento de viagens ainda não estão presentes nesta implementação.
+
+Estão fora do escopo da versão especificada: reservas de hotéis, voos e ingressos por APIs externas; chat em tempo real; aplicativo mobile nativo; pagamentos e divisão de custos; edição simultânea em tempo real; e gamificação de avaliações. A integração de catálogo com Google Places prevista na arquitetura não corresponde a uma integração de reservas.
+
+## Referências de especificação
+
+Esta descrição considera os documentos oficiais fornecidos pela equipe: `index.md` (visão geral), `requirements.md` (requisitos e regras de negócio) e `architecture.md` (arquitetura e modelo de dados). Os documentos de requisitos e arquitetura identificam a revisão inicial como versão 0.1, de 25/08/2026. Esses arquivos foram consultados externamente e não estão incluídos neste repositório.
+
+Além da divergência de stack, há pontos que precisam de alinhamento entre os documentos: a visão geral e algumas regras mencionam avaliações de destinos, enquanto RF22–RF24 e o modelo relacional descrevem avaliações de atividades; o identificador de viagem é descrito como string/código de convite, mas as chaves estrangeiras correspondentes aparecem como inteiros. Este README registra essas diferenças sem definir uma solução que ainda não foi formalizada pela equipe.
