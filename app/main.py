@@ -16,7 +16,7 @@ app = FastAPI(
     ),
     version="0.1.0",
     openapi_tags=[
-        {"name": "Autenticação", "description": "Login e emissão de tokens JWT."},
+        {"name": "Autenticação", "description": "Login, logout e emissão de tokens JWT."},
         {"name": "Usuarios", "description": "Cadastro e dados do usuário autenticado."},
         {"name": "Health", "description": "Verificação de disponibilidade da API."},
     ],
