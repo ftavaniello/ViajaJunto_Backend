@@ -18,10 +18,11 @@ class PapelMembro(StrEnum):
 
 
 class StatusViagem(StrEnum):
+    """Status definido pelos participantes (RF07); qualquer transição é permitida."""
+
     PLANEJANDO = "planejando"
-    EM_ANDAMENTO = "em_andamento"
+    CONFIRMADA = "confirmada"
     CONCLUIDA = "concluida"
-    CANCELADA = "cancelada"
 
 
 class StatusAtividade(StrEnum):
