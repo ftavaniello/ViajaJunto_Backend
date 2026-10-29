@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from app.domain.errors import DadosInvalidos
 from app.domain.validation import validar_email, validar_nome
 
