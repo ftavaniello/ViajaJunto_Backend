@@ -10,13 +10,17 @@ app = FastAPI(
     title="ViajaJunto API",
     description=(
         "API do ViajaJunto, aplicação de planejamento colaborativo de viagens. "
-        "Exceto `POST /usuarios` (cadastro) e `POST /auth/login`, todos os "
+        "Exceto `POST /usuarios` (cadastro), `POST /auth/login`, "
+        "`POST /auth/recuperar-senha` e `POST /auth/redefinir-senha`, todos os "
         "endpoints exigem um token JWT no header `Authorization: Bearer <token>` "
         "(use o botão **Authorize** acima com o token retornado pelo login)."
     ),
     version="0.1.0",
     openapi_tags=[
-        {"name": "Autenticação", "description": "Login, logout e emissão de tokens JWT."},
+        {
+            "name": "Autenticação",
+            "description": "Login, logout, emissão de tokens JWT e recuperação de senha.",
+        },
         {"name": "Usuarios", "description": "Cadastro e dados do usuário autenticado."},
         {"name": "Health", "description": "Verificação de disponibilidade da API."},
     ],

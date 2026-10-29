@@ -61,9 +61,10 @@ Qualquer falha resulta em `401` com `WWW-Authenticate: Bearer`.
 
 ### Recuperação de senha (RF03)
 
-Ainda não implementada. Quando for, a redefinição de senha pelo link de
-recuperação **deve** seguir a mesma regra da troca: incrementar
-`versao_sessao`, encerrando todas as sessões existentes.
+A redefinição de senha pelo link de recuperação (`POST /auth/redefinir-senha`)
+segue a mesma regra da troca: incrementa `versao_sessao` na mesma transação que
+grava o novo hash e consome o token, encerrando todas as sessões existentes.
+Detalhes em [`recuperacao-de-senha.md`](recuperacao-de-senha.md).
 
 ## Armazenamento e falhas
 

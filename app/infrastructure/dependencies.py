@@ -6,6 +6,9 @@ gravacoes de um caso de uso fiquem na mesma transacao.
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
+from app.adapters.outbound.persistence.token_recuperacao_senha_repository_sqlalchemy import (
+    SQLAlchemyTokenRecuperacaoSenhaRepository,
+)
 from app.adapters.outbound.persistence.token_revogado_repository_sqlalchemy import (
     SQLAlchemyTokenRevogadoRepository,
 )
@@ -23,11 +26,15 @@ from app.application.use_cases.consultar_usuario_autenticado import ConsultarUsu
 from app.application.use_cases.criar_usuario import CriarUsuario
 from app.application.use_cases.encerrar_sessao import EncerrarSessao
 from app.application.use_cases.excluir_usuario import ExcluirUsuario
+from app.application.use_cases.redefinir_senha import RedefinirSenha
+from app.application.use_cases.solicitar_recuperacao_senha import SolicitarRecuperacaoSenha
+from app.domain.ports.email_sender import EmailSender
 from app.domain.ports.token_service import TokenService
 from app.domain.ports.total_usuarios_cache import TotalUsuariosCache
 from app.infrastructure.cache import get_total_usuarios_cache
 from app.infrastructure.config import settings
 from app.infrastructure.database import get_db
+from app.infrastructure.email import get_email_sender
 
 
 def get_token_service() -> TokenService:
@@ -94,3 +101,25 @@ def get_consultar_resumo(
     cache: TotalUsuariosCache = Depends(get_total_usuarios_cache),
 ) -> ConsultarResumoUsuarios:
     return ConsultarResumoUsuarios(SQLAlchemyUsuarioRepository(db), cache)
+
+
+def get_solicitar_recuperacao_senha(
+    db: Session = Depends(get_db),
+    email_sender: EmailSender = Depends(get_email_sender),
+) -> SolicitarRecuperacaoSenha:
+    return SolicitarRecuperacaoSenha(
+        SQLAlchemyUsuarioRepository(db),
+        SQLAlchemyTokenRecuperacaoSenhaRepository(db),
+        email_sender,
+        SQLAlchemyUnitOfWork(db),
+        url_redefinicao=settings.RECUPERACAO_SENHA_URL,
+    )
+
+
+def get_redefinir_senha(db: Session = Depends(get_db)) -> RedefinirSenha:
+    return RedefinirSenha(
+        SQLAlchemyUsuarioRepository(db),
+        SQLAlchemyTokenRecuperacaoSenhaRepository(db),
+        BcryptPasswordHasher(),
+        SQLAlchemyUnitOfWork(db),
+    )

@@ -16,3 +16,7 @@ class UsuarioNaoEncontrado(ErroNegocio):
 
 class NaoAutenticado(ErroNegocio):
     pass
+
+
+class TokenRecuperacaoInvalido(ErroNegocio):
+    """Token de recuperacao inexistente, expirado ou ja utilizado (mesma mensagem)."""
