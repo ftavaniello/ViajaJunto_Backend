@@ -30,6 +30,26 @@ services:
       timeout: 5s
       retries: 5
 
+  # Banco exclusivo dos testes (pytest), separado dos dados de desenvolvimento.
+  # Sobe so com `docker compose --profile test up -d db_test`; dados ficam em memoria.
+  db_test:
+    image: postgres:16
+    container_name: viajajunto_db_test
+    profiles: [test]
+    environment:
+      POSTGRES_USER: viajajunto
+      POSTGRES_PASSWORD: viajajunto
+      POSTGRES_DB: viajajunto_test
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U viajajunto -d viajajunto_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   api:
     build: .
     container_name: viajajunto_api
