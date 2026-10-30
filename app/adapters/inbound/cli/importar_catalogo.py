@@ -1,7 +1,7 @@
-"""Uso: python -m app.adapters.inbound.cli.importar_catalogo arquivo.json."""
+"""Uso: JSON via stdin ou --exemplo para o seed fixo de desenvolvimento."""
 
 import argparse
-import json
+import sys
 from decimal import Decimal
 from pathlib import Path
 
@@ -45,12 +45,12 @@ class ArquivoCatalogo(BaseModel):
     atividades: list[AtividadeImportacao]
 
 
-def importar_arquivo(
-    arquivo: Path,
+def importar_json(
+    conteudo: str,
     caso: ImportarCatalogo,
     apenas_se_vazio: bool = False,
 ) -> int:
-    dados = ArquivoCatalogo.model_validate(json.loads(arquivo.read_text(encoding="utf-8")))
+    dados = ArquivoCatalogo.model_validate_json(conteudo)
     destinos = {chave: DestinoCatalogo(**d.model_dump()) for chave, d in dados.destinos.items()}
     atividades = []
     for atividade in dados.atividades:
@@ -70,7 +70,11 @@ def importar_arquivo(
 
 def main():
     parser = argparse.ArgumentParser(description="Importa catálogo curado pela equipe autorizada")
-    parser.add_argument("arquivo", type=Path)
+    parser.add_argument(
+        "--exemplo",
+        action="store_true",
+        help="Usa exclusivamente o arquivo fixo docs/catalogo-exemplo.json do projeto.",
+    )
     parser.add_argument(
         "--se-vazio",
         action="store_true",
@@ -78,8 +82,16 @@ def main():
     )
     args = parser.parse_args()
     try:
+        if args.exemplo:
+            # Caminho fixo derivado do código, nunca de argumentos fornecidos ao CLI.
+            arquivo_exemplo = Path(__file__).resolve().parents[4] / "docs/catalogo-exemplo.json"
+            conteudo = arquivo_exemplo.read_text(encoding="utf-8")
+        else:
+            if hasattr(sys.stdin, "reconfigure"):
+                sys.stdin.reconfigure(encoding="utf-8")
+            conteudo = sys.stdin.read()
         with SessionLocal() as db:
-            total = importar_arquivo(args.arquivo, montar_importar_catalogo(db), args.se_vazio)
+            total = importar_json(conteudo, montar_importar_catalogo(db), args.se_vazio)
     except IntegrityError:
         parser.exit(1, "Importação cancelada: referência externa duplicada ou vínculo inválido.\n")
     except (OSError, ValueError) as error:

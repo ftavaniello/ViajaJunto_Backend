@@ -50,7 +50,8 @@ def repository():
 )
 def test_filtros(repository, filtros, nomes):
     resultado = ListarAtividadesCatalogo(repository).execute(**filtros)
-    assert [a.nome for a in resultado.itens] == nomes
+    nomes_obtidos = [a.nome for a in resultado.itens]
+    assert nomes_obtidos == nomes
 
 
 def test_paginacao_estavel(repository):
@@ -78,8 +79,9 @@ def test_paginacao_estavel(repository):
 )
 def test_filtros_invalidos_nao_consultam_porta(filtros):
     repo = Mock()
+    caso_em_teste = ListarAtividadesCatalogo(repo)
     with pytest.raises(DadosInvalidos):
-        ListarAtividadesCatalogo(repo).execute(**filtros)
+        caso_em_teste.execute(**filtros)
     repo.listar_atividades.assert_not_called()
 
 
@@ -112,13 +114,10 @@ def test_importacao_desfaz_em_falha():
     repo.salvar_atividade.side_effect = RuntimeError("falha de persistência")
     destino = DestinoCatalogo(nome="Lisboa", pais_codigo="PT")
     atividade = AtividadeCatalogo(destino=destino, nome="Museu", categoria="cultura")
+    caso_em_teste = ImportarCatalogo(repo, uow)
+    entrada_teste_0 = LoteCatalogo({"lisboa": destino}, [("lisboa", atividade)])
     with pytest.raises(RuntimeError):
-        ImportarCatalogo(repo, uow).execute(
-            LoteCatalogo(
-                {"lisboa": destino},
-                [("lisboa", atividade)],
-            )
-        )
+        caso_em_teste.execute(entrada_teste_0)
     assert (uow.commits, uow.rollbacks) == (0, 1)
 
 
@@ -126,21 +125,19 @@ def test_destino_ausente_impede_importacao():
     repo, uow = Mock(), UnitOfWorkMemory()
     destino = DestinoCatalogo(nome="Lisboa", pais_codigo="PT")
     atividade = AtividadeCatalogo(destino=destino, nome="Museu", categoria="cultura")
+    caso_em_teste = ImportarCatalogo(repo, uow)
+    entrada_teste_0 = LoteCatalogo({"lisboa": destino}, [("porto", atividade)])
     with pytest.raises(DadosInvalidos):
-        ImportarCatalogo(repo, uow).execute(
-            LoteCatalogo(
-                {"lisboa": destino},
-                [("porto", atividade)],
-            )
-        )
+        caso_em_teste.execute(entrada_teste_0)
     repo.salvar_destino.assert_not_called()
 
 
 def test_falha_de_busca_nao_e_ocultada():
     repo = Mock()
     repo.listar_atividades.side_effect = RuntimeError("offline")
+    caso_em_teste = ListarAtividadesCatalogo(repo)
     with pytest.raises(RuntimeError):
-        ListarAtividadesCatalogo(repo).execute()
+        caso_em_teste.execute()
 
 
 @pytest.fixture
@@ -190,6 +187,7 @@ def test_seed_com_falha_nao_confirma(lote_seed):
     repo, uow = Mock(), UnitOfWorkMemory()
     repo.reservar_carga_inicial.return_value = True
     repo.salvar_atividade.side_effect = RuntimeError("falha no seed")
+    caso_em_teste = ImportarCatalogo(repo, uow)
     with pytest.raises(RuntimeError):
-        ImportarCatalogo(repo, uow).execute(lote_seed, apenas_se_vazio=True)
+        caso_em_teste.execute(lote_seed, apenas_se_vazio=True)
     assert (uow.commits, uow.rollbacks) == (0, 1)

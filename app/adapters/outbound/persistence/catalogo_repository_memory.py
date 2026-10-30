@@ -1,4 +1,5 @@
 from dataclasses import replace
+from typing import cast
 
 from app.domain.entities.catalogo import AtividadeCatalogo, DestinoCatalogo
 from app.domain.enums import CategoriaAtividade
@@ -14,12 +15,12 @@ class CatalogoRepositoryMemory(CatalogoRepository):
         return not self.destinos and not self.atividades
 
     def salvar_destino(self, destino: DestinoCatalogo) -> DestinoCatalogo:
-        destino = replace(destino, id=len(self.destinos) + 1)
+        destino = cast(DestinoCatalogo, replace(destino, id=len(self.destinos) + 1))
         self.destinos[destino.id] = destino
         return destino
 
     def salvar_atividade(self, atividade: AtividadeCatalogo) -> AtividadeCatalogo:
-        atividade = replace(atividade, id=len(self.atividades) + 1)
+        atividade = cast(AtividadeCatalogo, replace(atividade, id=len(self.atividades) + 1))
         self.atividades[atividade.id] = atividade
         return atividade
 

@@ -88,11 +88,11 @@ services:
       - cache-endpoint:/run/cache:ro
       - ./app:/app/app
       - ./alembic:/app/alembic
-      - ./docs/catalogo-exemplo.json:/app/seed/catalogo.json:ro
+      - ./docs/catalogo-exemplo.json:/app/docs/catalogo-exemplo.json:ro
     command: >-
       sh -c 'alembic upgrade head &&
       if [ "$$SEED_CATALOGO" = "true" ]; then
-        python -m app.adapters.inbound.cli.importar_catalogo --se-vazio /app/seed/catalogo.json;
+        python -m app.adapters.inbound.cli.importar_catalogo --se-vazio --exemplo;
       fi &&
       uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload'
 

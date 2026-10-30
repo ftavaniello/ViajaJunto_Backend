@@ -29,7 +29,7 @@ router = APIRouter(prefix="/catalogo/atividades", tags=["Catálogo"])
 )
 def listar(
     filtros: Annotated[FiltrosCatalogo, Query()],
-    caso: ListarAtividadesCatalogo = Depends(get_listar_catalogo),
+    caso: Annotated[ListarAtividadesCatalogo, Depends(get_listar_catalogo)],
 ):
     resultado = caso.execute(**filtros.model_dump())
     return PaginaAtividadesResponse(
@@ -52,6 +52,6 @@ def listar(
 )
 def consultar(
     atividade_id: Annotated[int, Path(ge=1)],
-    caso: ConsultarAtividadeCatalogo = Depends(get_consultar_atividade_catalogo),
+    caso: Annotated[ConsultarAtividadeCatalogo, Depends(get_consultar_atividade_catalogo)],
 ):
     return AtividadeCatalogoResponse.model_validate(caso.execute(atividade_id))

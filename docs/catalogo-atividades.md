@@ -82,7 +82,7 @@ fora desse Compose, não roda seed automaticamente.
 Para executar manualmente o mesmo modo seguro, no ambiente Python configurado:
 
 ```sh
-python -m app.adapters.inbound.cli.importar_catalogo --se-vazio docs/catalogo-exemplo.json
+python -m app.adapters.inbound.cli.importar_catalogo --se-vazio --exemplo
 ```
 
 ## Origem e abastecimento autorizado
@@ -101,6 +101,15 @@ endpoint de usuário para cadastrar, editar ou remover registros do catálogo.
 Revise a origem, as descrições e as permissões de uso das fotos antes de importar
 um arquivo. Use dados que a equipe esteja autorizada a disponibilizar publicamente.
 O arquivo `docs/catalogo-exemplo.json` contém dados fictícios para desenvolvimento.
+O importador não aceita caminhos de arquivos em argumentos. Para lotes personalizados,
+recebe JSON pela entrada padrão; `--exemplo` seleciona exclusivamente o arquivo fixo
+do projeto, sem permitir escolher outro caminho. No PowerShell local, por exemplo:
+
+```powershell
+$OutputEncoding = [System.Text.UTF8Encoding]::new()
+Get-Content -Raw -Encoding utf8 meu-lote.json | python -m app.adapters.inbound.cli.importar_catalogo
+```
+
 As chaves de `destinos`, como `lisboa`, são referências locais ao arquivo, não IDs
 persistidos. Cada atividade referencia uma dessas chaves em `destino`.
 
@@ -108,20 +117,20 @@ No ambiente Python com dependências instaladas e `DATABASE_URL` configurada:
 
 ```sh
 alembic upgrade head
-python -m app.adapters.inbound.cli.importar_catalogo docs/catalogo-exemplo.json
+python -m app.adapters.inbound.cli.importar_catalogo --exemplo
 ```
 
 Com a API do Docker Compose, após reconstruir a imagem para incluir o comando:
 
 ```sh
 docker compose up -d --build api
-docker compose exec -T api python -m app.adapters.inbound.cli.importar_catalogo /dev/stdin < docs/catalogo-exemplo.json
+docker compose exec -T api python -m app.adapters.inbound.cli.importar_catalogo < docs/catalogo-exemplo.json
 ```
 
 A segunda linha usa redirecionamento de shell POSIX/cmd. No PowerShell, use:
 
 ```powershell
-Get-Content -Raw -Encoding utf8 docs/catalogo-exemplo.json | docker compose exec -T api python -m app.adapters.inbound.cli.importar_catalogo /dev/stdin
+Get-Content -Raw -Encoding utf8 docs/catalogo-exemplo.json | docker compose exec -T api python -m app.adapters.inbound.cli.importar_catalogo
 ```
 
 A importação valida o arquivo inteiro antes de gravar e confirma o lote numa única

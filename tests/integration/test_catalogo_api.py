@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
-from app.adapters.inbound.cli.importar_catalogo import importar_arquivo
+from app.adapters.inbound.cli.importar_catalogo import importar_json
 from app.adapters.outbound.persistence.catalogo_model import (
     CatalogoAtividadeModel,
     DestinoCatalogoModel,
@@ -199,7 +199,7 @@ def test_importacao_json_persiste_e_aparece_publicamente(client, db_session, tmp
         SQLAlchemyCatalogoRepository(db_session),
         SQLAlchemyUnitOfWork(db_session),
     )
-    assert importar_arquivo(arquivo, caso) == 1
+    assert importar_json(arquivo.read_text(encoding="utf-8"), caso) == 1
     item = client.get("/catalogo/atividades").json()["itens"][0]
     assert item["google_place_id"] == "referencia-curada"
     assert item["fonte"] == "manual"
@@ -214,16 +214,11 @@ def test_importacao_desfaz_lote_inteiro_em_duplicacao(db_session):
         SQLAlchemyCatalogoRepository(db_session),
         SQLAlchemyUnitOfWork(db_session),
     )
+    entrada_teste_0 = LoteCatalogo(
+        {"lisboa": destino}, [("lisboa", atividade), ("lisboa", replace(atividade, nome="Outra"))]
+    )
     with pytest.raises(IntegrityError):
-        caso.execute(
-            LoteCatalogo(
-                {"lisboa": destino},
-                [
-                    ("lisboa", atividade),
-                    ("lisboa", replace(atividade, nome="Outra")),
-                ],
-            )
-        )
+        caso.execute(entrada_teste_0)
     assert db_session.scalar(select(func.count()).select_from(CatalogoAtividadeModel)) == 0
     assert db_session.scalar(select(func.count()).select_from(DestinoCatalogoModel)) == 0
 
@@ -243,8 +238,9 @@ def test_importacao_rejeita_json_invalido_sem_gravar(db_session, tmp_path):
         SQLAlchemyCatalogoRepository(db_session),
         SQLAlchemyUnitOfWork(db_session),
     )
+    entrada_teste_0 = arquivo.read_text(encoding="utf-8")
     with pytest.raises(DadosInvalidos):
-        importar_arquivo(arquivo, caso)
+        importar_json(entrada_teste_0, caso)
     assert db_session.scalar(select(func.count()).select_from(DestinoCatalogoModel)) == 0
 
 
@@ -263,13 +259,13 @@ def test_seed_do_exemplo_e_reexecucao_preservam_dados(db_session, client):
         SQLAlchemyCatalogoRepository(db_session),
         SQLAlchemyUnitOfWork(db_session),
     )
-    assert importar_arquivo(arquivo, caso, apenas_se_vazio=True) == 2
+    assert importar_json(arquivo.read_text(encoding="utf-8"), caso, apenas_se_vazio=True) == 2
     item = db_session.scalar(select(CatalogoAtividadeModel).order_by(CatalogoAtividadeModel.id))
     item.descricao = "Texto editado pela equipe"
     db_session.flush()
     primeira_resposta = client.get("/catalogo/atividades").json()
 
-    assert importar_arquivo(arquivo, caso, apenas_se_vazio=True) == 0
+    assert importar_json(arquivo.read_text(encoding="utf-8"), caso, apenas_se_vazio=True) == 0
     assert client.get("/catalogo/atividades").json() == primeira_resposta
     assert db_session.scalar(select(func.count()).select_from(DestinoCatalogoModel)) == 1
     assert db_session.scalar(select(func.count()).select_from(CatalogoAtividadeModel)) == 2
@@ -284,7 +280,7 @@ def test_seed_preserva_catalogo_ja_abastecido(db_session, catalogo):
         SQLAlchemyUnitOfWork(db_session),
     )
     arquivo = Path(__file__).resolve().parents[2] / "docs/catalogo-exemplo.json"
-    assert importar_arquivo(arquivo, caso, apenas_se_vazio=True) == 0
+    assert importar_json(arquivo.read_text(encoding="utf-8"), caso, apenas_se_vazio=True) == 0
     assert db_session.scalar(select(func.count()).select_from(CatalogoAtividadeModel)) == len(
         catalogo
     )
@@ -299,5 +295,6 @@ def test_reserva_do_seed_serializa_conexoes(db_session):
     assert SQLAlchemyCatalogoRepository(db_session).reservar_carga_inicial() is True
     with SessionLocal() as concorrente:
         concorrente.execute(text("SET LOCAL lock_timeout = '200ms'"))
+        caso_em_teste = SQLAlchemyCatalogoRepository(concorrente)
         with pytest.raises(OperationalError):
-            SQLAlchemyCatalogoRepository(concorrente).reservar_carga_inicial()
+            caso_em_teste.reservar_carga_inicial()
