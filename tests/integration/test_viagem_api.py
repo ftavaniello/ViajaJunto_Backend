@@ -124,8 +124,8 @@ def test_listar_traz_viagens_do_usuario(client, participantes):
     do_editor = client.get("/viagens", headers=headers["editor"]).json()
     do_estranho = client.get("/viagens", headers=headers["estranho"]).json()
 
-    assert [v["id"] for v in do_editor] == [viagem["id"]]
-    assert do_estranho == []
+    assert [v["id"] for v in do_editor["itens"]] == [viagem["id"]]
+    assert do_estranho["itens"] == []
 
 
 @pytest.mark.parametrize("papel", ["criador", "editor"])
@@ -209,4 +209,71 @@ def test_criador_exclui_e_ninguem_mais_acessa(client, participantes):
     assert response.status_code == 204
     for papel in ("criador", "editor", "visualizador"):
         assert client.get(f"/viagens/{viagem['id']}", headers=headers[papel]).status_code == 404
-        assert client.get("/viagens", headers=headers[papel]).json() == []
+        assert client.get("/viagens", headers=headers[papel]).json()["itens"] == []
+
+
+@pytest.mark.parametrize("papel", ["criador", "editor", "visualizador"])
+def test_lista_informa_papel_e_dados_do_painel(client, participantes, papel):
+    viagem, headers = participantes
+    response = client.get("/viagens", headers=headers[papel])
+    assert response.status_code == 200
+    body = response.json()
+    assert (body["pagina"], body["tamanho_pagina"], body["tem_proxima"]) == (1, 20, False)
+    assert body["itens"] == [{**viagem, "papel_usuario": papel}]
+    assert "codigo_convite" not in body["itens"][0]
+
+
+@pytest.mark.parametrize("query", [
+    "pagina=0", "pagina=-1", "pagina=abc", "pagina=1.5",
+    "tamanho_pagina=0", "tamanho_pagina=101", "tamanho_pagina=abc",
+])
+def test_lista_rejeita_paginacao_invalida(client, participantes, query):
+    _, headers = participantes
+    assert client.get(f"/viagens?{query}", headers=headers["criador"]).status_code == 422
+
+
+def test_lista_pagina_proprias_e_compartilhadas_sem_duplicacao(client, participantes):
+    compartilhada, headers = participantes
+    propria = _criar(client, headers["editor"], nome="Própria")
+    # Datas iguais: id da compartilhada é menor.
+    primeira = client.get(
+        "/viagens?pagina=1&tamanho_pagina=1", headers=headers["editor"],
+    ).json()
+    segunda = client.get(
+        "/viagens?pagina=2&tamanho_pagina=1", headers=headers["editor"],
+    ).json()
+    terceira = client.get(
+        "/viagens?pagina=3&tamanho_pagina=1", headers=headers["editor"],
+    ).json()
+    assert [(v["id"], v["papel_usuario"]) for v in primeira["itens"]] == [
+        (compartilhada["id"], "editor"),
+    ]
+    assert [(v["id"], v["papel_usuario"]) for v in segunda["itens"]] == [
+        (propria["id"], "criador"),
+    ]
+    assert primeira["tem_proxima"] is True
+    assert segunda["tem_proxima"] is False
+    assert terceira["itens"] == []
+    assert terceira["tem_proxima"] is False
+
+
+def test_lista_reflete_remocao_e_alteracao_do_vinculo(client, participantes, db_session):
+    from sqlalchemy import select
+
+    viagem, headers = participantes
+    editor_id = client.get("/usuarios/me", headers=headers["editor"]).json()["id"]
+    membro = db_session.scalar(select(MembroViagemModel).where(
+        MembroViagemModel.viagem_id == viagem["id"],
+        MembroViagemModel.usuario_id == editor_id,
+    ))
+    membro.papel = "visualizador"
+    db_session.flush()
+    assert client.get("/viagens", headers=headers["editor"]).json()["itens"][0][
+        "papel_usuario"
+    ] == "visualizador"
+
+    db_session.delete(membro)
+    db_session.flush()
+    assert client.get("/viagens", headers=headers["editor"]).json()["itens"] == []
+    assert client.get(f"/viagens/{viagem['id']}", headers=headers["editor"]).status_code == 404
+    assert len(client.get("/viagens", headers=headers["criador"]).json()["itens"]) == 1

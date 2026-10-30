@@ -3,6 +3,7 @@ from datetime import date, datetime
 from pydantic import BaseModel, Field
 
 from app.domain.enums import StatusViagem
+from app.domain.permissoes import PerfilViagem
 
 
 class CriarViagemRequest(BaseModel):
@@ -42,3 +43,14 @@ class ViagemResponse(BaseModel):
     status: StatusViagem = Field(examples=[StatusViagem.PLANEJANDO])
     criado_em: datetime | None = Field(examples=["2026-10-29T12:00:00Z"])
     atualizado_em: datetime | None = Field(examples=["2026-10-29T12:00:00Z"])
+
+
+class ItemListaViagensResponse(ViagemResponse):
+    papel_usuario: PerfilViagem = Field(examples=[PerfilViagem.CRIADOR])
+
+
+class PaginaViagensResponse(BaseModel):
+    itens: list[ItemListaViagensResponse]
+    pagina: int = Field(ge=1, examples=[1])
+    tamanho_pagina: int = Field(ge=1, le=100, examples=[20])
+    tem_proxima: bool = Field(examples=[False])

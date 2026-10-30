@@ -29,7 +29,7 @@ A matriz detalhada de permissões (quem edita dados gerais e status, quem exclui
 | Área | Previsão nos requisitos | Situação neste backend |
 |---|---|---|
 | Autenticação e perfil — RF01–RF03 | Cadastro, login, logout e recuperação de senha por email | Cadastro, login, logout (com revogação do token no servidor) e recuperação de senha por email implementados, além de consulta, edição, troca de senha e exclusão da conta |
-| Viagens — RF04–RF07 | Criação, edição, exclusão, painel pessoal e status de planejamento | Criação, consulta, listagem, edição, exclusão e status (RF04, RF05, RF07), com acesso restrito ao criador e colaboradores (RN06); o painel com resumo (RF06) ainda não |
+| Viagens — RF04–RF07 | Criação, edição, exclusão, painel pessoal e status de planejamento | Criação, consulta, listagem, edição, exclusão e status (RF04, RF05, RF07), com acesso restrito ao criador e colaboradores (RN06); listagem paginada para o painel pessoal (RF06), incluindo o papel do usuário |
 | Destinos — RF08–RF11 | Múltiplos destinos ordenados, informações da estadia, pesquisa e mapa de países visitados | Ainda não implementado |
 | Atividades — RF12–RF14 | Atividades por destino, horários, duração, custos e status | Ainda não implementado |
 | Orçamento — RF15–RF17 | Limite total, custos previstos e resumo financeiro por categoria | Ainda não implementado |
@@ -67,6 +67,34 @@ Quem esqueceu a senha pede um link em `POST /auth/recuperar-senha`. A resposta �
 | Recuperação de senha | Envia por email um link de uso único, válido por 60 minutos, sem revelar se o email tem conta; a redefinição encerra todas as sessões |
 | Exclusão de conta | Remove permanentemente o usuário autenticado |
 | Verificação de disponibilidade | Expõe uma rota pública de liveness da API |
+
+## Painel pessoal de viagens — RF06
+
+`GET /viagens?pagina=1&tamanho_pagina=20` exige `Authorization: Bearer <token>`.
+Retorna viagens criadas pelo usuário e compartilhadas com ele, sem duplicação.
+Cada item contém os campos da viagem (`id`, `criador_id`, `nome`, `descricao`,
+`data_inicio`, `data_fim`, `status`, `criado_em`, `atualizado_em`) e
+`papel_usuario`: `criador`, `editor` ou `visualizador`. Códigos de convite não são expostos.
+
+A resposta é um objeto com `itens`, `pagina`, `tamanho_pagina` e `tem_proxima`.
+Por exemplo, para uma conta sem viagens:
+
+```json
+{"itens": [], "pagina": 1, "tamanho_pagina": 20, "tem_proxima": false}
+```
+
+A página começa em 1; o tamanho padrão é 20, com mínimo 1 e máximo 100.
+Parâmetros inválidos retornam 422; token ausente ou inválido retorna 401.
+A ordenação é crescente por `data_inicio`, com desempate por `id`.
+Uma página além do fim retorna `itens: []` e `tem_proxima: false`.
+A paginação usa deslocamento: sem alterações nos dados, páginas sucessivas não
+repetem itens; inserções, exclusões ou mudanças de datas entre requisições podem
+mudar sua composição. Cada nova consulta reflete os vínculos e papéis atuais,
+inclusive a remoção de colaboradores.
+
+**Mudança de contrato:** o endpoint antes retornava uma lista simples. Clientes
+agora devem ler `itens` e usar os metadados para navegar pelas páginas.
+Não é necessário alterar o esquema do banco para esta funcionalidade.
 
 ## Arquitetura
 
@@ -209,7 +237,7 @@ Com as dependências instaladas no ambiente Python, a suíte pode ser executada 
 pytest tests/domain tests/application
 ```
 
-Quando o banco está indisponível, os testes de integração são marcados como ignorados (`skip`). Portanto, uma execução sem falhas nessas condições não comprova a integração com PostgreSQL.
+Os testes de integração exigem um PostgreSQL exclusivo e falham se ele estiver indisponível. Inicie-o com `docker compose --profile test up -d db_test`; o banco padrão é `viajajunto_test`, na porta 5433. As migrações são aplicadas pela suíte e as gravações de cada teste são desfeitas.
 
 ## Validação do contrato OpenAPI
 
