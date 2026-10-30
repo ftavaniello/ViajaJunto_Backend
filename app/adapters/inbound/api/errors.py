@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 
 from app.domain.errors import (
     AcessoNegado,
+    AtividadeCatalogoNaoEncontrada,
     ErroNegocio,
     NaoAutenticado,
     UsuarioNaoEncontrado,
@@ -19,6 +20,8 @@ async def tratar_erro_negocio(request: Request, error: ErroNegocio) -> JSONRespo
         headers = {"WWW-Authenticate": "Bearer"}
     elif isinstance(error, AcessoNegado):
         status = 403
-    elif isinstance(error, (UsuarioNaoEncontrado, ViagemNaoEncontrada)):
+    elif isinstance(
+        error, (UsuarioNaoEncontrado, ViagemNaoEncontrada, AtividadeCatalogoNaoEncontrada)
+    ):
         status = 404
     return JSONResponse(status_code=status, content={"detail": str(error)}, headers=headers)

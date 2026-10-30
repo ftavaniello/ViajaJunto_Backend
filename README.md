@@ -34,7 +34,7 @@ A matriz detalhada de permissões (quem edita dados gerais e status, quem exclui
 | Atividades — RF12–RF14 | Atividades por destino, horários, duração, custos e status | Ainda não implementado |
 | Orçamento — RF15–RF17 | Limite total, custos previstos e resumo financeiro por categoria | Ainda não implementado |
 | Colaboração — RF18–RF21 | Convite por código, permissões de Editor/Visualizador e notificações in-app | Ainda não implementado |
-| Avaliação e descoberta — RF22–RF25 | Avaliações, páginas públicas, catálogo com filtros e destaques | Ainda não implementado |
+| Avaliação e descoberta — RF22–RF25 | Avaliações, páginas públicas, catálogo com filtros e destaques | Catálogo público, detalhe e filtros descritivos implementados (#20); avaliações, nota mínima e destaques pendentes |
 
 Nas áreas marcadas como "Ainda não implementado", o que existe hoje é apenas o esquema do banco (tabelas e migração), sem casos de uso, rotas ou repositórios.
 
@@ -67,6 +67,14 @@ Quem esqueceu a senha pede um link em `POST /auth/recuperar-senha`. A resposta �
 | Recuperação de senha | Envia por email um link de uso único, válido por 60 minutos, sem revelar se o email tem conta; a redefinição encerra todas as sessões |
 | Exclusão de conta | Remove permanentemente o usuário autenticado |
 | Verificação de disponibilidade | Expõe uma rota pública de liveness da API |
+
+## Catálogo público de atividades
+
+A issue #20 disponibiliza `GET /catalogo/atividades` e
+`GET /catalogo/atividades/{atividade_id}`, sem autenticação. A busca aceita nome,
+categoria, localização e destino, com paginação. O abastecimento é feito pela equipe
+operadora via importação JSON transacional, sem escrita pública. Avaliações e filtro
+por nota ficam para a #23. Veja [contrato, importação e exemplos](docs/catalogo-atividades.md).
 
 ## Painel pessoal de viagens — RF06
 
@@ -356,6 +364,8 @@ obrigatórios da `main` e publique versões a partir de commits já aprovados.
 ## Escopo e evolução
 
 O módulo de usuários estabelece a base de autenticação, persistência e organização arquitetural do ViajaJunto. A evolução prevista contempla os módulos descritos nos requisitos, incluindo autorização por viagem e as integrações de catálogo e mapas previstas na arquitetura.
+
+O catálogo público de atividades e sua importação operacional estão documentados em `docs/catalogo-atividades.md`.
 
 Este repositório contém apenas o backend. A interface web e os recursos de colaboração no planejamento de viagens ainda não estão presentes nesta implementação.
 

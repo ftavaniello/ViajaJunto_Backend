@@ -6,6 +6,9 @@ gravacoes de um caso de uso fiquem na mesma transacao.
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
+from app.adapters.outbound.persistence.catalogo_repository_sqlalchemy import (
+    SQLAlchemyCatalogoRepository,
+)
 from app.adapters.outbound.persistence.membro_viagem_repository_sqlalchemy import (
     SQLAlchemyMembroViagemRepository,
 )
@@ -29,6 +32,10 @@ from app.application.use_cases.alterar_senha import AlterarSenha
 from app.application.use_cases.atualizar_usuario import AtualizarUsuario
 from app.application.use_cases.atualizar_viagem import AtualizarViagem
 from app.application.use_cases.autenticar_usuario import AutenticarUsuario
+from app.application.use_cases.consultar_catalogo import (
+    ConsultarAtividadeCatalogo,
+    ListarAtividadesCatalogo,
+)
 from app.application.use_cases.consultar_resumo_usuarios import ConsultarResumoUsuarios
 from app.application.use_cases.consultar_usuario_autenticado import ConsultarUsuarioAutenticado
 from app.application.use_cases.consultar_viagem import ConsultarViagem
@@ -37,6 +44,7 @@ from app.application.use_cases.criar_viagem import CriarViagem
 from app.application.use_cases.encerrar_sessao import EncerrarSessao
 from app.application.use_cases.excluir_usuario import ExcluirUsuario
 from app.application.use_cases.excluir_viagem import ExcluirViagem
+from app.application.use_cases.importar_catalogo import ImportarCatalogo
 from app.application.use_cases.listar_viagens import ListarViagens
 from app.application.use_cases.redefinir_senha import RedefinirSenha
 from app.application.use_cases.solicitar_recuperacao_senha import SolicitarRecuperacaoSenha
@@ -165,3 +173,15 @@ def get_redefinir_senha(db: Session = Depends(get_db)) -> RedefinirSenha:
         BcryptPasswordHasher(),
         SQLAlchemyUnitOfWork(db),
     )
+
+
+def get_listar_catalogo(db: Session = Depends(get_db)) -> ListarAtividadesCatalogo:
+    return ListarAtividadesCatalogo(SQLAlchemyCatalogoRepository(db))
+
+
+def get_consultar_atividade_catalogo(db: Session = Depends(get_db)) -> ConsultarAtividadeCatalogo:
+    return ConsultarAtividadeCatalogo(SQLAlchemyCatalogoRepository(db))
+
+
+def montar_importar_catalogo(db: Session) -> ImportarCatalogo:
+    return ImportarCatalogo(SQLAlchemyCatalogoRepository(db), SQLAlchemyUnitOfWork(db))
