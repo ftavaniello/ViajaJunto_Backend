@@ -60,6 +60,9 @@ class CatalogoAtividadeModel(Base):
     longitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
     foto_url: Mapped[str | None] = mapped_column(String(500))
     google_place_id: Mapped[str | None] = mapped_column(String(255), unique=True)
+    fonte: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="manual", server_default="manual"
+    )
     criado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

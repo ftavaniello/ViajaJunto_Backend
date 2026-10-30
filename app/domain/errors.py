@@ -28,3 +28,7 @@ class AcessoNegado(ErroNegocio):
 
 class TokenRecuperacaoInvalido(ErroNegocio):
     """Token de recuperacao inexistente, expirado ou ja utilizado (mesma mensagem)."""
+
+
+class AtividadeCatalogoNaoEncontrada(ErroNegocio):
+    pass
