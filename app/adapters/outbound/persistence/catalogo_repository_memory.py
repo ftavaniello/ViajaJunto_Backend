@@ -10,6 +10,9 @@ class CatalogoRepositoryMemory(CatalogoRepository):
         self.destinos: dict[int, DestinoCatalogo] = {}
         self.atividades: dict[int, AtividadeCatalogo] = {}
 
+    def reservar_carga_inicial(self) -> bool:
+        return not self.destinos and not self.atividades
+
     def salvar_destino(self, destino: DestinoCatalogo) -> DestinoCatalogo:
         destino = replace(destino, id=len(self.destinos) + 1)
         self.destinos[destino.id] = destino

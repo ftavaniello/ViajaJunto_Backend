@@ -253,3 +253,51 @@ def test_openapi_documenta_consulta_publica():
     for path in ("/catalogo/atividades", "/catalogo/atividades/{atividade_id}"):
         assert not schema["paths"][path]["get"].get("security")
     assert "ReviewCatalogoResponse" in schema["components"]["schemas"]
+
+
+def test_seed_do_exemplo_e_reexecucao_preservam_dados(db_session, client):
+    from pathlib import Path
+
+    arquivo = Path(__file__).resolve().parents[2] / "docs/catalogo-exemplo.json"
+    caso = ImportarCatalogo(
+        SQLAlchemyCatalogoRepository(db_session),
+        SQLAlchemyUnitOfWork(db_session),
+    )
+    assert importar_arquivo(arquivo, caso, apenas_se_vazio=True) == 2
+    item = db_session.scalar(select(CatalogoAtividadeModel).order_by(CatalogoAtividadeModel.id))
+    item.descricao = "Texto editado pela equipe"
+    db_session.flush()
+    primeira_resposta = client.get("/catalogo/atividades").json()
+
+    assert importar_arquivo(arquivo, caso, apenas_se_vazio=True) == 0
+    assert client.get("/catalogo/atividades").json() == primeira_resposta
+    assert db_session.scalar(select(func.count()).select_from(DestinoCatalogoModel)) == 1
+    assert db_session.scalar(select(func.count()).select_from(CatalogoAtividadeModel)) == 2
+    assert item.descricao == "Texto editado pela equipe"
+
+
+def test_seed_preserva_catalogo_ja_abastecido(db_session, catalogo):
+    from pathlib import Path
+
+    caso = ImportarCatalogo(
+        SQLAlchemyCatalogoRepository(db_session),
+        SQLAlchemyUnitOfWork(db_session),
+    )
+    arquivo = Path(__file__).resolve().parents[2] / "docs/catalogo-exemplo.json"
+    assert importar_arquivo(arquivo, caso, apenas_se_vazio=True) == 0
+    assert db_session.scalar(select(func.count()).select_from(CatalogoAtividadeModel)) == len(
+        catalogo
+    )
+
+
+def test_reserva_do_seed_serializa_conexoes(db_session):
+    from sqlalchemy import text
+    from sqlalchemy.exc import OperationalError
+
+    from app.infrastructure.database import SessionLocal
+
+    assert SQLAlchemyCatalogoRepository(db_session).reservar_carga_inicial() is True
+    with SessionLocal() as concorrente:
+        concorrente.execute(text("SET LOCAL lock_timeout = '200ms'"))
+        with pytest.raises(OperationalError):
+            SQLAlchemyCatalogoRepository(concorrente).reservar_carga_inicial()

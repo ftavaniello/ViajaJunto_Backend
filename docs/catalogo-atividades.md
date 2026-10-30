@@ -56,6 +56,35 @@ média nula, total zero e reviews vazios. Não usar nota zero, pois as notas vá
 vão de 1 a 5. Média real, reviews e filtro por nota continuam pendentes na #23;
 RF23 e RF24 não estão integralmente concluídos nesta issue.
 
+## Seed automático no desenvolvimento
+
+Ao iniciar a API pelo Docker Compose, a sequência é: migrações, seed e servidor.
+O seed usa `docs/catalogo-exemplo.json`, montado somente para leitura no container,
+e cadastra um destino e duas atividades fictícias **somente se o catálogo estiver
+completamente vazio** (sem destinos nem atividades).
+
+```powershell
+docker compose up -d --build api
+```
+
+Reiniciar a API não duplica nem sobrescreve dados. Se você já importou exemplos ou
+cadastrou qualquer destino/atividade, a carga inicial inteira é ignorada; o seed
+não completa nem modifica catálogos parcialmente preenchidos. Usuários, viagens
+e os demais dados não participam dessa verificação e são preservados.
+
+A carga usa transação e um lock no PostgreSQL para serializar seeds simultâneos.
+Uma falha reverte o lote e impede o servidor de iniciar com uma carga incompleta.
+
+O seed é ativado por padrão apenas no Compose de desenvolvimento. Para desativar,
+defina `SEED_CATALOGO=false` no `.env` e recrie a API. A imagem Docker, executada
+fora desse Compose, não roda seed automaticamente.
+
+Para executar manualmente o mesmo modo seguro, no ambiente Python configurado:
+
+```sh
+python -m app.adapters.inbound.cli.importar_catalogo --se-vazio docs/catalogo-exemplo.json
+```
+
 ## Origem e abastecimento autorizado
 
 Nesta versão a origem é **curadoria manual pela equipe operadora**, persistida como
@@ -100,14 +129,14 @@ transação. Nome vazio, categoria inválida, coordenada fora de faixa, referên
 destino ausente ou URL de foto fora de HTTP/HTTPS são rejeitados. Uma falha no banco
 reverte destinos e atividades do lote inteiro. IDs externos não nulos são únicos.
 
-**Importação aditiva:** não é atualização nem sincronização idempotente. Reimportar
+**Importação sem `--se-vazio` é aditiva:** não é atualização nem sincronização idempotente. Reimportar
 um arquivo com IDs externos repetidos cancela o lote; sem IDs externos, reimportar
 cria novos registros. Execute cada lote uma vez e confira o resultado. A evolução
 do mecanismo de atualização deve preservar as referências do roteiro e avaliações.
 
 ## Teste no Swagger
 
-1. Abasteça o banco de desenvolvimento usando o comando de importação.
+1. Inicie a API pelo Docker Compose; em catálogo vazio, o seed abastece os exemplos automaticamente.
 2. Abra `/docs`; as operações da tag **Catálogo** não precisam de Authorize.
 3. Liste as atividades e experimente os filtros e `tamanho_pagina=1`.
 4. Use um ID retornado para consultar o detalhe.

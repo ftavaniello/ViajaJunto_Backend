@@ -141,3 +141,55 @@ def test_falha_de_busca_nao_e_ocultada():
     repo.listar_atividades.side_effect = RuntimeError("offline")
     with pytest.raises(RuntimeError):
         ListarAtividadesCatalogo(repo).execute()
+
+
+@pytest.fixture
+def lote_seed():
+    destino = DestinoCatalogo(nome="Lisboa", pais_codigo="PT")
+    atividade = AtividadeCatalogo(destino=destino, nome="Museu", categoria="cultura")
+    return LoteCatalogo({"lisboa": destino}, [("lisboa", atividade)])
+
+
+def test_seed_repetido_nao_duplica(lote_seed):
+    repo, uow = CatalogoRepositoryMemory(), UnitOfWorkMemory()
+    caso = ImportarCatalogo(repo, uow)
+    assert caso.execute(lote_seed, apenas_se_vazio=True) == 1
+    antes = (dict(repo.destinos), dict(repo.atividades))
+    assert caso.execute(lote_seed, apenas_se_vazio=True) == 0
+    assert (repo.destinos, repo.atividades) == antes
+    assert uow.commits == 2
+
+
+def test_seed_preserva_catalogo_existente(repository, lote_seed):
+    antes = (dict(repository.destinos), dict(repository.atividades))
+    assert (
+        ImportarCatalogo(repository, UnitOfWorkMemory()).execute(
+            lote_seed,
+            apenas_se_vazio=True,
+        )
+        == 0
+    )
+    assert (repository.destinos, repository.atividades) == antes
+
+
+def test_seed_nao_duplica_destinos_preexistentes(lote_seed):
+    repo = CatalogoRepositoryMemory()
+    destino = repo.salvar_destino(DestinoCatalogo(nome="Lisboa", pais_codigo="PT"))
+    assert (
+        ImportarCatalogo(repo, UnitOfWorkMemory()).execute(
+            lote_seed,
+            apenas_se_vazio=True,
+        )
+        == 0
+    )
+    assert repo.destinos == {destino.id: destino}
+    assert repo.atividades == {}
+
+
+def test_seed_com_falha_nao_confirma(lote_seed):
+    repo, uow = Mock(), UnitOfWorkMemory()
+    repo.reservar_carga_inicial.return_value = True
+    repo.salvar_atividade.side_effect = RuntimeError("falha no seed")
+    with pytest.raises(RuntimeError):
+        ImportarCatalogo(repo, uow).execute(lote_seed, apenas_se_vazio=True)
+    assert (uow.commits, uow.rollbacks) == (0, 1)

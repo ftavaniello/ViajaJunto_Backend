@@ -45,7 +45,11 @@ class ArquivoCatalogo(BaseModel):
     atividades: list[AtividadeImportacao]
 
 
-def importar_arquivo(arquivo: Path, caso: ImportarCatalogo) -> int:
+def importar_arquivo(
+    arquivo: Path,
+    caso: ImportarCatalogo,
+    apenas_se_vazio: bool = False,
+) -> int:
     dados = ArquivoCatalogo.model_validate(json.loads(arquivo.read_text(encoding="utf-8")))
     destinos = {chave: DestinoCatalogo(**d.model_dump()) for chave, d in dados.destinos.items()}
     atividades = []
@@ -61,21 +65,29 @@ def importar_arquivo(arquivo: Path, caso: ImportarCatalogo) -> int:
                 ),
             )
         )
-    return caso.execute(LoteCatalogo(destinos, atividades))
+    return caso.execute(LoteCatalogo(destinos, atividades), apenas_se_vazio=apenas_se_vazio)
 
 
 def main():
     parser = argparse.ArgumentParser(description="Importa catálogo curado pela equipe autorizada")
     parser.add_argument("arquivo", type=Path)
+    parser.add_argument(
+        "--se-vazio",
+        action="store_true",
+        help="Seed: importa somente se não houver destinos nem atividades no catálogo.",
+    )
     args = parser.parse_args()
     try:
         with SessionLocal() as db:
-            total = importar_arquivo(args.arquivo, montar_importar_catalogo(db))
+            total = importar_arquivo(args.arquivo, montar_importar_catalogo(db), args.se_vazio)
     except IntegrityError:
         parser.exit(1, "Importação cancelada: referência externa duplicada ou vínculo inválido.\n")
     except (OSError, ValueError) as error:
         parser.exit(1, f"Importação cancelada: {error}\n")
-    print(f"{total} atividade(s) importada(s).")
+    if args.se_vazio and total == 0:
+        print("Seed ignorado: o catálogo já contém dados.")
+    else:
+        print(f"{total} atividade(s) importada(s).")
 
 
 if __name__ == "__main__":

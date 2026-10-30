@@ -22,12 +22,15 @@ class ImportarCatalogo:
         self.repository = repository
         self.uow = uow
 
-    def execute(self, lote: LoteCatalogo) -> int:
+    def execute(self, lote: LoteCatalogo, apenas_se_vazio: bool = False) -> int:
         if not lote.destinos or not lote.atividades:
             raise DadosInvalidos("Informe destinos e atividades para importar")
         if any(chave not in lote.destinos for chave, _ in lote.atividades):
             raise DadosInvalidos("Atividade referencia destino ausente no lote")
         with self.uow:
+            if apenas_se_vazio and not self.repository.reservar_carga_inicial():
+                self.uow.commit()
+                return 0
             destinos = {
                 chave: self.repository.salvar_destino(destino)
                 for chave, destino in lote.destinos.items()

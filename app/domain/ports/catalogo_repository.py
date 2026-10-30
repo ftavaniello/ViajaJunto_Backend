@@ -6,6 +6,14 @@ from app.domain.enums import CategoriaAtividade
 
 class CatalogoRepository(ABC):
     @abstractmethod
+    def reservar_carga_inicial(self) -> bool:
+        """Reserva a inicialização até o fim da transação; True se o catálogo está vazio.
+
+        Considera destinos e atividades; cargas iniciais simultâneas devem ser serializadas.
+        """
+        pass
+
+    @abstractmethod
     def salvar_destino(self, destino: DestinoCatalogo) -> DestinoCatalogo:
         pass
 

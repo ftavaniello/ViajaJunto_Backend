@@ -73,7 +73,9 @@ Quem esqueceu a senha pede um link em `POST /auth/recuperar-senha`. A resposta �
 A issue #20 disponibiliza `GET /catalogo/atividades` e
 `GET /catalogo/atividades/{atividade_id}`, sem autenticação. A busca aceita nome,
 categoria, localização e destino, com paginação. O abastecimento é feito pela equipe
-operadora via importação JSON transacional, sem escrita pública. Avaliações e filtro
+operadora via importação JSON transacional, sem escrita pública. No Docker Compose
+de desenvolvimento, um seed carrega exemplos automaticamente se o catálogo estiver vazio
+(desative com `SEED_CATALOGO=false`). Avaliações e filtro
 por nota ficam para a #23. Veja [contrato, importação e exemplos](docs/catalogo-atividades.md).
 
 ## Painel pessoal de viagens — RF06

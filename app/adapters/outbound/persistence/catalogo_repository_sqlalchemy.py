@@ -1,4 +1,4 @@
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.adapters.outbound.persistence.catalogo_model import (
@@ -13,6 +13,14 @@ from app.domain.ports.catalogo_repository import CatalogoRepository
 class SQLAlchemyCatalogoRepository(CatalogoRepository):
     def __init__(self, db: Session):
         self.db = db
+
+    def reservar_carga_inicial(self) -> bool:
+        # Lock transacional exclusivo para serializar seeds de múltiplas instâncias.
+        # A UnitOfWork libera o lock ao confirmar ou desfazer a carga.
+        self.db.execute(select(func.pg_advisory_xact_lock(202620, 1)))
+        possui_destinos = self.db.scalar(select(select(DestinoCatalogoModel.id).exists()))
+        possui_atividades = self.db.scalar(select(select(CatalogoAtividadeModel.id).exists()))
+        return not possui_destinos and not possui_atividades
 
     def salvar_destino(self, destino: DestinoCatalogo) -> DestinoCatalogo:
         model = DestinoCatalogoModel(
