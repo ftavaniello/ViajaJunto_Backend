@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.adapters.inbound.api.schemas.viagem_schema import (
     AtualizarViagemRequest,
     CriarViagemRequest,
+    ItemListaViagensResponse,
+    PaginaViagensResponse,
     ViagemResponse,
 )
 from app.adapters.inbound.api.security import get_usuario_atual
@@ -77,16 +79,33 @@ def criar(
 
 @router.get(
     "",
-    response_model=list[ViagemResponse],
+    response_model=PaginaViagensResponse,
     summary="Lista as viagens do usuário autenticado",
-    description="Viagens criadas pelo usuário ou das quais ele é colaborador.",
+    description=(
+        "Viagens próprias e compartilhadas, sem duplicação, com o papel atual do usuário. "
+        "Ordenação crescente por data_inicio e id. Paginação por deslocamento; alterações "
+        "nas viagens entre requisições podem mudar a composição das páginas."
+    ),
     responses=_NAO_AUTENTICADO,
 )
 def listar(
+    pagina: int = Query(default=1, ge=1, description="Número da página, começando em 1."),
+    tamanho_pagina: int = Query(default=20, ge=1, le=100, description="Itens por página."),
     usuario_atual: Usuario = Depends(get_usuario_atual),
     caso: ListarViagens = Depends(get_listar_viagens),
 ):
-    return [_to_response(viagem) for viagem in caso.execute(usuario_atual.id)]
+    resultado = caso.execute(usuario_atual.id, pagina, tamanho_pagina)
+    return PaginaViagensResponse(
+        itens=[
+            ItemListaViagensResponse(
+                **_to_response(item.viagem).model_dump(), papel_usuario=item.papel_usuario
+            )
+            for item in resultado.itens
+        ],
+        pagina=resultado.pagina,
+        tamanho_pagina=resultado.tamanho_pagina,
+        tem_proxima=resultado.tem_proxima,
+    )
 
 
 @router.get(

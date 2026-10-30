@@ -1,8 +1,10 @@
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from app.adapters.outbound.persistence.viagem_model import MembroViagemModel, ViagemModel
 from app.domain.entities.viagem import Viagem
+from app.domain.enums import PapelMembro
+from app.domain.participacao_viagem import ParticipacaoViagem
 from app.domain.ports.viagem_repository import ViagemRepository
 
 
@@ -40,16 +42,25 @@ class SQLAlchemyViagemRepository(ViagemRepository):
 
         return self._to_entity(model) if model else None
 
-    def listar_por_participante(self, usuario_id: int) -> list[Viagem]:
-        como_membro = select(MembroViagemModel.viagem_id).where(
-            MembroViagemModel.usuario_id == usuario_id
-        )
-        models = self.db.scalars(
-            select(ViagemModel)
-            .where(or_(ViagemModel.criador_id == usuario_id, ViagemModel.id.in_(como_membro)))
+    def listar_por_participante(
+        self, usuario_id: int, limite: int, deslocamento: int
+    ) -> list[ParticipacaoViagem]:
+        # O vínculo único por (viagem, usuário) impede duplicação no JOIN.
+        resultados = self.db.execute(
+            select(ViagemModel, MembroViagemModel.papel)
+            .outerjoin(MembroViagemModel, and_(
+                MembroViagemModel.viagem_id == ViagemModel.id,
+                MembroViagemModel.usuario_id == usuario_id,
+            ))
+            .where(or_(ViagemModel.criador_id == usuario_id, MembroViagemModel.id.is_not(None)))
             .order_by(ViagemModel.data_inicio, ViagemModel.id)
+            .limit(limite)
+            .offset(deslocamento)
         )
-        return [self._to_entity(model) for model in models]
+        return [
+            ParticipacaoViagem(self._to_entity(model), PapelMembro(papel) if papel else None)
+            for model, papel in resultados
+        ]
 
     def deletar(self, viagem_id: int) -> None:
         model = self.db.get(ViagemModel, viagem_id)

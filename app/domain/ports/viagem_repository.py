@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 from app.domain.entities.viagem import Viagem
+from app.domain.participacao_viagem import ParticipacaoViagem
 
 
 class ViagemRepository(ABC):
@@ -13,8 +14,13 @@ class ViagemRepository(ABC):
         pass
 
     @abstractmethod
-    def listar_por_participante(self, usuario_id: int) -> list[Viagem]:
-        """Viagens criadas pelo usuario ou das quais ele e colaborador."""
+    def listar_por_participante(
+        self, usuario_id: int, limite: int, deslocamento: int
+    ) -> list[ParticipacaoViagem]:
+        """Viagens e vínculos atuais, sem duplicação, por data_inicio e id crescentes.
+
+        Aplica limite e deslocamento na persistência; inclui próprias e compartilhadas.
+        """
         pass
 
     @abstractmethod

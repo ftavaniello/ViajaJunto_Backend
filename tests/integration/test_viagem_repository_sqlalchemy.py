@@ -86,7 +86,7 @@ def test_listar_por_participante_inclui_viagens_como_membro(db_session, email_te
     _criar(db_session, criador_id, "Privada")
     _membro(db_session, compartilhada.id, colaborador_id, PapelMembro.VISUALIZADOR)
 
-    ids = [v.id for v in repository.listar_por_participante(colaborador_id)]
+    ids = [p.viagem.id for p in repository.listar_por_participante(colaborador_id, 20, 0)]
 
     assert ids == [compartilhada.id, propria.id]  # ordenadas por data de início
 
@@ -131,3 +131,23 @@ def test_exclusao_sem_commit_e_desfeita(db_session, email_teste):
         # sem commit: sair do bloco desfaz a exclusao
 
     assert repository.buscar_por_id(viagem.id) is not None
+
+
+def test_listagem_paginada_com_vinculo_do_criador_e_multiplos_membros(db_session, email_teste):
+    criador = _usuario(db_session, email_teste)
+    editor = _usuario(db_session, email_teste.replace("@", "-editor@"))
+    primeira = _criar(db_session, criador)
+    segunda = _criar(db_session, editor)
+    _membro(db_session, primeira.id, criador, PapelMembro.VISUALIZADOR)
+    _membro(db_session, primeira.id, editor, PapelMembro.EDITOR)
+    _membro(db_session, segunda.id, criador, PapelMembro.VISUALIZADOR)
+    repository = SQLAlchemyViagemRepository(db_session)
+
+    assert [p.viagem.id for p in repository.listar_por_participante(criador, 10, 0)] == [
+        primeira.id, segunda.id,
+    ]
+    pagina = repository.listar_por_participante(criador, 1, 1)
+    assert len(pagina) == 1
+    assert pagina[0].viagem.id == segunda.id
+    assert pagina[0].papel_membro == PapelMembro.VISUALIZADOR
+    assert repository.listar_por_participante(criador, 1, 2) == []
