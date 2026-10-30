@@ -32,3 +32,7 @@ class TokenRecuperacaoInvalido(ErroNegocio):
 
 class AtividadeCatalogoNaoEncontrada(ErroNegocio):
     pass
+
+
+class DestinoCatalogoNaoEncontrado(ErroNegocio):
+    pass

@@ -23,8 +23,8 @@ class ImportarCatalogo:
         self.uow = uow
 
     def execute(self, lote: LoteCatalogo, apenas_se_vazio: bool = False) -> int:
-        if not lote.destinos or not lote.atividades:
-            raise DadosInvalidos("Informe destinos e atividades para importar")
+        if not lote.destinos:
+            raise DadosInvalidos("Informe destinos para importar")
         if any(chave not in lote.destinos for chave, _ in lote.atividades):
             raise DadosInvalidos("Atividade referencia destino ausente no lote")
         with self.uow:

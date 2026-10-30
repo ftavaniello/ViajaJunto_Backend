@@ -2,7 +2,7 @@ from dataclasses import replace
 from typing import cast
 
 from app.domain.entities.catalogo import AtividadeCatalogo, DestinoCatalogo
-from app.domain.enums import CategoriaAtividade
+from app.domain.enums import CategoriaAtividade, CategoriaDestino
 from app.domain.ports.catalogo_repository import CatalogoRepository
 
 
@@ -18,6 +18,26 @@ class CatalogoRepositoryMemory(CatalogoRepository):
         destino = cast(DestinoCatalogo, replace(destino, id=len(self.destinos) + 1))
         self.destinos[destino.id] = destino
         return destino
+
+    def buscar_destino(self, destino_id: int) -> DestinoCatalogo | None:
+        return self.destinos.get(destino_id)
+
+    def listar_destinos(
+        self,
+        nome: str | None,
+        pais_codigo: str | None,
+        categoria: CategoriaDestino | None,
+        limite: int,
+        deslocamento: int,
+    ) -> list[DestinoCatalogo]:
+        destinos = [
+            destino
+            for destino in sorted(self.destinos.values(), key=lambda d: d.id)
+            if (not nome or nome.lower() in destino.nome.lower())
+            and (not pais_codigo or destino.pais_codigo == pais_codigo)
+            and (not categoria or destino.categoria == categoria)
+        ]
+        return destinos[deslocamento : deslocamento + limite]
 
     def salvar_atividade(self, atividade: AtividadeCatalogo) -> AtividadeCatalogo:
         atividade = cast(AtividadeCatalogo, replace(atividade, id=len(self.atividades) + 1))

@@ -30,7 +30,7 @@ A matriz detalhada de permissões (quem edita dados gerais e status, quem exclui
 |---|---|---|
 | Autenticação e perfil — RF01–RF03 | Cadastro, login, logout e recuperação de senha por email | Cadastro, login, logout (com revogação do token no servidor) e recuperação de senha por email implementados, além de consulta, edição, troca de senha e exclusão da conta |
 | Viagens — RF04–RF07 | Criação, edição, exclusão, painel pessoal e status de planejamento | Criação, consulta, listagem, edição, exclusão e status (RF04, RF05, RF07), com acesso restrito ao criador e colaboradores (RN06); listagem paginada para o painel pessoal (RF06), incluindo o papel do usuário |
-| Destinos — RF08–RF11 | Múltiplos destinos ordenados, informações da estadia, pesquisa e mapa de países visitados | Ainda não implementado |
+| Destinos — RF08–RF11 | Múltiplos destinos ordenados, informações da estadia, pesquisa e mapa de países visitados | Catálogo público com detalhe, nome, país, categoria e busca paginada (RF09/RF10); roteiro e mapa ainda pendentes |
 | Atividades — RF12–RF14 | Atividades por destino, horários, duração, custos e status | Ainda não implementado |
 | Orçamento — RF15–RF17 | Limite total, custos previstos e resumo financeiro por categoria | Ainda não implementado |
 | Colaboração — RF18–RF21 | Convite por código, permissões de Editor/Visualizador e notificações in-app | Ainda não implementado |
@@ -67,6 +67,13 @@ Quem esqueceu a senha pede um link em `POST /auth/recuperar-senha`. A resposta �
 | Recuperação de senha | Envia por email um link de uso único, válido por 60 minutos, sem revelar se o email tem conta; a redefinição encerra todas as sessões |
 | Exclusão de conta | Remove permanentemente o usuário autenticado |
 | Verificação de disponibilidade | Expõe uma rota pública de liveness da API |
+
+## Catálogo público de destinos
+
+`GET /catalogo/destinos` pesquisa por nome, país e categoria, com paginação;
+`GET /catalogo/destinos/{destino_id}` consulta o detalhe. São consultas públicas,
+sem dados privados de viagens. A carga é operacional e reutiliza o seed e importador
+do catálogo. Veja [contrato e exemplos](docs/catalogo-destinos.md).
 
 ## Catálogo público de atividades
 

@@ -31,6 +31,13 @@ class StatusAtividade(StrEnum):
     CANCELADA = "cancelada"
 
 
+class CategoriaDestino(StrEnum):
+    CIDADE = "cidade"
+    PRAIA = "praia"
+    NATUREZA = "natureza"
+    CULTURAL = "cultural"
+
+
 class CategoriaAtividade(StrEnum):
     ALIMENTACAO = "alimentacao"
     TRANSPORTE = "transporte"

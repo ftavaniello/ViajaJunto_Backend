@@ -67,3 +67,43 @@ def test_rejeita_pais_invalido(pais):
 def test_campos_opcionais_vazios_sao_normalizados(destino):
     atividade = AtividadeCatalogo(destino=destino, nome="Museu", categoria="cultura")
     assert replace(atividade, descricao="   ", foto_url="").descricao is None
+
+
+@pytest.mark.parametrize("categoria", ["cidade", "praia", "natureza", "cultural"])
+def test_destino_categoria_e_descricao(categoria):
+    destino = DestinoCatalogo(
+        nome=" Destino ",
+        pais_codigo="BR",
+        categoria=categoria,
+        descricao=" Paisagem ",
+        latitude=Decimal("-27.5"),
+        longitude=Decimal("-48.5"),
+        foto_url="https://example.com/destino.jpg",
+    )
+    assert destino.nome == "Destino"
+    assert destino.categoria.value == categoria
+    assert destino.descricao == "Paisagem"
+
+
+@pytest.mark.parametrize(
+    "mudanca",
+    [
+        {"categoria": "hotel"},
+        {"categoria": None},
+        {"descricao": "x" * 10001},
+        {"latitude": Decimal("-91")},
+        {"longitude": Decimal("181")},
+        {"latitude": Decimal("Infinity")},
+        {"foto_url": "file:///segredo"},
+    ],
+)
+def test_destino_rejeita_dados_invalidos(mudanca):
+    dados = {"nome": "Destino", "pais_codigo": "BR", **mudanca}
+    with pytest.raises(DadosInvalidos):
+        DestinoCatalogo(**dados)
+
+
+def test_destino_compatibilidade_com_categoria_padrao_e_descricao_vazia():
+    destino = DestinoCatalogo(nome="Lisboa", pais_codigo="PT", descricao="   ")
+    assert destino.categoria.value == "cidade"
+    assert destino.descricao is None
