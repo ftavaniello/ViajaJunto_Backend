@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.domain.enums import CategoriaAtividade
+from app.domain.enums import CategoriaAtividade, CategoriaDestino
 
 
 class DestinoCatalogoResponse(BaseModel):
@@ -11,6 +11,8 @@ class DestinoCatalogoResponse(BaseModel):
     id: int
     nome: str
     pais_codigo: str
+    categoria: CategoriaDestino
+    descricao: str | None
     latitude: Decimal | None
     longitude: Decimal | None
     foto_url: str | None
@@ -63,5 +65,25 @@ class FiltrosCatalogo(BaseModel):
         description="Trecho do nome da cidade, código de país ou endereço, sem distinguir caixa.",
     )
     destino_catalogo_id: int | None = Field(default=None, ge=1)
+    pagina: int = Field(default=1, ge=1)
+    tamanho_pagina: int = Field(default=20, ge=1, le=100)
+
+
+class PaginaDestinosResponse(BaseModel):
+    itens: list[DestinoCatalogoResponse]
+    pagina: int
+    tamanho_pagina: int
+    tem_proxima: bool
+
+
+class FiltrosDestinosCatalogo(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    nome: str | None = Field(default=None, max_length=255)
+    pais_codigo: str | None = Field(
+        default=None,
+        pattern="^[A-Za-z]{2}$",
+        description="Código de país ISO alfa-2, como BR ou PT; aceita minúsculas.",
+    )
+    categoria: CategoriaDestino | None = None
     pagina: int = Field(default=1, ge=1)
     tamanho_pagina: int = Field(default=20, ge=1, le=100)

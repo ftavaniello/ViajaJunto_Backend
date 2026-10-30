@@ -93,6 +93,8 @@ def test_detalhe_publico_sem_token_e_sem_dados_privados(client, catalogo):
         "id",
         "nome",
         "pais_codigo",
+        "categoria",
+        "descricao",
         "latitude",
         "longitude",
         "foto_url",

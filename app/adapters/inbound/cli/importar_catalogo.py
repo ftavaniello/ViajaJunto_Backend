@@ -5,12 +5,12 @@ import sys
 from decimal import Decimal
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.exc import IntegrityError
 
 from app.application.use_cases.importar_catalogo import ImportarCatalogo, LoteCatalogo
 from app.domain.entities.catalogo import AtividadeCatalogo, DestinoCatalogo
-from app.domain.enums import CategoriaAtividade
+from app.domain.enums import CategoriaAtividade, CategoriaDestino
 from app.domain.errors import DadosInvalidos
 from app.infrastructure.database import SessionLocal
 from app.infrastructure.dependencies import montar_importar_catalogo
@@ -20,6 +20,8 @@ class DestinoImportacao(BaseModel):
     model_config = ConfigDict(extra="forbid")
     nome: str
     pais_codigo: str
+    categoria: CategoriaDestino = CategoriaDestino.CIDADE
+    descricao: str | None = None
     latitude: Decimal | None = None
     longitude: Decimal | None = None
     foto_url: str | None = None
@@ -42,7 +44,7 @@ class AtividadeImportacao(BaseModel):
 class ArquivoCatalogo(BaseModel):
     model_config = ConfigDict(extra="forbid")
     destinos: dict[str, DestinoImportacao]
-    atividades: list[AtividadeImportacao]
+    atividades: list[AtividadeImportacao] = Field(default_factory=list)
 
 
 def importar_json(
@@ -96,10 +98,10 @@ def main():
         parser.exit(1, "Importação cancelada: referência externa duplicada ou vínculo inválido.\n")
     except (OSError, ValueError) as error:
         parser.exit(1, f"Importação cancelada: {error}\n")
-    if args.se_vazio and total == 0:
+    if args.se_vazio and args.exemplo and total == 0:
         print("Seed ignorado: o catálogo já contém dados.")
     else:
-        print(f"{total} atividade(s) importada(s).")
+        print(f"Catálogo processado: {total} atividade(s) importada(s).")
 
 
 if __name__ == "__main__":

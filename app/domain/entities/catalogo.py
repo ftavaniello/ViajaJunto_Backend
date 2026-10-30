@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from urllib.parse import urlsplit
 
-from app.domain.enums import CategoriaAtividade
+from app.domain.enums import CategoriaAtividade, CategoriaDestino
 from app.domain.errors import DadosInvalidos
 
 
@@ -31,10 +31,22 @@ def validar_local(latitude: Decimal | None, longitude: Decimal | None, foto_url:
             raise DadosInvalidos("Foto deve ser uma URL HTTP ou HTTPS")
 
 
+def validar_pais_codigo(pais_codigo: str) -> None:
+    if not isinstance(pais_codigo, str) or not (
+        len(pais_codigo) == 2
+        and pais_codigo.isascii()
+        and pais_codigo.isalpha()
+        and pais_codigo.isupper()
+    ):
+        raise DadosInvalidos("País deve ser um código ISO alfa-2 em maiúsculas")
+
+
 @dataclass(frozen=True, kw_only=True)
 class DestinoCatalogo:
     nome: str
     pais_codigo: str
+    categoria: CategoriaDestino = CategoriaDestino.CIDADE
+    descricao: str | None = None
     latitude: Decimal | None = None
     longitude: Decimal | None = None
     foto_url: str | None = None
@@ -43,13 +55,12 @@ class DestinoCatalogo:
 
     def __post_init__(self):
         object.__setattr__(self, "nome", texto(self.nome, "Nome", 255, True))
-        if not isinstance(self.pais_codigo, str) or not (
-            len(self.pais_codigo) == 2
-            and self.pais_codigo.isascii()
-            and self.pais_codigo.isalpha()
-            and self.pais_codigo.isupper()
-        ):
-            raise DadosInvalidos("País deve ser um código ISO alfa-2 em maiúsculas")
+        validar_pais_codigo(self.pais_codigo)
+        object.__setattr__(self, "descricao", texto(self.descricao, "Descrição", 10000))
+        try:
+            object.__setattr__(self, "categoria", CategoriaDestino(self.categoria))
+        except (ValueError, TypeError) as error:
+            raise DadosInvalidos("Categoria de destino inválida") from error
         for campo, limite in (("foto_url", 500), ("google_place_id", 255)):
             object.__setattr__(self, campo, texto(getattr(self, campo), campo, limite))
         validar_local(self.latitude, self.longitude, self.foto_url)

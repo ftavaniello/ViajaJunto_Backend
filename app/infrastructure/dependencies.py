@@ -36,6 +36,10 @@ from app.application.use_cases.consultar_catalogo import (
     ConsultarAtividadeCatalogo,
     ListarAtividadesCatalogo,
 )
+from app.application.use_cases.consultar_destinos_catalogo import (
+    ConsultarDestinoCatalogo,
+    ListarDestinosCatalogo,
+)
 from app.application.use_cases.consultar_resumo_usuarios import ConsultarResumoUsuarios
 from app.application.use_cases.consultar_usuario_autenticado import ConsultarUsuarioAutenticado
 from app.application.use_cases.consultar_viagem import ConsultarViagem
@@ -185,3 +189,11 @@ def get_consultar_atividade_catalogo(db: Session = Depends(get_db)) -> Consultar
 
 def montar_importar_catalogo(db: Session) -> ImportarCatalogo:
     return ImportarCatalogo(SQLAlchemyCatalogoRepository(db), SQLAlchemyUnitOfWork(db))
+
+
+def get_listar_destinos_catalogo(db: Session = Depends(get_db)) -> ListarDestinosCatalogo:
+    return ListarDestinosCatalogo(SQLAlchemyCatalogoRepository(db))
+
+
+def get_consultar_destino_catalogo(db: Session = Depends(get_db)) -> ConsultarDestinoCatalogo:
+    return ConsultarDestinoCatalogo(SQLAlchemyCatalogoRepository(db))

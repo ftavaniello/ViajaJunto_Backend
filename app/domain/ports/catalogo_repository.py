@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 from app.domain.entities.catalogo import AtividadeCatalogo, DestinoCatalogo
-from app.domain.enums import CategoriaAtividade
+from app.domain.enums import CategoriaAtividade, CategoriaDestino
 
 
 class CatalogoRepository(ABC):
@@ -15,6 +15,22 @@ class CatalogoRepository(ABC):
 
     @abstractmethod
     def salvar_destino(self, destino: DestinoCatalogo) -> DestinoCatalogo:
+        pass
+
+    @abstractmethod
+    def buscar_destino(self, destino_id: int) -> DestinoCatalogo | None:
+        pass
+
+    @abstractmethod
+    def listar_destinos(
+        self,
+        nome: str | None,
+        pais_codigo: str | None,
+        categoria: CategoriaDestino | None,
+        limite: int,
+        deslocamento: int,
+    ) -> list[DestinoCatalogo]:
+        """Filtros combinados por E, nome parcial sem distinguir caixa; ordem crescente por id."""
         pass
 
     @abstractmethod

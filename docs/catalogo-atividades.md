@@ -34,6 +34,9 @@ Ordenação crescente por ID, com limite e deslocamento aplicados no PostgreSQL.
 Sem resultados ou após a última página, `itens=[]` e `tem_proxima=false`.
 Inserções ou exclusões entre consultas podem alterar a composição das páginas.
 
+O destino associado inclui também categoria e descrição gerais (issue #18).
+Veja [catálogo de destinos](catalogo-destinos.md) para pesquisa e seleção.
+
 Cada item tem ID, nome, descrição, categoria, endereço, latitude/longitude,
 `foto_url`, `google_place_id`, `fonte` e o destino (ID, cidade, país e dados geográficos).
 O modelo aprovado na migração usa uma foto por registro, representada por URL;
@@ -110,6 +113,8 @@ $OutputEncoding = [System.Text.UTF8Encoding]::new()
 Get-Content -Raw -Encoding utf8 meu-lote.json | python -m app.adapters.inbound.cli.importar_catalogo
 ```
 
+O lote pode conter apenas destinos, omitindo `atividades`; a mensagem final conta
+atividades, portanto informa zero nesses lotes, mesmo com destinos cadastrados.
 As chaves de `destinos`, como `lisboa`, são referências locais ao arquivo, não IDs
 persistidos. Cada atividade referencia uma dessas chaves em `destino`.
 

@@ -6,7 +6,7 @@ from app.adapters.outbound.persistence.catalogo_model import (
     DestinoCatalogoModel,
 )
 from app.domain.entities.catalogo import AtividadeCatalogo, DestinoCatalogo
-from app.domain.enums import CategoriaAtividade
+from app.domain.enums import CategoriaAtividade, CategoriaDestino
 from app.domain.ports.catalogo_repository import CatalogoRepository
 
 
@@ -29,6 +29,8 @@ class SQLAlchemyCatalogoRepository(CatalogoRepository):
                 for campo in (
                     "nome",
                     "pais_codigo",
+                    "categoria",
+                    "descricao",
                     "latitude",
                     "longitude",
                     "foto_url",
@@ -39,6 +41,30 @@ class SQLAlchemyCatalogoRepository(CatalogoRepository):
         self.db.add(model)
         self.db.flush()
         return self._destino(model)
+
+    def buscar_destino(self, destino_id: int) -> DestinoCatalogo | None:
+        model = self.db.get(DestinoCatalogoModel, destino_id)
+        return self._destino(model) if model is not None else None
+
+    def listar_destinos(
+        self,
+        nome: str | None,
+        pais_codigo: str | None,
+        categoria: CategoriaDestino | None,
+        limite: int,
+        deslocamento: int,
+    ) -> list[DestinoCatalogo]:
+        consulta = select(DestinoCatalogoModel)
+        if nome:
+            consulta = consulta.where(DestinoCatalogoModel.nome.icontains(nome, autoescape=True))
+        if pais_codigo:
+            consulta = consulta.where(DestinoCatalogoModel.pais_codigo == pais_codigo)
+        if categoria:
+            consulta = consulta.where(DestinoCatalogoModel.categoria == categoria.value)
+        models = self.db.scalars(
+            consulta.order_by(DestinoCatalogoModel.id).limit(limite).offset(deslocamento)
+        )
+        return [self._destino(model) for model in models]
 
     def salvar_atividade(self, atividade: AtividadeCatalogo) -> AtividadeCatalogo:
         model = CatalogoAtividadeModel(
@@ -111,6 +137,8 @@ class SQLAlchemyCatalogoRepository(CatalogoRepository):
                     "id",
                     "nome",
                     "pais_codigo",
+                    "categoria",
+                    "descricao",
                     "latitude",
                     "longitude",
                     "foto_url",

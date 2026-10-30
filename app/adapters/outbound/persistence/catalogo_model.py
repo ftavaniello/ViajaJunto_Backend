@@ -5,7 +5,7 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Numeric, St
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.adapters.outbound.persistence._constraints import check_in
-from app.domain.enums import CategoriaAtividade
+from app.domain.enums import CategoriaAtividade, CategoriaDestino
 from app.infrastructure.database import Base
 
 
@@ -18,6 +18,11 @@ class DestinoCatalogoModel(Base):
     nome: Mapped[str] = mapped_column(String(255), nullable=False)
     # ISO 3166-1 alfa-2 em maiúsculas. Base do critério de "país visitado" (D5).
     pais_codigo: Mapped[str] = mapped_column(String(2), nullable=False)
+    categoria: Mapped[str] = mapped_column(
+        String(20), nullable=False, default=CategoriaDestino.CIDADE.value,
+        server_default=CategoriaDestino.CIDADE.value,
+    )
+    descricao: Mapped[str | None] = mapped_column(Text)
     latitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
     longitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
     # Nome IANA (ex.: "Europe/Lisbon"), usado só para exibir horários (D6).
@@ -30,6 +35,7 @@ class DestinoCatalogoModel(Base):
     )
 
     __table_args__ = (
+        check_in("ck_destinos_catalogo_categoria", "categoria", CategoriaDestino),
         CheckConstraint("pais_codigo = upper(pais_codigo) AND length(pais_codigo) = 2",
                         name="ck_destinos_catalogo_pais"),
         CheckConstraint("latitude IS NULL OR latitude BETWEEN -90 AND 90",
