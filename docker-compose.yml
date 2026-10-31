@@ -41,6 +41,10 @@ services:
         condition: service_completed_successfully
     networks: [default, cache]
     environment:
+      # Ambiente local: aceita o segredo JWT de desenvolvimento se nenhum for definido.
+      APP_ENV: ${APP_ENV:-development}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-60}
       REDIS_URL_FILE: /run/cache/redis-url
       CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-60}
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-viajajunto}:${POSTGRES_PASSWORD:-viajajunto}@db:5432/${POSTGRES_DB:-viajajunto}
@@ -50,7 +54,12 @@ services:
       - cache-endpoint:/run/cache:ro
       - ./app:/app/app
       - ./alembic:/app/alembic
-    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    # Migracoes provisionam so o schema; a conta de demonstracao e semeada a parte,
+    # apenas em desenvolvimento (o script tambem recusa outros ambientes).
+    command: >-
+      sh -c "alembic upgrade head
+      && { [ \"$$APP_ENV\" != development ] || python -m app.adapters.inbound.cli.seed_demo; }
+      && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
 volumes:
   viajajunto_db_data:

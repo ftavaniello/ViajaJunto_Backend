@@ -29,11 +29,16 @@ def get_token_service() -> TokenService:
     )
 
 
+def montar_criar_usuario(db: Session, cache: TotalUsuariosCache) -> CriarUsuario:
+    """Composicao reutilizada pela API e por adaptadores de entrada fora do HTTP."""
+    return CriarUsuario(SQLAlchemyUsuarioRepository(db), BcryptPasswordHasher(), cache)
+
+
 def get_criar_usuario(
     db: Session = Depends(get_db),
     cache: TotalUsuariosCache = Depends(get_total_usuarios_cache),
 ) -> CriarUsuario:
-    return CriarUsuario(SQLAlchemyUsuarioRepository(db), BcryptPasswordHasher(), cache)
+    return montar_criar_usuario(db, cache)
 
 
 def get_excluir_usuario(

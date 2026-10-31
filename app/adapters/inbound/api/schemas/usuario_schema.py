@@ -1,4 +1,8 @@
+from datetime import datetime
+
 from pydantic import BaseModel, EmailStr, Field
+
+from app.domain.entities.usuario import Usuario
 
 
 class CriarUsuarioRequest(BaseModel):
@@ -15,6 +19,19 @@ class UsuarioResponse(BaseModel):
     id: int = Field(examples=[1])
     nome: str = Field(examples=["Livia Bampi"])
     email: EmailStr = Field(examples=["livia@example.com"])
+    criado_em: datetime = Field(
+        examples=["2026-10-29T14:30:00Z"],
+        description="Data e hora do cadastro da conta (UTC).",
+    )
+
+    @classmethod
+    def de_usuario(cls, usuario: Usuario) -> "UsuarioResponse":
+        return cls(
+            id=usuario.id,
+            nome=usuario.nome,
+            email=usuario.email,
+            criado_em=usuario.criado_em,
+        )
 
 
 class ResumoUsuariosResponse(BaseModel):

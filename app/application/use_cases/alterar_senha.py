@@ -26,6 +26,7 @@ class AlterarSenha:
             nome=usuario.nome,
             email=usuario.email,
             senha_hash=self.password_hasher.hash(senha_nova),
+            criado_em=usuario.criado_em,
         )
 
         self.repository.salvar(usuario_atualizado)

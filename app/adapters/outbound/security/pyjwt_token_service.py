@@ -26,6 +26,14 @@ class PyJWTTokenService(TokenService):
                 algorithms=[self.algorithm],
                 options={"require": ["sub", "exp"]},
             )
-            return int(payload["sub"])
-        except (jwt.PyJWTError, ValueError, TypeError, KeyError) as error:
+        except (jwt.PyJWTError, ValueError, TypeError) as error:
             raise NaoAutenticado("Token inválido ou expirado") from error
+
+        return _usuario_id_do_sub(payload["sub"])
+
+
+def _usuario_id_do_sub(sub: object) -> int:
+    # Emitimos sempre str(id) positivo; int() aceitaria " 42 ", "-1" ou "1_000".
+    if not isinstance(sub, str) or not (sub.isascii() and sub.isdigit()) or int(sub) <= 0:
+        raise NaoAutenticado("Token inválido ou expirado")
+    return int(sub)

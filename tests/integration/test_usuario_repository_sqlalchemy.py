@@ -1,10 +1,14 @@
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from app.adapters.outbound.persistence.usuario_repository_sqlalchemy import (
     SQLAlchemyUsuarioRepository,
 )
+from app.application.use_cases.criar_usuario import CriarUsuario
 from app.domain.entities.usuario import Usuario
 from app.domain.errors import EmailDuplicado
+from app.infrastructure.database import SessionLocal
+from tests.application.fakes import FakePasswordHasher
 
 
 def test_salvar_persiste_e_gera_id(db_session, email_teste):
@@ -59,3 +63,53 @@ def test_email_duplicado_no_banco_vira_erro_de_dominio(db_session, email_teste):
         repository.salvar(Usuario(nome="Outra", email=email_teste, senha_hash="hash456"))
 
     assert repository.buscar_por_email(email_teste) is not None
+
+
+def test_salvar_preenche_criado_em_e_atualizacao_nao_o_altera(db_session, email_teste):
+    repository = SQLAlchemyUsuarioRepository(db_session)
+    salvo = repository.salvar(Usuario(nome="Livia", email=email_teste, senha_hash="hash123"))
+
+    assert salvo.criado_em is not None
+    assert salvo.criado_em.tzinfo is not None
+
+    salvo.nome = "Livia Bampi"
+    atualizado = repository.salvar(salvo)
+
+    assert atualizado.criado_em == salvo.criado_em
+
+
+def test_cadastros_concorrentes_com_mesmo_email_um_vira_erro_controlado(db_session, email_teste):
+    outra_sessao = SessionLocal()
+
+    class RepositorioQueSofreCorrida(SQLAlchemyUsuarioRepository):
+        def buscar_por_email(self, email):
+            resultado = super().buscar_por_email(email)
+            # Outra requisicao conclui o cadastro logo apos a checagem desta.
+            SQLAlchemyUsuarioRepository(outra_sessao).salvar(
+                Usuario(nome="Concorrente", email=email, senha_hash="hash-concorrente")
+            )
+            return resultado
+
+    try:
+        criar_usuario = CriarUsuario(RepositorioQueSofreCorrida(db_session), FakePasswordHasher())
+
+        with pytest.raises(EmailDuplicado):
+            criar_usuario.execute(nome="Livia", email=email_teste, senha="senha123")
+    finally:
+        outra_sessao.close()
+
+    vencedor = SQLAlchemyUsuarioRepository(db_session).buscar_por_email(email_teste)
+    assert vencedor.nome == "Concorrente"
+
+
+def test_outra_violacao_de_integridade_nao_e_mascarada_como_email_duplicado(
+    db_session, email_teste
+):
+    repository = SQLAlchemyUsuarioRepository(db_session)
+    usuario = Usuario(nome="Livia", email=email_teste, senha_hash="hash123")
+    usuario.nome = None  # burla a entidade para violar o NOT NULL do banco
+
+    with pytest.raises(IntegrityError) as erro:
+        repository.salvar(usuario)
+
+    assert not isinstance(erro.value, EmailDuplicado)

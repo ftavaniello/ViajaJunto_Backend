@@ -5,6 +5,10 @@ from app.adapters.inbound.api.routes.auth import router as auth_router
 from app.adapters.inbound.api.routes.health import router as health_router
 from app.adapters.inbound.api.routes.usuario import router as usuario_router
 from app.domain.errors import ErroNegocio
+from app.infrastructure.config import settings, validar_settings
+
+# Recusa subir com configuracao insegura (ex.: segredo JWT padrao em producao).
+validar_settings(settings)
 
 app = FastAPI(
     title="ViajaJunto API",

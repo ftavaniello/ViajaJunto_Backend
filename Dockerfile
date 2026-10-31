@@ -16,7 +16,10 @@ RUN apk upgrade --no-cache && apk add --no-cache libpq libstdc++
 RUN python -m pip uninstall -y setuptools wheel pip \
     && python -c "import shutil, sysconfig; shutil.rmtree(sysconfig.get_path('stdlib') + '/ensurepip')"
 
+# A imagem publicada assume producao: sem JWT_SECRET_KEY propria a API nao sobe.
+# O docker-compose local sobrescreve com APP_ENV=development.
 ENV PATH="/opt/venv/bin:$PATH" \
+    APP_ENV=production \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 WORKDIR /app

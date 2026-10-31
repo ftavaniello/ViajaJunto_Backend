@@ -24,6 +24,7 @@ class AtualizarUsuario:
             nome=usuario.nome if nome is None else nome,
             email=usuario.email if email is None else email,
             senha_hash=usuario.senha_hash,
+            criado_em=usuario.criado_em,
         )
 
         return self.repository.salvar(usuario_atualizado)
