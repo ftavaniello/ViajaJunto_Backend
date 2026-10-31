@@ -25,6 +25,7 @@ def test_criar_usuario_via_api_persiste_no_banco(db_session, email_teste):
     body = response.json()
     assert body["nome"] == "Livia"
     assert body["email"] == email_teste
+    assert body["criado_em"]
     assert "senha_hash" not in body
     assert "senha" not in body
 

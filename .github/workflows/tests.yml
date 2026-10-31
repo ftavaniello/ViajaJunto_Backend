@@ -35,10 +35,13 @@ jobs:
           --health-retries 5
 
     env:
-      # Banco exclusivo de testes; as migrações são aplicadas pelo conftest.py e os
+
+       # Banco exclusivo de testes; as migrações são aplicadas pelo conftest.py e os
       # testes falham (não são ignorados) se ele estiver indisponível.
       TEST_DATABASE_URL: postgresql+psycopg2://viajajunto:viajajunto@localhost:5432/viajajunto_test
-      JWT_SECRET_KEY: ci-test-secret-key
+      APP_ENV: test
+      JWT_SECRET_KEY: ci-test-secret-key-com-pelo-menos-32-bytes
+
       TEST_REDIS_URL: redis://localhost:6379/15
 
     steps:

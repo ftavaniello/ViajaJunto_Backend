@@ -2,9 +2,9 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.adapters.outbound.persistence.usuario_model import UsuarioModel
+from app.adapters.outbound.persistence.usuario_model import USUARIOS_EMAIL_UNIQUE, UsuarioModel
 from app.domain.entities.usuario import Usuario
-from app.domain.errors import EmailDuplicado
+from app.domain.errors import EmailDuplicado, UsuarioNaoEncontrado
 from app.domain.ports.usuario_repository import UsuarioRepository
 
 
@@ -25,6 +25,8 @@ class SQLAlchemyUsuarioRepository(UsuarioRepository):
             self.db.add(model)
         else:
             model = self.db.get(UsuarioModel, usuario.id)
+            if model is None:
+                raise UsuarioNaoEncontrado("Usuário não encontrado")
             model.nome = usuario.nome
             model.email = usuario.email
             model.senha_hash = usuario.senha_hash
@@ -37,7 +39,10 @@ class SQLAlchemyUsuarioRepository(UsuarioRepository):
         except IntegrityError as error:
             # A unicidade do email e garantida pelo banco; a verificacao previa no
             # caso de uso nao elimina a condicao de corrida entre requisicoes.
-            raise EmailDuplicado("Já existe um usuário com este email") from error
+
+            if _constraint_violada(error) == USUARIOS_EMAIL_UNIQUE:
+                raise EmailDuplicado("Já existe um usuário com este email") from error
+            raise
         self.db.refresh(model)
 
         return self._to_entity(model)
@@ -72,3 +77,9 @@ class SQLAlchemyUsuarioRepository(UsuarioRepository):
             criado_em=model.criado_em,
             versao_sessao=model.versao_sessao,
         )
+
+
+def _constraint_violada(error: IntegrityError) -> str | None:
+    # psycopg2 expoe o nome da constraint violada em diag.constraint_name.
+    diag = getattr(error.orig, "diag", None)
+    return getattr(diag, "constraint_name", None)

@@ -17,7 +17,7 @@ class Usuario:
         validar_nome(nome)
         validar_email(email)
         if not senha_hash.strip():
-            raise DadosInvalidos("Senha n\u00e3o pode ser vazia")
+            raise DadosInvalidos("Senha não pode ser vazia")
 
         self.id = id
         self.nome = nome

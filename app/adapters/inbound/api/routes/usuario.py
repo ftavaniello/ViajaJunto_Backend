@@ -47,7 +47,7 @@ def criar(
     caso: CriarUsuario = Depends(get_criar_usuario),
 ):
     usuario = caso.execute(nome=request.nome, email=request.email, senha=request.senha)
-    return UsuarioResponse(id=usuario.id, nome=usuario.nome, email=usuario.email)
+    return UsuarioResponse.de_usuario(usuario)
 
 
 @router.get(
@@ -90,11 +90,7 @@ def resumo(
     },
 )
 def me(usuario_atual: Usuario = Depends(get_usuario_atual)):
-    return UsuarioResponse(
-        id=usuario_atual.id,
-        nome=usuario_atual.nome,
-        email=usuario_atual.email,
-    )
+    return UsuarioResponse.de_usuario(usuario_atual)
 
 
 @router.patch(
@@ -116,7 +112,7 @@ def atualizar_me(
     caso: AtualizarUsuario = Depends(get_atualizar_usuario),
 ):
     usuario = caso.execute(usuario_id=usuario_atual.id, nome=request.nome, email=request.email)
-    return UsuarioResponse(id=usuario.id, nome=usuario.nome, email=usuario.email)
+    return UsuarioResponse.de_usuario(usuario)
 
 
 @router.patch(

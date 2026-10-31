@@ -10,6 +10,7 @@ def test_cria_usuario_valido():
     assert usuario.nome == "Livia"
     assert usuario.email == "livia@example.com"
     assert usuario.senha_hash == "hash123"
+    assert usuario.criado_em is None
 
 
 @pytest.mark.parametrize(

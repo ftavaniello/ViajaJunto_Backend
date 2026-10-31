@@ -25,7 +25,7 @@ class PyJWTTokenService(TokenService):
 
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
 
-    def verificar_token(self, token: str) -> DadosToken:
+        def verificar_token(self, token: str) -> DadosToken:
         try:
             payload = jwt.decode(
                 token,
@@ -35,10 +35,17 @@ class PyJWTTokenService(TokenService):
                 options={"require": ["sub", "exp", "jti", "ver"]},
             )
             return DadosToken(
-                usuario_id=int(payload["sub"]),
+                usuario_id=_usuario_id_do_sub(payload["sub"]),
                 jti=str(payload["jti"]),
                 versao_sessao=int(payload["ver"]),
                 expira_em=datetime.fromtimestamp(payload["exp"], tz=timezone.utc),
             )
         except (jwt.PyJWTError, ValueError, TypeError, KeyError) as error:
             raise NaoAutenticado("Token inválido ou expirado") from error
+
+
+def _usuario_id_do_sub(sub: object) -> int:
+    # Emitimos sempre str(id) positivo; int() aceitaria " 42 ", "-1" ou "1_000".
+    if not isinstance(sub, str) or not (sub.isascii() and sub.isdigit()) or int(sub) <= 0:
+        raise NaoAutenticado("Token inválido ou expirado")
+    return int(sub)

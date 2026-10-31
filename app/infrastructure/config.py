@@ -1,38 +1,114 @@
 import os
+from collections.abc import Mapping
+from dataclasses import dataclass
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
+# Ambientes em que a API pode subir com o segredo JWT de exemplo. Qualquer outro
+# valor de APP_ENV (production, staging...) exige um segredo proprio.
+AMBIENTES_DE_DESENVOLVIMENTO = frozenset({"development", "test"})
+JWT_SECRET_KEY_DEV = "changeme-super-secret-key-dev-only"
+# HS256 usa chave de 256 bits; segredos menores enfraquecem a assinatura.
+JWT_SECRET_KEY_TAMANHO_MINIMO = 32
 
+
+class ConfiguracaoInvalida(RuntimeError):
+    """Configuracao de ambiente insegura ou incompleta; a API nao deve subir."""
+
+
+@dataclass
 class Settings:
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL",
-        "postgresql+psycopg2://viajajunto:viajajunto@localhost:5432/viajajunto",
-    )
-    JWT_SECRET_KEY: str = os.getenv(
-        "JWT_SECRET_KEY",
-        "changeme-super-secret-key-dev-only",
-    )
-    REDIS_URL: str = os.getenv("REDIS_URL", "")
-    REDIS_URL_FILE: str = os.getenv("REDIS_URL_FILE", "")
-    CACHE_TTL_SECONDS: int = max(1, int(os.getenv("CACHE_TTL_SECONDS", "60")))
-    JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRE_MINUTES: int = int(os.getenv("JWT_EXPIRE_MINUTES", "60"))
+    APP_ENV: str
+    DATABASE_URL: str
+    JWT_SECRET_KEY: str
+    JWT_ALGORITHM: str
+    JWT_EXPIRE_MINUTES: int
+    REDIS_URL: str
+    REDIS_URL_FILE: str
+    CACHE_TTL_SECONDS: int
     # Envio de email: "console" (escreve no log, so dev) ou "smtp".
-    EMAIL_BACKEND: str = os.getenv("EMAIL_BACKEND", "console").strip().lower()
-    EMAIL_REMETENTE: str = os.getenv(
-        "EMAIL_REMETENTE", "ViajaJunto <nao-responda@viajajunto.local>"
-    )
-    SMTP_HOST: str = os.getenv("SMTP_HOST", "localhost")
-    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "1025"))
-    SMTP_USUARIO: str = os.getenv("SMTP_USUARIO", "")
-    SMTP_SENHA: str = os.getenv("SMTP_SENHA", "")
-    SMTP_STARTTLS: bool = os.getenv("SMTP_STARTTLS", "false").strip().lower() == "true"
+    EMAIL_BACKEND: str
+    EMAIL_REMETENTE: str
+    SMTP_HOST: str
+    SMTP_PORT: int
+    SMTP_USUARIO: str
+    SMTP_SENHA: str
+    SMTP_STARTTLS: bool
     # Pagina do frontend que recebe ?token=... e pede a nova senha.
-    RECUPERACAO_SENHA_URL: str = os.getenv(
-        "RECUPERACAO_SENHA_URL", "http://localhost:3000/redefinir-senha"
+    RECUPERACAO_SENHA_URL: str
+
+    @property
+    def em_desenvolvimento(self) -> bool:
+        return self.APP_ENV in AMBIENTES_DE_DESENVOLVIMENTO
+
+
+def carregar_settings(env: Mapping[str, str] = os.environ) -> Settings:
+    app_env = (env.get("APP_ENV") or "development").strip().lower()
+    # Variavel vazia (ex.: "${JWT_SECRET_KEY:-}" no compose) conta como ausente.
+    jwt_secret = env.get("JWT_SECRET_KEY") or ""
+    if not jwt_secret and app_env in AMBIENTES_DE_DESENVOLVIMENTO:
+        jwt_secret = JWT_SECRET_KEY_DEV
+
+    return Settings(
+        APP_ENV=app_env,
+        DATABASE_URL=env.get(
+            "DATABASE_URL",
+            "postgresql+psycopg2://viajajunto:viajajunto@localhost:5432/viajajunto",
+        ),
+        JWT_SECRET_KEY=jwt_secret,
+        JWT_ALGORITHM="HS256",
+        JWT_EXPIRE_MINUTES=_inteiro(env, "JWT_EXPIRE_MINUTES", 60),
+        REDIS_URL=env.get("REDIS_URL", ""),
+        REDIS_URL_FILE=env.get("REDIS_URL_FILE", ""),
+        CACHE_TTL_SECONDS=max(1, _inteiro(env, "CACHE_TTL_SECONDS", 60)),
+        EMAIL_BACKEND=env.get("EMAIL_BACKEND", "console").strip().lower(),
+        EMAIL_REMETENTE=env.get("EMAIL_REMETENTE", "ViajaJunto <nao-responda@viajajunto.local>"),
+        SMTP_HOST=env.get("SMTP_HOST", "localhost"),
+        SMTP_PORT=_inteiro(env, "SMTP_PORT", 1025),
+        SMTP_USUARIO=env.get("SMTP_USUARIO", ""),
+        SMTP_SENHA=env.get("SMTP_SENHA", ""),
+        SMTP_STARTTLS=env.get("SMTP_STARTTLS", "false").strip().lower() == "true",
+        RECUPERACAO_SENHA_URL=env.get(
+            "RECUPERACAO_SENHA_URL", "http://localhost:3000/redefinir-senha"
+        ),
     )
 
 
-settings = Settings()
+def validar_settings(config: Settings) -> None:
+    """Falha cedo, na inicializacao, em vez de emitir tokens com segredo fraco.
+
+    As mensagens nunca incluem o valor do segredo, para nao vaza-lo em logs.
+    """
+    if config.JWT_EXPIRE_MINUTES <= 0:
+        raise ConfiguracaoInvalida("JWT_EXPIRE_MINUTES deve ser maior que zero")
+
+    if config.em_desenvolvimento:
+        return
+
+    if not config.JWT_SECRET_KEY:
+        raise ConfiguracaoInvalida(
+            f"JWT_SECRET_KEY é obrigatória quando APP_ENV={config.APP_ENV}"
+        )
+    if config.JWT_SECRET_KEY == JWT_SECRET_KEY_DEV:
+        raise ConfiguracaoInvalida(
+            "JWT_SECRET_KEY de desenvolvimento não pode ser usada fora do desenvolvimento"
+        )
+    if len(config.JWT_SECRET_KEY.encode()) < JWT_SECRET_KEY_TAMANHO_MINIMO:
+        raise ConfiguracaoInvalida(
+            f"JWT_SECRET_KEY deve ter pelo menos {JWT_SECRET_KEY_TAMANHO_MINIMO} bytes"
+        )
+
+
+def _inteiro(env: Mapping[str, str], nome: str, padrao: int) -> int:
+    valor = env.get(nome)
+    if valor is None or not valor.strip():
+        return padrao
+    try:
+        return int(valor)
+    except ValueError as error:
+        raise ConfiguracaoInvalida(f"{nome} deve ser um número inteiro") from error
+
+
+settings = carregar_settings()

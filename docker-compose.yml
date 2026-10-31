@@ -74,6 +74,10 @@ services:
         condition: service_started
     networks: [default, cache]
     environment:
+      # Ambiente local: aceita o segredo JWT de desenvolvimento se nenhum for definido.
+      APP_ENV: ${APP_ENV:-development}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-60}
       REDIS_URL_FILE: /run/cache/redis-url
       CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-60}
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-viajajunto}:${POSTGRES_PASSWORD:-viajajunto}@db:5432/${POSTGRES_DB:-viajajunto}
@@ -89,8 +93,13 @@ services:
       - ./app:/app/app
       - ./alembic:/app/alembic
       - ./docs/catalogo-exemplo.json:/app/docs/catalogo-exemplo.json:ro
+    # Migracoes provisionam so o schema; a conta de demonstracao e semeada a parte,
+    # apenas em desenvolvimento (o script tambem recusa outros ambientes).
     command: >-
       sh -c 'alembic upgrade head &&
+      if [ "$$APP_ENV" = "development" ]; then
+        python -m app.adapters.inbound.cli.seed_demo;
+      fi &&
       if [ "$$SEED_CATALOGO" = "true" ]; then
         python -m app.adapters.inbound.cli.importar_catalogo --se-vazio --exemplo;
       fi &&

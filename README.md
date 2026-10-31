@@ -181,7 +181,7 @@ ou BYPASS; a autenticacao continua consultando o banco. Veja o [roteiro de infra
 
 Os contratos completos, exemplos e respostas estão disponíveis no Swagger UI em [http://localhost:8000/docs](http://localhost:8000/docs), com a aplicação em execução. O documento OpenAPI fica em `/openapi.json`.
 
-A proteção das rotas de conta é feita pela dependência `get_usuario_atual`. Tokens ausentes, inválidos, expirados, encerrados por logout ou por troca de senha e tokens de contas excluídas resultam em resposta `401`. O JWT utiliza o algoritmo HS256, tem validade padrão de 60 minutos e carrega `jti` (identificador da sessão) e `ver` (versão das sessões do usuário). A lista de tokens revogados fica no PostgreSQL, não no Redis, e uma falha ao consultá-la nunca autoriza a requisição. Detalhes em [`docs/sessoes-e-logout.md`](docs/sessoes-e-logout.md).
+A proteção das rotas de conta é feita pela dependência `get_usuario_atual`. Tokens ausentes, inválidos, expirados, encerrados por logout ou por troca de senha e tokens de contas excluídas resultam em resposta `401`. O JWT utiliza o algoritmo HS256, tem validade padrão de 60 minutos e carrega `jti` (identificador da sessão) e `ver` (versão das sessões do usuário). A lista de tokens revogados fica no PostgreSQL, não no Redis, e uma falha ao consultá-la nunca autoriza a requisição. As claims `sub`, `exp`, `jti` e `ver` são obrigatórias, e `sub` precisa ser o identificador numérico positivo emitido pelo login. Tokens sem essas claims, com outro algoritmo ou sem assinatura (`alg: none`) também resultam em `401`, nunca em erro interno. Detalhes em [`docs/sessoes-e-logout.md`](docs/sessoes-e-logout.md).
 
 ### Viagens e permissões
 
@@ -200,11 +200,19 @@ Quem não participa da viagem recebe `404`, a mesma resposta de uma viagem inexi
 
 ## Dados e persistência
 
-A entidade `Usuario` representa a conta e contém `id`, `nome`, `email`, `senha_hash` e `criado_em` (preenchido pelo banco na criação). Ela rejeita nome, email e hash vazios. A validação do formato do email e dos contratos HTTP fica nos schemas Pydantic; a verificação de email duplicado ocorre nos casos de uso de cadastro e atualização.
+A entidade `Usuario` representa a conta e contém `id`, `nome`, `email`, `senha_hash` e `criado_em`. Ela rejeita nome, email e hash vazios. A validação do formato do email e dos contratos HTTP fica nos schemas Pydantic; a verificação de email duplicado ocorre nos casos de uso de cadastro e atualização.
 
-Na persistência, a tabela `usuarios` possui identificador inteiro gerado automaticamente, uma restrição de unicidade para o email e a data de criação (`criado_em`, `TIMESTAMPTZ`). A API utiliza `SQLAlchemyUsuarioRepository`; a implementação `UsuarioRepositoryMemory` está disponível como alternativa para testes.
+Na persistência, a tabela `usuarios` possui identificador inteiro gerado automaticamente, uma restrição de unicidade para o email (`usuarios_email_key`) e `criado_em` com fuso horário, preenchido pelo banco no cadastro e mantido nas atualizações. A checagem prévia do caso de uso não impede que duas requisições simultâneas cadastrem o mesmo email. Por isso, o repositório converte a violação dessa restrição específica em `EmailDuplicado` (resposta `400`). Outras violações de integridade não são mascaradas como email duplicado. A API utiliza `SQLAlchemyUsuarioRepository`; a implementação `UsuarioRepositoryMemory`, que aplica a mesma regra de unicidade, está disponível como alternativa para testes.
 
-As migrações em `alembic/versions/` criam a tabela de usuários, inserem um usuário de exemplo, atualizam a senha desse registro para um hash bcrypt e, por fim, criam o esquema de viagens descrito abaixo (migração `a3f1c9d27b45`) e, em seguida, a tabela `tokens_revogados` e a coluna `usuarios.versao_sessao`, usadas pelo logout e pela troca de senha (migração `b7e4d2a91c03`). No ambiente Docker Compose, as migrações pendentes são aplicadas antes da inicialização da API. Os dados do PostgreSQL são mantidos em um volume Docker.
+As migrações em `alembic/versions/` provisionam somente o schema; elas não criam contas. Elas criam a tabela de usuários e, em seguida, o esquema de viagens descrito abaixo (migração `a3f1c9d27b45`, que também adiciona `usuarios.criado_em`; contas existentes recebem o horário da migração) e a tabela `tokens_revogados` e a coluna `usuarios.versao_sessao`, usadas pelo logout e pela troca de senha (migração `b7e4d2a91c03`). A revisão `c86992485fcc`, que antes inseria uma conta de demonstração, permanece na cadeia sem alterar dados. A revisão `7059dc664d50` só converte para bcrypt uma conta `usuario@viajajunto.com` que ainda tenha a senha original do seed em texto puro, e nunca sobrescreve uma senha já definida. No ambiente Docker Compose, as migrações pendentes são aplicadas antes da inicialização da API. Os dados do PostgreSQL são mantidos em um volume Docker.
+
+A conta de demonstração (`usuario@viajajunto.com` / `changeme123`) é criada à parte, apenas em desenvolvimento:
+
+```sh
+python -m app.adapters.inbound.cli.seed_demo
+```
+
+O comando usa o caso de uso de cadastro, é recusado quando `APP_ENV` não é `development` nem `test` e mantém sem alterações uma conta que já exista com esse email. O Compose local o executa automaticamente após as migrações quando `APP_ENV=development`. Bancos migrados antes dessa mudança continuam com a conta de demonstração; remova-a manualmente em ambientes que não sejam de desenvolvimento.
 
 O modelo oficial prevê também `viagem`, `membro_viagem`, `destino_catalogo`, `destino_viagem`, `catalogo_atividade`, `atividade_viagem`, `orcamento` e `avaliacao`. Ele distingue os dados reutilizáveis do catálogo das informações de cada viagem: por exemplo, a atividade do catálogo descreve um local ou experiência, enquanto sua associação à viagem registra horário, custo previsto e status. Cada viagem possui um orçamento, e as avaliações se vinculam às atividades do catálogo.
 
@@ -221,6 +229,7 @@ app/
 │   └── use_cases/         # Operações da aplicação
 ├── adapters/
 │   ├── inbound/api/       # Rotas, schemas HTTP e autenticação das requisições
+│   ├── inbound/cli/       # Comandos de linha (seed de demonstração)
 │   └── outbound/          # Persistência e implementações de segurança
 ├── infrastructure/       # Configuração e acesso ao banco
 └── main.py               # Criação da aplicação FastAPI
@@ -229,6 +238,7 @@ docs/                     # Decisões de produto, modelo de dados, sessões e re
 tests/
 ├── domain/               # Validações da entidade Usuario
 ├── application/          # Casos de uso com repositório em memória
+├── infrastructure/       # Validação da configuração de ambiente
 └── integration/          # API, persistência e modelo de dados com PostgreSQL
 ```
 
@@ -242,7 +252,9 @@ docker compose up -d --build
 
 O Compose inicia o PostgreSQL, aguarda o banco ficar saudável, aplica as migrações e disponibiliza a API na porta `8000`. O ambiente utiliza recarga automática ao editar os arquivos da aplicação. Também sobe o Mailpit: os emails enviados pela API (recuperação de senha) aparecem em [http://localhost:8025](http://localhost:8025) e nunca saem para a internet. Veja [`docs/recuperacao-de-senha.md`](docs/recuperacao-de-senha.md#como-ver-os-emails-no-ambiente-de-teste).
 
-A configuração da API utiliza `DATABASE_URL`, `JWT_SECRET_KEY` e `JWT_EXPIRE_MINUTES`. O Compose fornece `DATABASE_URL` diretamente ao container da API. Na configuração atual, as variáveis JWT do `.env` não são repassadas ao container, que usa os valores padrão; para personalizá-las nesse modo de execução, é necessário incluí-las no ambiente do serviço `api`. A chave padrão é destinada ao desenvolvimento local.
+A configuração da API utiliza `APP_ENV`, `DATABASE_URL`, `JWT_SECRET_KEY` e `JWT_EXPIRE_MINUTES`. O Compose fornece `DATABASE_URL` diretamente ao container da API e repassa `APP_ENV` (padrão `development`), `JWT_SECRET_KEY` e `JWT_EXPIRE_MINUTES` a partir do `.env`.
+
+A configuração é validada na inicialização. Com `APP_ENV` igual a `development` ou `test`, uma `JWT_SECRET_KEY` vazia usa a chave de exemplo. Em qualquer outro ambiente, a API não sobe se a chave estiver ausente, se for a chave de exemplo ou se tiver menos de 32 bytes. A mensagem de erro não exibe o valor da chave. A imagem Docker define `APP_ENV=production` por padrão. Portanto, ao executá-la fora do Compose local, forneça uma chave própria, por exemplo gerada com `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
 
 ## Testes
 
