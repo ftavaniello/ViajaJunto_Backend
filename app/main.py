@@ -4,6 +4,7 @@ from app.adapters.inbound.api.errors import tratar_erro_negocio
 from app.adapters.inbound.api.routes.auth import router as auth_router
 from app.adapters.inbound.api.routes.catalogo import router as catalogo_router
 from app.adapters.inbound.api.routes.destinos_catalogo import router as destinos_catalogo_router
+from app.adapters.inbound.api.routes.destinos_viagem import router as destinos_viagem_router
 from app.adapters.inbound.api.routes.health import router as health_router
 from app.adapters.inbound.api.routes.usuario import router as usuario_router
 from app.adapters.inbound.api.routes.viagem import router as viagem_router
@@ -30,6 +31,7 @@ app = FastAPI(
             "name": "Viagens",
             "description": "Viagens do usuário; acesso restrito ao criador e colaboradores.",
         },
+        {"name": "Roteiro", "description": "Destinos e estadias privadas das viagens."},
         {"name": "Catálogo", "description": "Consulta pública de atividades e locais."},
         {"name": "Health", "description": "Verificação de disponibilidade da API."},
     ],
@@ -43,3 +45,4 @@ app.include_router(usuario_router)
 app.include_router(viagem_router)
 app.include_router(catalogo_router)
 app.include_router(destinos_catalogo_router)
+app.include_router(destinos_viagem_router)

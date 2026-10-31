@@ -30,7 +30,7 @@ A matriz detalhada de permissões (quem edita dados gerais e status, quem exclui
 |---|---|---|
 | Autenticação e perfil — RF01–RF03 | Cadastro, login, logout e recuperação de senha por email | Cadastro, login, logout (com revogação do token no servidor) e recuperação de senha por email implementados, além de consulta, edição, troca de senha e exclusão da conta |
 | Viagens — RF04–RF07 | Criação, edição, exclusão, painel pessoal e status de planejamento | Criação, consulta, listagem, edição, exclusão e status (RF04, RF05, RF07), com acesso restrito ao criador e colaboradores (RN06); listagem paginada para o painel pessoal (RF06), incluindo o papel do usuário |
-| Destinos — RF08–RF11 | Múltiplos destinos ordenados, informações da estadia, pesquisa e mapa de países visitados | Catálogo público com detalhe, nome, país, categoria e busca paginada (RF09/RF10); roteiro e mapa ainda pendentes |
+| Destinos — RF08–RF11 | Múltiplos destinos ordenados, informações da estadia, pesquisa e mapa de países visitados | Catálogo público e destinos do roteiro com datas e ordem de visita (RF08–RF10); mapa de países visitados pendente |
 | Atividades — RF12–RF14 | Atividades por destino, horários, duração, custos e status | Ainda não implementado |
 | Orçamento — RF15–RF17 | Limite total, custos previstos e resumo financeiro por categoria | Ainda não implementado |
 | Colaboração — RF18–RF21 | Convite por código, permissões de Editor/Visualizador e notificações in-app | Ainda não implementado |
@@ -67,6 +67,14 @@ Quem esqueceu a senha pede um link em `POST /auth/recuperar-senha`. A resposta �
 | Recuperação de senha | Envia por email um link de uso único, válido por 60 minutos, sem revelar se o email tem conta; a redefinição encerra todas as sessões |
 | Exclusão de conta | Remove permanentemente o usuário autenticado |
 | Verificação de disponibilidade | Expõe uma rota pública de liveness da API |
+
+## Destinos do roteiro
+
+As rotas autenticadas `/viagens/{viagem_id}/destinos` permitem listar, consultar,
+adicionar, editar, excluir e reordenar paradas. Criador e Editor alteram;
+Visualizador consulta. Datas respeitam o período da viagem e os dados públicos
+do catálogo são preservados. Excluir uma parada remove suas atividades.
+Veja [contrato, regras e teste pelo Swagger](docs/destinos-roteiro.md).
 
 ## Catálogo público de destinos
 

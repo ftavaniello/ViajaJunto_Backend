@@ -5,6 +5,7 @@ from app.domain.errors import (
     AcessoNegado,
     AtividadeCatalogoNaoEncontrada,
     DestinoCatalogoNaoEncontrado,
+    DestinoViagemNaoEncontrado,
     ErroNegocio,
     NaoAutenticado,
     UsuarioNaoEncontrado,
@@ -28,6 +29,7 @@ async def tratar_erro_negocio(request: Request, error: ErroNegocio) -> JSONRespo
             ViagemNaoEncontrada,
             AtividadeCatalogoNaoEncontrada,
             DestinoCatalogoNaoEncontrado,
+            DestinoViagemNaoEncontrado,
         ),
     ):
         status = 404
