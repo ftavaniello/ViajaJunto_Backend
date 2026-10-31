@@ -3,7 +3,16 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
-from app.adapters.outbound.persistence.usuario_model import UsuarioModel  # noqa: F401
+from app.adapters.outbound.persistence import (  # noqa: F401
+    avaliacao_model,
+    catalogo_model,
+    notificacao_model,
+    recuperacao_senha_model,
+    roteiro_model,
+    token_revogado_model,
+    usuario_model,
+    viagem_model,
+)
 from app.infrastructure.config import settings
 from app.infrastructure.database import Base
 

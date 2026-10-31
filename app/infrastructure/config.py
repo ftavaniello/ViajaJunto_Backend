@@ -28,6 +28,16 @@ class Settings:
     REDIS_URL: str
     REDIS_URL_FILE: str
     CACHE_TTL_SECONDS: int
+    # Envio de email: "console" (escreve no log, so dev) ou "smtp".
+    EMAIL_BACKEND: str
+    EMAIL_REMETENTE: str
+    SMTP_HOST: str
+    SMTP_PORT: int
+    SMTP_USUARIO: str
+    SMTP_SENHA: str
+    SMTP_STARTTLS: bool
+    # Pagina do frontend que recebe ?token=... e pede a nova senha.
+    RECUPERACAO_SENHA_URL: str
 
     @property
     def em_desenvolvimento(self) -> bool:
@@ -53,6 +63,16 @@ def carregar_settings(env: Mapping[str, str] = os.environ) -> Settings:
         REDIS_URL=env.get("REDIS_URL", ""),
         REDIS_URL_FILE=env.get("REDIS_URL_FILE", ""),
         CACHE_TTL_SECONDS=max(1, _inteiro(env, "CACHE_TTL_SECONDS", 60)),
+        EMAIL_BACKEND=env.get("EMAIL_BACKEND", "console").strip().lower(),
+        EMAIL_REMETENTE=env.get("EMAIL_REMETENTE", "ViajaJunto <nao-responda@viajajunto.local>"),
+        SMTP_HOST=env.get("SMTP_HOST", "localhost"),
+        SMTP_PORT=_inteiro(env, "SMTP_PORT", 1025),
+        SMTP_USUARIO=env.get("SMTP_USUARIO", ""),
+        SMTP_SENHA=env.get("SMTP_SENHA", ""),
+        SMTP_STARTTLS=env.get("SMTP_STARTTLS", "false").strip().lower() == "true",
+        RECUPERACAO_SENHA_URL=env.get(
+            "RECUPERACAO_SENHA_URL", "http://localhost:3000/redefinir-senha"
+        ),
     )
 
 

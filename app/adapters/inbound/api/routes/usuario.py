@@ -119,7 +119,12 @@ def atualizar_me(
     "/me/senha",
     status_code=204,
     summary="Altera a senha do usuário autenticado",
-    description="Exige a senha atual para autorizar a troca. Requer token JWT válido.",
+    description=(
+        "Exige a senha atual para autorizar a troca. Requer token JWT válido. "
+        "A troca encerra todas as sessões do usuário, inclusive a usada nesta "
+        "requisição: os tokens emitidos antes passam a receber 401 e é preciso "
+        "fazer login novamente com a nova senha."
+    ),
     responses={
         400: {"description": "Senha atual incorreta"},
         401: {"description": "Token ausente, inválido ou expirado"},

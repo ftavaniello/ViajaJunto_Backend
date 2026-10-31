@@ -1,0 +1,30 @@
+{
+  "destinos": {
+    "lisboa": {
+      "nome": "Lisboa",
+      "pais_codigo": "PT",
+      "latitude": "38.722300",
+      "longitude": "-9.139300",
+      "categoria": "cidade",
+      "descricao": "Destino de demonstração em Portugal."
+    }
+  },
+  "atividades": [
+    {
+      "destino": "lisboa",
+      "nome": "Passeio cultural de exemplo",
+      "categoria": "cultura",
+      "descricao": "Registro fictício para testar o catálogo público.",
+      "endereco": "Lisboa, Portugal",
+      "foto_url": null,
+      "google_place_id": null
+    },
+    {
+      "destino": "lisboa",
+      "nome": "Refeição de exemplo",
+      "categoria": "alimentacao",
+      "descricao": "Registro fictício de demonstração.",
+      "endereco": "Lisboa, Portugal"
+    }
+  ]
+}

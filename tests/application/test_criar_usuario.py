@@ -1,5 +1,6 @@
 import pytest
 
+from app.adapters.outbound.persistence.unit_of_work_memory import UnitOfWorkMemory
 from app.adapters.outbound.persistence.usuario_repository_memory import (
     UsuarioRepositoryMemory,
 )
@@ -9,7 +10,9 @@ from tests.application.fakes import FakePasswordHasher, RepositorioComCorrida
 
 
 def test_cria_usuario_com_sucesso():
-    criar_usuario = CriarUsuario(UsuarioRepositoryMemory(), FakePasswordHasher())
+    criar_usuario = CriarUsuario(
+        UsuarioRepositoryMemory(), FakePasswordHasher(), UnitOfWorkMemory()
+    )
 
     usuario = criar_usuario.execute(
         nome="Livia",
@@ -24,7 +27,9 @@ def test_cria_usuario_com_sucesso():
 
 
 def test_nao_permite_email_duplicado():
-    criar_usuario = CriarUsuario(UsuarioRepositoryMemory(), FakePasswordHasher())
+    criar_usuario = CriarUsuario(
+        UsuarioRepositoryMemory(), FakePasswordHasher(), UnitOfWorkMemory()
+    )
     criar_usuario.execute(nome="Livia", email="livia@example.com", senha="senha123")
 
     with pytest.raises(ValueError, match="Já existe um usuário com este email"):

@@ -12,6 +12,7 @@ class Usuario:
         senha_hash: str,
         id: int | None = None,
         criado_em: datetime | None = None,
+        versao_sessao: int = 0,
     ):
         validar_nome(nome)
         validar_email(email)
@@ -22,5 +23,7 @@ class Usuario:
         self.nome = nome
         self.email = email
         self.senha_hash = senha_hash
-        # Atribuido pela persistencia no cadastro; None enquanto nao foi salvo.
         self.criado_em = criado_em
+        # Tokens emitidos com versao diferente da atual sao recusados; incrementar
+        # encerra todas as sessoes do usuario (ex.: troca de senha).
+        self.versao_sessao = versao_sessao

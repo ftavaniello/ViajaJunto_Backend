@@ -1,5 +1,6 @@
 import pytest
 
+from app.adapters.outbound.persistence.unit_of_work_memory import UnitOfWorkMemory
 from app.adapters.outbound.persistence.usuario_repository_memory import (
     UsuarioRepositoryMemory,
 )
@@ -13,7 +14,7 @@ def _autenticar_usuario():
     password_hasher = FakePasswordHasher()
     token_service = FakeTokenService()
 
-    CriarUsuario(repository, password_hasher).execute(
+    CriarUsuario(repository, password_hasher, UnitOfWorkMemory()).execute(
         nome="Livia",
         email="livia@example.com",
         senha="senha123",
@@ -28,7 +29,9 @@ def test_autentica_com_credenciais_corretas_e_retorna_token_valido():
     token = autenticar_usuario.execute(email="livia@example.com", senha="senha123")
 
     assert isinstance(token, str)
-    assert token_service.verificar_token(token) == 1
+    dados = token_service.verificar_token(token)
+    assert dados.usuario_id == 1
+    assert dados.versao_sessao == 0
 
 
 def test_rejeita_senha_incorreta():

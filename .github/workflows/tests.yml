@@ -2,9 +2,9 @@ name: Tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 jobs:
   pytest:
@@ -25,19 +25,23 @@ jobs:
         env:
           POSTGRES_USER: viajajunto
           POSTGRES_PASSWORD: viajajunto
-          POSTGRES_DB: viajajunto
+          POSTGRES_DB: viajajunto_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U viajajunto -d viajajunto"
+          --health-cmd "pg_isready -U viajajunto -d viajajunto_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql+psycopg2://viajajunto:viajajunto@localhost:5432/viajajunto
+
+       # Banco exclusivo de testes; as migrações são aplicadas pelo conftest.py e os
+      # testes falham (não são ignorados) se ele estiver indisponível.
+      TEST_DATABASE_URL: postgresql+psycopg2://viajajunto:viajajunto@localhost:5432/viajajunto_test
       APP_ENV: test
       JWT_SECRET_KEY: ci-test-secret-key-com-pelo-menos-32-bytes
+
       TEST_REDIS_URL: redis://localhost:6379/15
 
     steps:
@@ -50,9 +54,6 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
-
-      - name: Run migrations
-        run: alembic upgrade head
 
       - name: Run tests with coverage
         run: pytest --cov --cov-report=term-missing --cov-report=xml --cov-report=html

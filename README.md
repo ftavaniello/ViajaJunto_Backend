@@ -4,7 +4,7 @@ O ViajaJunto é uma aplicação web de planejamento colaborativo de viagens, des
 
 A plataforma foi especificada para reunir viagens com múltiplos destinos, datas, atividades e orçamento, além de visualização geográfica e descoberta de locais e atividades com avaliações da comunidade. A colaboração é o eixo do produto: o criador de uma viagem pode convidar outros usuários e definir quem pode editar ou apenas consultar o planejamento.
 
-Este repositório contém a API do projeto. Atualmente, o backend implementa o módulo de usuários: cadastro, autenticação e gerenciamento da própria conta. As funcionalidades de planejamento de viagens fazem parte da evolução prevista e ainda não estão implementadas.
+Este repositório contém a API do projeto. Atualmente, o backend implementa o módulo de usuários (cadastro, autenticação e gerenciamento da própria conta) e o cadastro de viagens com a política central de acesso por viagem. As demais funcionalidades de planejamento fazem parte da evolução prevista; o esquema do banco para elas, porém, já foi definido e criado (ver [Dados e persistência](#dados-e-persistência)).
 
 ## Visão do produto
 
@@ -22,17 +22,21 @@ O criador compartilha a viagem por código de convite e administra os colaborado
 
 O acesso aos dados de uma viagem deve ser restrito ao criador e aos colaboradores convidados. Os recursos públicos de catálogo e avaliações constituem um acesso separado do planejamento privado.
 
+A matriz detalhada de permissões (quem edita dados gerais e status, quem exclui a viagem, quem avalia), as regras de convite e as demais decisões de produto estão em [`docs/decisoes-de-produto.md`](docs/decisoes-de-produto.md).
+
 ## Escopo especificado e implementação atual
 
 | Área | Previsão nos requisitos | Situação neste backend |
 |---|---|---|
-| Autenticação e perfil — RF01–RF03 | Cadastro, login, logout e recuperação de senha por email | Cadastro e login implementados, além de consulta, edição, troca de senha e exclusão da conta; não há endpoint de logout/revogação nem recuperação por email |
-| Viagens — RF04–RF07 | Criação, edição, exclusão, painel pessoal e status de planejamento | Ainda não implementado |
-| Destinos — RF08–RF11 | Múltiplos destinos ordenados, informações da estadia, pesquisa e mapa de países visitados | Ainda não implementado |
+| Autenticação e perfil — RF01–RF03 | Cadastro, login, logout e recuperação de senha por email | Cadastro, login, logout (com revogação do token no servidor) e recuperação de senha por email implementados, além de consulta, edição, troca de senha e exclusão da conta |
+| Viagens — RF04–RF07 | Criação, edição, exclusão, painel pessoal e status de planejamento | Criação, consulta, listagem, edição, exclusão e status (RF04, RF05, RF07), com acesso restrito ao criador e colaboradores (RN06); listagem paginada para o painel pessoal (RF06), incluindo o papel do usuário |
+| Destinos — RF08–RF11 | Múltiplos destinos ordenados, informações da estadia, pesquisa e mapa de países visitados | Catálogo público com detalhe, nome, país, categoria e busca paginada (RF09/RF10); roteiro e mapa ainda pendentes |
 | Atividades — RF12–RF14 | Atividades por destino, horários, duração, custos e status | Ainda não implementado |
 | Orçamento — RF15–RF17 | Limite total, custos previstos e resumo financeiro por categoria | Ainda não implementado |
 | Colaboração — RF18–RF21 | Convite por código, permissões de Editor/Visualizador e notificações in-app | Ainda não implementado |
-| Avaliação e descoberta — RF22–RF25 | Avaliações, páginas públicas, catálogo com filtros e destaques | Ainda não implementado |
+| Avaliação e descoberta — RF22–RF25 | Avaliações, páginas públicas, catálogo com filtros e destaques | Catálogo público, detalhe e filtros descritivos implementados (#20); avaliações, nota mínima e destaques pendentes |
+
+Nas áreas marcadas como "Ainda não implementado", o que existe hoje é apenas o esquema do banco (tabelas e migração), sem casos de uso, rotas ou repositórios.
 
 A especificação também estabelece interface responsiva e acessível, carregamento das páginas principais em menos de três segundos em condições normais, autenticação por token, senhas com hash e separação entre frontend e backend. Esses são requisitos do produto; este README não representa uma validação de atendimento a todos eles.
 
@@ -46,17 +50,68 @@ As operações de conta usam a rota `/usuarios/me`: o usuário é identificado p
 
 O usuário autenticado pode consultar seu perfil, alterar nome e email, trocar a senha mediante confirmação da senha atual e excluir sua conta. Após a exclusão, o token deixa de permitir acesso às rotas protegidas, pois a conta não é mais encontrada.
 
+No logout (`POST /auth/logout`), o servidor revoga o token enviado: ele e qualquer cópia dele deixam de funcionar imediatamente, enquanto outras sessões do usuário continuam válidas. A troca de senha encerra todas as sessões, inclusive a atual. A política completa está em [`docs/sessoes-e-logout.md`](docs/sessoes-e-logout.md).
+
+Quem esqueceu a senha pede um link em `POST /auth/recuperar-senha`. A resposta é sempre a mesma, exista ou não a conta. O link chega por email, vale por 60 minutos e só pode ser usado uma vez; `POST /auth/redefinir-senha` troca a senha e encerra todas as sessões. No Docker Compose os emails ficam no Mailpit, em <http://localhost:8025>. Detalhes, configuração e passo a passo em [`docs/recuperacao-de-senha.md`](docs/recuperacao-de-senha.md).
+
 ## Funcionalidades disponíveis
 
 | Funcionalidade | Comportamento |
 |---|---|
 | Cadastro | Cria uma conta com email único e senha de pelo menos oito caracteres no contrato da API |
 | Autenticação | Valida email e senha e retorna um token JWT |
+| Logout | Revoga no servidor o token usado; cópias dele também passam a receber 401 |
 | Consulta de perfil | Retorna os dados da própria conta |
 | Atualização de perfil | Altera nome e/ou email; campos omitidos ou nulos permanecem inalterados |
-| Alteração de senha | Exige a senha atual e uma nova senha de pelo menos oito caracteres |
+| Alteração de senha | Exige a senha atual e uma nova senha de pelo menos oito caracteres; encerra todas as sessões |
+| Recuperação de senha | Envia por email um link de uso único, válido por 60 minutos, sem revelar se o email tem conta; a redefinição encerra todas as sessões |
 | Exclusão de conta | Remove permanentemente o usuário autenticado |
 | Verificação de disponibilidade | Expõe uma rota pública de liveness da API |
+
+## Catálogo público de destinos
+
+`GET /catalogo/destinos` pesquisa por nome, país e categoria, com paginação;
+`GET /catalogo/destinos/{destino_id}` consulta o detalhe. São consultas públicas,
+sem dados privados de viagens. A carga é operacional e reutiliza o seed e importador
+do catálogo. Veja [contrato e exemplos](docs/catalogo-destinos.md).
+
+## Catálogo público de atividades
+
+A issue #20 disponibiliza `GET /catalogo/atividades` e
+`GET /catalogo/atividades/{atividade_id}`, sem autenticação. A busca aceita nome,
+categoria, localização e destino, com paginação. O abastecimento é feito pela equipe
+operadora via importação JSON transacional, sem escrita pública. No Docker Compose
+de desenvolvimento, um seed carrega exemplos automaticamente se o catálogo estiver vazio
+(desative com `SEED_CATALOGO=false`). Avaliações e filtro
+por nota ficam para a #23. Veja [contrato, importação e exemplos](docs/catalogo-atividades.md).
+
+## Painel pessoal de viagens — RF06
+
+`GET /viagens?pagina=1&tamanho_pagina=20` exige `Authorization: Bearer <token>`.
+Retorna viagens criadas pelo usuário e compartilhadas com ele, sem duplicação.
+Cada item contém os campos da viagem (`id`, `criador_id`, `nome`, `descricao`,
+`data_inicio`, `data_fim`, `status`, `criado_em`, `atualizado_em`) e
+`papel_usuario`: `criador`, `editor` ou `visualizador`. Códigos de convite não são expostos.
+
+A resposta é um objeto com `itens`, `pagina`, `tamanho_pagina` e `tem_proxima`.
+Por exemplo, para uma conta sem viagens:
+
+```json
+{"itens": [], "pagina": 1, "tamanho_pagina": 20, "tem_proxima": false}
+```
+
+A página começa em 1; o tamanho padrão é 20, com mínimo 1 e máximo 100.
+Parâmetros inválidos retornam 422; token ausente ou inválido retorna 401.
+A ordenação é crescente por `data_inicio`, com desempate por `id`.
+Uma página além do fim retorna `itens: []` e `tem_proxima: false`.
+A paginação usa deslocamento: sem alterações nos dados, páginas sucessivas não
+repetem itens; inserções, exclusões ou mudanças de datas entre requisições podem
+mudar sua composição. Cada nova consulta reflete os vínculos e papéis atuais,
+inclusive a remoção de colaboradores.
+
+**Mudança de contrato:** o endpoint antes retornava uma lista simples. Clientes
+agora devem ler `itens` e usar os metadados para navegar pelas páginas.
+Não é necessário alterar o esquema do banco para esta funcionalidade.
 
 ## Arquitetura
 
@@ -70,10 +125,10 @@ Essa separação permite exercitar os casos de uso com um repositório em memór
 
 | Camada | Responsabilidade no projeto |
 |---|---|
-| `domain` | Define a entidade `Usuario` e os contratos `UsuarioRepository`, `PasswordHasher` e `TokenService` |
-| `application` | Coordena os casos de uso de criação, autenticação, atualização, alteração de senha e exclusão de usuários |
+| `domain` | Define as entidades `Usuario` e `Viagem`, a matriz de permissões por viagem (`permissoes.py`), os contratos `UsuarioRepository`, `ViagemRepository`, `MembroViagemRepository`, `PasswordHasher` e `TokenService`, o vocabulário fechado do domínio (`enums.py`: papéis, status, categorias, tipos de notificação) e as constantes das regras de negócio (`regras.py`) |
+| `application` | Coordena os casos de uso de usuários (incluindo logout e recuperação de senha) e de viagens; `PoliticaAcessoViagem` centraliza a autorização das operações sobre uma viagem |
 | `adapters/inbound` | Recebe requisições HTTP, valida contratos com Pydantic e converte resultados em respostas da API |
-| `adapters/outbound` | Implementa persistência com SQLAlchemy ou memória, hash com bcrypt e tokens com PyJWT |
+| `adapters/outbound` | Implementa persistência com SQLAlchemy ou memória, hash com bcrypt, tokens com PyJWT e envio de email por SMTP |
 | `infrastructure` | Centraliza configurações, conexão e sessões do banco de dados |
 
 Em uma operação de cadastro, por exemplo, a rota recebe os dados e chama `CriarUsuario`. O caso de uso consulta o repositório para verificar duplicidade de email, solicita o hash da senha e salva a entidade. As implementações concretas de persistência e hashing são fornecidas ao caso de uso pela camada de entrada.
@@ -94,12 +149,13 @@ ou BYPASS; a autenticacao continua consultando o banco. Veja o [roteiro de infra
 | Python | Linguagem do backend; a imagem Docker utiliza Python 3.13 |
 | FastAPI e Uvicorn | API HTTP e servidor da aplicação |
 | Pydantic | Validação dos dados de entrada e definição dos contratos de resposta |
-| SQLAlchemy e PostgreSQL | Mapeamento e armazenamento relacional dos usuários |
+| SQLAlchemy e PostgreSQL | Mapeamento e armazenamento relacional dos dados |
 | Alembic | Versionamento e aplicação de alterações no banco |
 | bcrypt | Geração e verificação de hashes de senha |
 | PyJWT | Emissão e validação de tokens JWT |
 | Redis / ElastiCache local | Cache da contagem de usuarios, provisionado via CloudFormation no MiniStack |
 | Docker Compose | Inicializacao do MiniStack, deploy AWS CLI, PostgreSQL e API |
+| Mailpit | Servidor SMTP falso do ambiente local: captura os emails da API e os exibe em http://localhost:8025 |
 | pytest | Testes automatizados de domínio, aplicação e integração |
 
 ## API HTTP
@@ -109,15 +165,38 @@ ou BYPASS; a autenticacao continua consultando o banco. Veja o [roteiro de infra
 | `GET` | `/health` | Público | Verifica se a API está respondendo |
 | `POST` | `/usuarios` | Público | Cadastra um usuário |
 | `POST` | `/auth/login` | Público | Autentica e retorna o token de acesso |
+| `POST` | `/auth/logout` | JWT | Encerra a sessão do token enviado |
+| `POST` | `/auth/recuperar-senha` | Público | Envia por email um link de redefinição de senha |
+| `POST` | `/auth/redefinir-senha` | Público | Define uma nova senha com o token recebido por email |
 | `GET` | `/usuarios/resumo` | JWT | Consulta o total de usuarios, com cache Redis e header X-Cache |
 | `GET` | `/usuarios/me` | JWT | Consulta o perfil autenticado |
 | `PATCH` | `/usuarios/me` | JWT | Atualiza nome e/ou email |
 | `PATCH` | `/usuarios/me/senha` | JWT | Altera a senha da conta |
 | `DELETE` | `/usuarios/me` | JWT | Exclui a conta autenticada |
+| `POST` | `/viagens` | JWT | Cria uma viagem; o criador é o usuário do token |
+| `GET` | `/viagens` | JWT | Lista as viagens criadas pelo usuário ou das quais ele é colaborador |
+| `GET` | `/viagens/{viagem_id}` | JWT + participante | Consulta uma viagem |
+| `PATCH` | `/viagens/{viagem_id}` | JWT + criador ou editor | Altera nome, descrição, datas e/ou status |
+| `DELETE` | `/viagens/{viagem_id}` | JWT + criador | Exclui a viagem com colaboradores, roteiro e orçamento |
 
 Os contratos completos, exemplos e respostas estão disponíveis no Swagger UI em [http://localhost:8000/docs](http://localhost:8000/docs), com a aplicação em execução. O documento OpenAPI fica em `/openapi.json`.
 
-A proteção das rotas de conta é feita pela dependência `get_usuario_atual`. Tokens ausentes, inválidos ou expirados e tokens de contas excluídas resultam em resposta `401`. O JWT utiliza o algoritmo HS256 e tem validade padrão de 60 minutos. As claims `sub` e `exp` são obrigatórias, e `sub` precisa ser o identificador numérico positivo emitido pelo login. Tokens sem essas claims, com outro algoritmo ou sem assinatura (`alg: none`) também resultam em `401`, nunca em erro interno. A troca de senha não revoga tokens já emitidos; eles continuam sujeitos à expiração e à existência da conta.
+A proteção das rotas de conta é feita pela dependência `get_usuario_atual`. Tokens ausentes, inválidos, expirados, encerrados por logout ou por troca de senha e tokens de contas excluídas resultam em resposta `401`. O JWT utiliza o algoritmo HS256, tem validade padrão de 60 minutos e carrega `jti` (identificador da sessão) e `ver` (versão das sessões do usuário). A lista de tokens revogados fica no PostgreSQL, não no Redis, e uma falha ao consultá-la nunca autoriza a requisição. As claims `sub`, `exp`, `jti` e `ver` são obrigatórias, e `sub` precisa ser o identificador numérico positivo emitido pelo login. Tokens sem essas claims, com outro algoritmo ou sem assinatura (`alg: none`) também resultam em `401`, nunca em erro interno. Detalhes em [`docs/sessoes-e-logout.md`](docs/sessoes-e-logout.md).
+
+### Viagens e permissões
+
+O usuário autenticado cria uma viagem com nome, descrição opcional e datas de início e fim; a data de fim não pode ser anterior à de início. Toda viagem nasce com status `planejando` e pode passar livremente para `confirmada` ou `concluida` (RF07). O criador é sempre o usuário do token: um `criador_id` enviado no corpo é ignorado. Na criação também é gerado o código de convite, que ainda não é exposto pela API.
+
+A autorização fica em `PoliticaAcessoViagem` (aplicação), que consulta a matriz de `app/domain/permissoes.py`. Os próximos módulos (destinos, atividades, orçamento, membros) devem usar a mesma política.
+
+| Ação | Criador | Editor | Visualizador | Outro usuário |
+|---|---|---|---|---|
+| Consultar a viagem | Sim | Sim | Sim | `404` |
+| Editar dados gerais e status | Sim | Sim | `403` | `404` |
+| Excluir a viagem | Sim | `403` | `403` | `404` |
+| Gerenciar membros (futuro) | Sim | `403` | `403` | `404` |
+
+Quem não participa da viagem recebe `404`, a mesma resposta de uma viagem inexistente, para não revelar ids de viagens alheias. A exclusão remove colaboradores, roteiro e orçamento pela cascata do banco, na mesma transação.
 
 ## Dados e persistência
 
@@ -125,7 +204,7 @@ A entidade `Usuario` representa a conta e contém `id`, `nome`, `email`, `senha_
 
 Na persistência, a tabela `usuarios` possui identificador inteiro gerado automaticamente, uma restrição de unicidade para o email (`usuarios_email_key`) e `criado_em` com fuso horário, preenchido pelo banco no cadastro e mantido nas atualizações. A checagem prévia do caso de uso não impede que duas requisições simultâneas cadastrem o mesmo email. Por isso, o repositório converte a violação dessa restrição específica em `EmailDuplicado` (resposta `400`). Outras violações de integridade não são mascaradas como email duplicado. A API utiliza `SQLAlchemyUsuarioRepository`; a implementação `UsuarioRepositoryMemory`, que aplica a mesma regra de unicidade, está disponível como alternativa para testes.
 
-As migrações em `alembic/versions/` provisionam somente o schema; elas não criam contas. A revisão `c86992485fcc`, que antes inseria uma conta de demonstração, permanece na cadeia sem alterar dados. A revisão `7059dc664d50` só converte para bcrypt uma conta `usuario@viajajunto.com` que ainda tenha a senha original do seed em texto puro, e nunca sobrescreve uma senha já definida. A migração `3f1a9c2d7b40` adiciona `criado_em`; contas existentes recebem o horário da migração, pois a data real de cadastro não era registrada. No ambiente Docker Compose, as migrações pendentes são aplicadas antes da inicialização da API. Os dados do PostgreSQL são mantidos em um volume Docker.
+As migrações em `alembic/versions/` provisionam somente o schema; elas não criam contas. Elas criam a tabela de usuários e, em seguida, o esquema de viagens descrito abaixo (migração `a3f1c9d27b45`, que também adiciona `usuarios.criado_em`; contas existentes recebem o horário da migração) e a tabela `tokens_revogados` e a coluna `usuarios.versao_sessao`, usadas pelo logout e pela troca de senha (migração `b7e4d2a91c03`). A revisão `c86992485fcc`, que antes inseria uma conta de demonstração, permanece na cadeia sem alterar dados. A revisão `7059dc664d50` só converte para bcrypt uma conta `usuario@viajajunto.com` que ainda tenha a senha original do seed em texto puro, e nunca sobrescreve uma senha já definida. No ambiente Docker Compose, as migrações pendentes são aplicadas antes da inicialização da API. Os dados do PostgreSQL são mantidos em um volume Docker.
 
 A conta de demonstração (`usuario@viajajunto.com` / `changeme123`) é criada à parte, apenas em desenvolvimento:
 
@@ -137,7 +216,7 @@ O comando usa o caso de uso de cadastro, é recusado quando `APP_ENV` não é `d
 
 O modelo oficial prevê também `viagem`, `membro_viagem`, `destino_catalogo`, `destino_viagem`, `catalogo_atividade`, `atividade_viagem`, `orcamento` e `avaliacao`. Ele distingue os dados reutilizáveis do catálogo das informações de cada viagem: por exemplo, a atividade do catálogo descreve um local ou experiência, enquanto sua associação à viagem registra horário, custo previsto e status. Cada viagem possui um orçamento, e as avaliações se vinculam às atividades do catálogo.
 
-Essas entidades ainda não possuem implementação ou migrações neste backend. O usuário já possui os campos do modelo especificado, inclusive `criado_em`; a única diferença é o nome da tabela, que é `usuarios`.
+Essas tabelas, mais `notificacoes` e `tokens_recuperacao_senha`, foram criadas pela migração `a3f1c9d27b45` conforme as decisões de [`docs/decisoes-de-produto.md`](docs/decisoes-de-produto.md): identificadores inteiros com o código de convite em coluna própria, avaliação de atividades com ranking de destinos derivado, papéis, validade de convites, datas, moeda e efeitos das exclusões. Viagens e membros já têm repositórios (`SQLAlchemyViagemRepository`, `SQLAlchemyMembroViagemRepository`); `tokens_recuperacao_senha` é usada pela recuperação de senha; as demais tabelas ainda são apenas esquema. A migração `e2c7a4f19d36` alinhou os status de viagem ao RF07 (`planejando`, `confirmada`, `concluida`). A tabela `usuarios` ganhou o campo `criado_em` previsto no documento; ela mantém o nome `usuarios` em vez de `usuario`.
 
 ## Organização do repositório
 
@@ -155,11 +234,12 @@ app/
 ├── infrastructure/       # Configuração e acesso ao banco
 └── main.py               # Criação da aplicação FastAPI
 alembic/                  # Migrações do banco de dados
+docs/                     # Decisões de produto, modelo de dados, sessões e recuperação de senha
 tests/
 ├── domain/               # Validações da entidade Usuario
 ├── application/          # Casos de uso com repositório em memória
 ├── infrastructure/       # Validação da configuração de ambiente
-└── integration/          # API e persistência com PostgreSQL
+└── integration/          # API, persistência e modelo de dados com PostgreSQL
 ```
 
 ## Execução local
@@ -170,7 +250,7 @@ Com Docker e Docker Compose disponíveis, crie um arquivo `.env` a partir de `.e
 docker compose up -d --build
 ```
 
-O Compose inicia o PostgreSQL, aguarda o banco ficar saudável, aplica as migrações e disponibiliza a API na porta `8000`. O ambiente utiliza recarga automática ao editar os arquivos da aplicação.
+O Compose inicia o PostgreSQL, aguarda o banco ficar saudável, aplica as migrações e disponibiliza a API na porta `8000`. O ambiente utiliza recarga automática ao editar os arquivos da aplicação. Também sobe o Mailpit: os emails enviados pela API (recuperação de senha) aparecem em [http://localhost:8025](http://localhost:8025) e nunca saem para a internet. Veja [`docs/recuperacao-de-senha.md`](docs/recuperacao-de-senha.md#como-ver-os-emails-no-ambiente-de-teste).
 
 A configuração da API utiliza `APP_ENV`, `DATABASE_URL`, `JWT_SECRET_KEY` e `JWT_EXPIRE_MINUTES`. O Compose fornece `DATABASE_URL` diretamente ao container da API e repassa `APP_ENV` (padrão `development`), `JWT_SECRET_KEY` e `JWT_EXPIRE_MINUTES` a partir do `.env`.
 
@@ -186,7 +266,7 @@ Com as dependências instaladas no ambiente Python, a suíte pode ser executada 
 pytest tests/domain tests/application
 ```
 
-Quando o banco está indisponível, os testes de integração são marcados como ignorados (`skip`). Portanto, uma execução sem falhas nessas condições não comprova a integração com PostgreSQL.
+Os testes de integração exigem um PostgreSQL exclusivo e falham se ele estiver indisponível. Inicie-o com `docker compose --profile test up -d db_test`; o banco padrão é `viajajunto_test`, na porta 5433. As migrações são aplicadas pela suíte e as gravações de cada teste são desfeitas.
 
 ## Validação do contrato OpenAPI
 
@@ -305,6 +385,8 @@ obrigatórios da `main` e publique versões a partir de commits já aprovados.
 ## Escopo e evolução
 
 O módulo de usuários estabelece a base de autenticação, persistência e organização arquitetural do ViajaJunto. A evolução prevista contempla os módulos descritos nos requisitos, incluindo autorização por viagem e as integrações de catálogo e mapas previstas na arquitetura.
+
+O catálogo público de atividades e sua importação operacional estão documentados em `docs/catalogo-atividades.md`.
 
 Este repositório contém apenas o backend. A interface web e os recursos de colaboração no planejamento de viagens ainda não estão presentes nesta implementação.
 
