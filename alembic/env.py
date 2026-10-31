@@ -9,6 +9,7 @@ from app.adapters.outbound.persistence import (  # noqa: F401
     notificacao_model,
     recuperacao_senha_model,
     roteiro_model,
+    seed_demonstracao_repository_sqlalchemy,
     token_revogado_model,
     usuario_model,
     viagem_model,

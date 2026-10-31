@@ -93,8 +93,8 @@ services:
       - ./app:/app/app
       - ./alembic:/app/alembic
       - ./docs/catalogo-exemplo.json:/app/docs/catalogo-exemplo.json:ro
-    # Migracoes provisionam so o schema; a conta de demonstracao e semeada a parte,
-    # apenas em desenvolvimento (o script tambem recusa outros ambientes).
+    # Migrações criam o schema; os seeds locais preparam os dados em seguida.
+    # O seed completo só cria os cenários na primeira execução e preserva edições.
     command: >-
       sh -c 'alembic upgrade head &&
       if [ "$$APP_ENV" = "development" ]; then
@@ -102,6 +102,9 @@ services:
       fi &&
       if [ "$$SEED_CATALOGO" = "true" ]; then
         python -m app.adapters.inbound.cli.importar_catalogo --se-vazio --exemplo;
+      fi &&
+      if [ "$$APP_ENV" = "development" ]; then
+        python -m app.adapters.inbound.cli.seed_demo --completo;
       fi &&
       uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload'
 

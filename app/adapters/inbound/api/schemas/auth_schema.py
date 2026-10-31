@@ -2,8 +2,8 @@ from pydantic import BaseModel, EmailStr, Field
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr = Field(examples=["livia@example.com"])
-    senha: str = Field(examples=["senhaSegura123"])
+    email: EmailStr = Field(examples=["criador.demo@example.com"])
+    senha: str = Field(examples=["DemoViaja123!"])
 
 
 class TokenResponse(BaseModel):

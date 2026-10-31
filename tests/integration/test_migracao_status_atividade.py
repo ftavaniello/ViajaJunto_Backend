@@ -5,6 +5,7 @@ from pathlib import Path
 from alembic.config import Config
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.schema import CreateSchema, DropSchema
@@ -74,7 +75,10 @@ def test_historico_completo_em_schema_vazio_tem_uma_ponta(banco_de_testes, monke
     try:
         command.upgrade(config, "head")
         with isolado.connect() as conexao:
-            assert conexao.scalar(text("SELECT version_num FROM alembic_version")) == "b5e0f3a72c91"
+            assert (
+                conexao.scalar(text("SELECT version_num FROM alembic_version"))
+                == ScriptDirectory.from_config(config).get_current_head()
+            )
             assert (
                 conexao.scalar(
                     text(
