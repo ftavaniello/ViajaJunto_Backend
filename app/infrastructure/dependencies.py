@@ -9,6 +9,9 @@ from sqlalchemy.orm import Session
 from app.adapters.outbound.persistence.catalogo_repository_sqlalchemy import (
     SQLAlchemyCatalogoRepository,
 )
+from app.adapters.outbound.persistence.destino_viagem_repository_sqlalchemy import (
+    SQLAlchemyDestinoViagemRepository,
+)
 from app.adapters.outbound.persistence.membro_viagem_repository_sqlalchemy import (
     SQLAlchemyMembroViagemRepository,
 )
@@ -48,6 +51,7 @@ from app.application.use_cases.criar_viagem import CriarViagem
 from app.application.use_cases.encerrar_sessao import EncerrarSessao
 from app.application.use_cases.excluir_usuario import ExcluirUsuario
 from app.application.use_cases.excluir_viagem import ExcluirViagem
+from app.application.use_cases.gerenciar_destinos_viagem import GerenciarDestinosViagem
 from app.application.use_cases.importar_catalogo import ImportarCatalogo
 from app.application.use_cases.listar_viagens import ListarViagens
 from app.application.use_cases.redefinir_senha import RedefinirSenha
@@ -152,7 +156,8 @@ def get_consultar_viagem(db: Session = Depends(get_db)) -> ConsultarViagem:
 
 def get_atualizar_viagem(db: Session = Depends(get_db)) -> AtualizarViagem:
     return AtualizarViagem(
-        SQLAlchemyViagemRepository(db), _politica_acesso_viagem(db), SQLAlchemyUnitOfWork(db)
+        SQLAlchemyViagemRepository(db), _politica_acesso_viagem(db), SQLAlchemyUnitOfWork(db),
+        SQLAlchemyDestinoViagemRepository(db),
     )
 
 
@@ -202,3 +207,10 @@ def get_listar_destinos_catalogo(db: Session = Depends(get_db)) -> ListarDestino
 
 def get_consultar_destino_catalogo(db: Session = Depends(get_db)) -> ConsultarDestinoCatalogo:
     return ConsultarDestinoCatalogo(SQLAlchemyCatalogoRepository(db))
+
+
+def get_gerenciar_destinos_viagem(db: Session = Depends(get_db)) -> GerenciarDestinosViagem:
+    return GerenciarDestinosViagem(
+        SQLAlchemyDestinoViagemRepository(db), SQLAlchemyCatalogoRepository(db),
+        _politica_acesso_viagem(db), SQLAlchemyUnitOfWork(db),
+    )

@@ -36,3 +36,7 @@ class AtividadeCatalogoNaoEncontrada(ErroNegocio):
 
 class DestinoCatalogoNaoEncontrado(ErroNegocio):
     pass
+
+
+class DestinoViagemNaoEncontrado(ErroNegocio):
+    pass

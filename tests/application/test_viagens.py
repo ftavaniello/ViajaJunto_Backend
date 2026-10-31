@@ -3,6 +3,9 @@ from unittest.mock import Mock
 
 import pytest
 
+from app.adapters.outbound.persistence.destino_viagem_repository_memory import (
+    DestinoViagemRepositoryMemory,
+)
 from app.adapters.outbound.persistence.membro_viagem_repository_memory import (
     MembroViagemRepositoryMemory,
 )
@@ -39,8 +42,11 @@ def acesso(viagens, membros) -> PoliticaAcessoViagem:
 @pytest.fixture
 def viagem_id(viagens, membros) -> int:
     viagem = CriarViagem(viagens, UnitOfWorkMemory()).execute(
-        criador_id=CRIADOR, nome="Europa", descricao=None,
-        data_inicio=date(2027, 7, 1), data_fim=date(2027, 7, 20),
+        criador_id=CRIADOR,
+        nome="Europa",
+        descricao=None,
+        data_inicio=date(2027, 7, 1),
+        data_fim=date(2027, 7, 20),
     )
     membros.adicionar(viagem.id, EDITOR, PapelMembro.EDITOR)
     membros.adicionar(viagem.id, VISUALIZADOR, PapelMembro.VISUALIZADOR)
@@ -52,8 +58,11 @@ def test_criar_viagem_registra_criador_status_e_convite(viagens):
     uow = UnitOfWorkMemory()
 
     viagem = CriarViagem(viagens, uow, agora=lambda: agora).execute(
-        criador_id=CRIADOR, nome="Europa", descricao="Férias",
-        data_inicio=date(2027, 7, 1), data_fim=date(2027, 7, 20),
+        criador_id=CRIADOR,
+        nome="Europa",
+        descricao="Férias",
+        data_inicio=date(2027, 7, 1),
+        data_fim=date(2027, 7, 20),
     )
 
     assert viagem.id is not None
@@ -67,10 +76,16 @@ def test_criar_viagem_registra_criador_status_e_convite(viagens):
 def test_criar_viagem_com_periodo_invalido_nao_grava(viagens):
     uow = UnitOfWorkMemory()
 
+    caso_em_teste = CriarViagem(viagens, uow)
+    valor_data_inicio = date(2027, 7, 20)
+    valor_data_fim = date(2027, 7, 1)
     with pytest.raises(DadosInvalidos):
-        CriarViagem(viagens, uow).execute(
-            criador_id=CRIADOR, nome="Europa", descricao=None,
-            data_inicio=date(2027, 7, 20), data_fim=date(2027, 7, 1),
+        caso_em_teste.execute(
+            criador_id=CRIADOR,
+            nome="Europa",
+            descricao=None,
+            data_inicio=valor_data_inicio,
+            data_fim=valor_data_fim,
         )
 
     assert viagens.viagens == {}
@@ -111,14 +126,18 @@ def test_participantes_consultam_a_viagem(acesso, viagem_id, usuario_id):
 
 
 def test_consulta_por_quem_nao_participa_e_negada(acesso, viagem_id):
+    caso_em_teste = ConsultarViagem(acesso)
     with pytest.raises(ViagemNaoEncontrada):
-        ConsultarViagem(acesso).execute(viagem_id, ESTRANHO)
+        caso_em_teste.execute(viagem_id, ESTRANHO)
 
 
 def test_listar_traz_viagens_criadas_e_como_colaborador(viagens, membros, viagem_id):
     outra = CriarViagem(viagens, UnitOfWorkMemory()).execute(
-        criador_id=ESTRANHO, nome="Japão", descricao=None,
-        data_inicio=date(2027, 1, 1), data_fim=date(2027, 1, 10),
+        criador_id=ESTRANHO,
+        nome="Japão",
+        descricao=None,
+        data_inicio=date(2027, 1, 1),
+        data_fim=date(2027, 1, 10),
     )
 
     listar = ListarViagens(viagens)
@@ -129,11 +148,14 @@ def test_listar_traz_viagens_criadas_e_como_colaborador(viagens, membros, viagem
 
 
 @pytest.mark.parametrize("usuario_id", [CRIADOR, EDITOR])
-def test_criador_e_editor_atualizam_dados_e_status(viagens, acesso, viagem_id, usuario_id):
+def test_criador_e_editor_atualizam_dados_e_status(viagens, acesso, viagem_id, usuario_id, roteiro):
     uow = UnitOfWorkMemory()
 
-    viagem = AtualizarViagem(viagens, acesso, uow).execute(
-        viagem_id, usuario_id, nome="Europa 2027", status=StatusViagem.CONFIRMADA,
+    viagem = AtualizarViagem(viagens, acesso, uow, roteiro).execute(
+        viagem_id,
+        usuario_id,
+        nome="Europa 2027",
+        status=StatusViagem.CONFIRMADA,
     )
 
     assert viagem.nome == "Europa 2027"
@@ -143,48 +165,49 @@ def test_criador_e_editor_atualizam_dados_e_status(viagens, acesso, viagem_id, u
     assert (uow.commits, uow.rollbacks) == (1, 0)
 
 
-def test_visualizador_nao_atualiza(viagens, acesso, viagem_id):
+def test_visualizador_nao_atualiza(viagens, acesso, viagem_id, roteiro):
+    caso_em_teste = AtualizarViagem(viagens, acesso, UnitOfWorkMemory(), roteiro)
     with pytest.raises(AcessoNegado):
-        AtualizarViagem(viagens, acesso, UnitOfWorkMemory()).execute(
-            viagem_id, VISUALIZADOR, nome="Outro nome",
-        )
+        caso_em_teste.execute(viagem_id, VISUALIZADOR, nome="Outro nome")
 
     assert viagens.buscar_por_id(viagem_id).nome == "Europa"
 
 
-def test_estranho_nao_atualiza(viagens, acesso, viagem_id):
+def test_estranho_nao_atualiza(viagens, acesso, viagem_id, roteiro):
+    caso_em_teste = AtualizarViagem(viagens, acesso, UnitOfWorkMemory(), roteiro)
     with pytest.raises(ViagemNaoEncontrada):
-        AtualizarViagem(viagens, acesso, UnitOfWorkMemory()).execute(
-            viagem_id, ESTRANHO, nome="Outro nome",
-        )
+        caso_em_teste.execute(viagem_id, ESTRANHO, nome="Outro nome")
 
 
-def test_atualizar_valida_periodo_combinado_com_o_atual(viagens, acesso, viagem_id):
+def test_atualizar_valida_periodo_combinado_com_o_atual(viagens, acesso, viagem_id, roteiro):
+    caso_em_teste = AtualizarViagem(viagens, acesso, UnitOfWorkMemory(), roteiro)
+    valor_data_fim = date(2027, 6, 30)
     with pytest.raises(DadosInvalidos):
-        AtualizarViagem(viagens, acesso, UnitOfWorkMemory()).execute(
-            viagem_id, CRIADOR, data_fim=date(2027, 6, 30),
-        )
+        caso_em_teste.execute(viagem_id, CRIADOR, data_fim=valor_data_fim)
 
     assert viagens.buscar_por_id(viagem_id).data_fim == date(2027, 7, 20)
 
 
-def test_atualizar_preserva_convite(viagens, acesso, viagem_id):
+def test_atualizar_preserva_convite(viagens, acesso, viagem_id, roteiro):
     codigo = viagens.buscar_por_id(viagem_id).codigo_convite
 
-    viagem = AtualizarViagem(viagens, acesso, UnitOfWorkMemory()).execute(
-        viagem_id, CRIADOR, descricao="Nova descrição",
+    viagem = AtualizarViagem(viagens, acesso, UnitOfWorkMemory(), roteiro).execute(
+        viagem_id,
+        CRIADOR,
+        descricao="Nova descrição",
     )
 
     assert viagem.codigo_convite == codigo
 
 
-def test_falha_ao_gravar_atualizacao_desfaz_a_transacao(viagens, acesso, viagem_id):
+def test_falha_ao_gravar_atualizacao_desfaz_a_transacao(viagens, acesso, viagem_id, roteiro):
     repository = Mock(wraps=viagens)
     repository.salvar.side_effect = RuntimeError("falha no banco")
     uow = UnitOfWorkMemory()
 
+    caso_em_teste = AtualizarViagem(repository, acesso, uow, roteiro)
     with pytest.raises(RuntimeError):
-        AtualizarViagem(repository, acesso, uow).execute(viagem_id, CRIADOR, nome="X")
+        caso_em_teste.execute(viagem_id, CRIADOR, nome="X")
 
     assert (uow.commits, uow.rollbacks) == (0, 1)
 
@@ -206,8 +229,9 @@ def test_criador_exclui_viagem_e_colaboradores_perdem_acesso(viagens, acesso, vi
 def test_somente_criador_exclui(viagens, acesso, viagem_id, usuario_id, erro):
     uow = UnitOfWorkMemory()
 
+    caso_em_teste = ExcluirViagem(viagens, acesso, uow)
     with pytest.raises(erro):
-        ExcluirViagem(viagens, acesso, uow).execute(viagem_id, usuario_id)
+        caso_em_teste.execute(viagem_id, usuario_id)
 
     assert viagens.buscar_por_id(viagem_id) is not None
     assert uow.commits == 0
@@ -218,16 +242,20 @@ def test_falha_ao_excluir_desfaz_a_transacao(viagens, acesso, viagem_id):
     repository.deletar.side_effect = RuntimeError("falha no banco")
     uow = UnitOfWorkMemory()
 
+    caso_em_teste = ExcluirViagem(repository, acesso, uow)
     with pytest.raises(RuntimeError):
-        ExcluirViagem(repository, acesso, uow).execute(viagem_id, CRIADOR)
+        caso_em_teste.execute(viagem_id, CRIADOR)
 
     assert (uow.commits, uow.rollbacks) == (0, 1)
 
 
 @pytest.mark.parametrize(
     ("usuario_id", "papel"),
-    [(CRIADOR, PerfilViagem.CRIADOR), (EDITOR, PerfilViagem.EDITOR),
-     (VISUALIZADOR, PerfilViagem.VISUALIZADOR)],
+    [
+        (CRIADOR, PerfilViagem.CRIADOR),
+        (EDITOR, PerfilViagem.EDITOR),
+        (VISUALIZADOR, PerfilViagem.VISUALIZADOR),
+    ],
 )
 def test_listar_informa_papel_atual(viagens, viagem_id, usuario_id, papel):
     resultado = ListarViagens(viagens).execute(usuario_id)
@@ -249,8 +277,11 @@ def test_paginas_misturam_proprias_e_compartilhadas_sem_duplicar(viagens, membro
     # Mesmo início: o id desempata. O criador com vínculo também só aparece uma vez.
     membros.adicionar(viagem_id, CRIADOR, PapelMembro.VISUALIZADOR)
     compartilhada = CriarViagem(viagens, UnitOfWorkMemory()).execute(
-        criador_id=ESTRANHO, nome="Compartilhada", descricao=None,
-        data_inicio=date(2027, 7, 1), data_fim=date(2027, 7, 20),
+        criador_id=ESTRANHO,
+        nome="Compartilhada",
+        descricao=None,
+        data_inicio=date(2027, 7, 1),
+        data_fim=date(2027, 7, 20),
     )
     membros.adicionar(compartilhada.id, CRIADOR, PapelMembro.EDITOR)
     listar = ListarViagens(viagens)
@@ -284,13 +315,20 @@ def test_lista_reflete_mudanca_de_papel_e_remocao(viagens, membros, viagem_id):
 )
 def test_paginacao_invalida_nao_consulta_repositorio(pagina, tamanho):
     repository = Mock()
+    caso_em_teste = ListarViagens(repository)
     with pytest.raises(DadosInvalidos):
-        ListarViagens(repository).execute(CRIADOR, pagina, tamanho)
+        caso_em_teste.execute(CRIADOR, pagina, tamanho)
     repository.listar_por_participante.assert_not_called()
 
 
 def test_falha_na_listagem_nao_e_convertida_em_lista_vazia():
     repository = Mock()
     repository.listar_por_participante.side_effect = RuntimeError("banco indisponível")
+    caso_em_teste = ListarViagens(repository)
     with pytest.raises(RuntimeError):
-        ListarViagens(repository).execute(CRIADOR)
+        caso_em_teste.execute(CRIADOR)
+
+
+@pytest.fixture
+def roteiro():
+    return DestinoViagemRepositoryMemory()
