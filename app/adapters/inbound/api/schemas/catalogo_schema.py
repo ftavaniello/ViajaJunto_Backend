@@ -29,7 +29,7 @@ class ReviewCatalogoResponse(BaseModel):
     criado_em: datetime
 
 
-class AtividadeCatalogoResponse(BaseModel):
+class DadosAtividadeCatalogoResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     nome: str
@@ -42,6 +42,9 @@ class AtividadeCatalogoResponse(BaseModel):
     google_place_id: str | None
     fonte: str
     destino: DestinoCatalogoResponse
+
+
+class AtividadeCatalogoResponse(DadosAtividadeCatalogoResponse):
     avaliacoes_disponiveis: bool = Field(default=False, description="Integração pendente na #23.")
     media_avaliacoes: float | None = Field(default=None, ge=1, le=5)
     total_avaliacoes: int | None = Field(default=None, ge=0)

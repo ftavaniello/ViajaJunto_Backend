@@ -8,7 +8,7 @@ import pytest
 from app.adapters.outbound.email.console_email_sender import ConsoleEmailSender
 from app.adapters.outbound.email.smtp_email_sender import SmtpEmailSender
 from app.domain.ports.email_sender import FalhaEnvioEmail, MensagemEmail
-from app.infrastructure.config import Settings
+from app.infrastructure.config import Settings, carregar_settings
 from app.infrastructure.email import criar_email_sender
 
 MENSAGEM = MensagemEmail(destinatario="livia@example.com", assunto="Assunto", corpo="Corpo")
@@ -78,7 +78,7 @@ def test_console_escreve_o_email_no_log(caplog):
 
 
 def _config(**valores) -> Settings:
-    config = Settings()
+    config = carregar_settings({})
     for nome, valor in valores.items():
         setattr(config, nome, valor)
     return config

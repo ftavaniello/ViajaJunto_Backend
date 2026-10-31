@@ -97,7 +97,7 @@ def _roteiro(db, viagem, destino, atividade, realizada=True):
         destino_viagem_id=parada.id,
         catalogo_atividade_id=atividade.id,
         data=date(2027, 1, 11),
-        status=StatusAtividade.REALIZADA.value if realizada else "planejada",
+        status=StatusAtividade.CONCLUIDA.value if realizada else "pendente",
         realizada_em=_agora() if realizada else None,
     )
     db.add(ativ)
@@ -236,7 +236,7 @@ def test_atividade_marcada_como_realizada_exige_data_da_comprovacao(db_session):
     destino, atividade = _catalogo(db_session)
     _, ativ = _roteiro(db_session, viagem, destino, atividade, realizada=False)
 
-    ativ.status = StatusAtividade.REALIZADA.value
+    ativ.status = StatusAtividade.CONCLUIDA.value
     with pytest.raises(IntegrityError):
         db_session.commit()
 

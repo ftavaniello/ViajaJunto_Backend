@@ -1,7 +1,9 @@
 import pytest
+from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
 
 from app.adapters.outbound.persistence.unit_of_work_sqlalchemy import SQLAlchemyUnitOfWork
+from app.adapters.outbound.persistence.usuario_model import UsuarioModel
 from app.adapters.outbound.persistence.usuario_repository_sqlalchemy import (
     SQLAlchemyUsuarioRepository,
 )
@@ -90,22 +92,30 @@ def test_cadastros_concorrentes_com_mesmo_email_um_vira_erro_controlado(db_sessi
     class RepositorioQueSofreCorrida(SQLAlchemyUsuarioRepository):
         def buscar_por_email(self, email):
             resultado = super().buscar_por_email(email)
-            # Outra requisicao conclui o cadastro logo apos a checagem desta.
+            # Simula uma requisição que confirma o cadastro após a checagem prévia.
             SQLAlchemyUsuarioRepository(outra_sessao).salvar(
                 Usuario(nome="Concorrente", email=email, senha_hash="hash-concorrente")
             )
+            outra_sessao.commit()
             return resultado
 
     try:
-        criar_usuario = CriarUsuario(RepositorioQueSofreCorrida(db_session), FakePasswordHasher())
-
+        criar_usuario = CriarUsuario(
+            RepositorioQueSofreCorrida(db_session),
+            FakePasswordHasher(),
+            SQLAlchemyUnitOfWork(db_session),
+        )
         with pytest.raises(EmailDuplicado):
             criar_usuario.execute(nome="Livia", email=email_teste, senha="senha123")
+        vencedor = SQLAlchemyUsuarioRepository(db_session).buscar_por_email(email_teste)
+        assert vencedor.nome == "Concorrente"
     finally:
+        # A segunda sessão confirmou fora do rollback da fixture; limpa só seu registro.
+        db_session.rollback()
+        outra_sessao.rollback()
+        outra_sessao.execute(delete(UsuarioModel).where(UsuarioModel.email == email_teste))
+        outra_sessao.commit()
         outra_sessao.close()
-
-    vencedor = SQLAlchemyUsuarioRepository(db_session).buscar_por_email(email_teste)
-    assert vencedor.nome == "Concorrente"
 
 
 def test_outra_violacao_de_integridade_nao_e_mascarada_como_email_duplicado(

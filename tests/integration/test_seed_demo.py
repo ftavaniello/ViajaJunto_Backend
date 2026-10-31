@@ -1,6 +1,7 @@
 import pytest
 
 from app.adapters.inbound.cli.seed_demo import EMAIL_DEMO, SENHA_DEMO, semear_usuario_demo
+from app.adapters.outbound.persistence.unit_of_work_memory import UnitOfWorkMemory
 from app.adapters.outbound.persistence.usuario_repository_memory import (
     UsuarioRepositoryMemory,
 )
@@ -16,7 +17,7 @@ def test_seed_cria_conta_de_demonstracao_em_desenvolvimento():
     repository = UsuarioRepositoryMemory()
 
     mensagem = semear_usuario_demo(
-        CriarUsuario(repository, FakePasswordHasher()), DESENVOLVIMENTO
+        CriarUsuario(repository, FakePasswordHasher(), UnitOfWorkMemory()), DESENVOLVIMENTO
     )
 
     assert "criada" in mensagem
@@ -30,7 +31,7 @@ def test_seed_nao_reescreve_conta_existente():
     repository.salvar(Usuario(nome="Dono Real", email=EMAIL_DEMO, senha_hash="hash:outra-senha"))
 
     mensagem = semear_usuario_demo(
-        CriarUsuario(repository, FakePasswordHasher()), DESENVOLVIMENTO
+        CriarUsuario(repository, FakePasswordHasher(), UnitOfWorkMemory()), DESENVOLVIMENTO
     )
 
     assert "mantida sem alterações" in mensagem
@@ -45,7 +46,8 @@ def test_seed_e_bloqueado_fora_do_desenvolvimento(app_env):
     repository = UsuarioRepositoryMemory()
     config = carregar_settings({"APP_ENV": app_env, "JWT_SECRET_KEY": "x" * 40})
 
+    caso = CriarUsuario(repository, FakePasswordHasher(), UnitOfWorkMemory())
     with pytest.raises(PermissionError):
-        semear_usuario_demo(CriarUsuario(repository, FakePasswordHasher()), config)
+        semear_usuario_demo(caso, config)
 
     assert repository.contar() == 0

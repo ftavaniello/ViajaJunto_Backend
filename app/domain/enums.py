@@ -26,9 +26,10 @@ class StatusViagem(StrEnum):
 
 
 class StatusAtividade(StrEnum):
-    PLANEJADA = "planejada"
-    REALIZADA = "realizada"
-    CANCELADA = "cancelada"
+    PENDENTE = "pendente"
+    CONFIRMADA = "confirmada"
+    CONCLUIDA = "concluida"
+    CANCELADA = "cancelada"  # Somente leitura/preservação de registros legados.
 
 
 class CategoriaDestino(StrEnum):

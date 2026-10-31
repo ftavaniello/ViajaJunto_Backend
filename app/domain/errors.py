@@ -40,3 +40,7 @@ class DestinoCatalogoNaoEncontrado(ErroNegocio):
 
 class DestinoViagemNaoEncontrado(ErroNegocio):
     pass
+
+
+class AtividadeViagemNaoEncontrada(ErroNegocio):
+    pass
