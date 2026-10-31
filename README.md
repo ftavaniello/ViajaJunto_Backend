@@ -221,6 +221,19 @@ Na persistência, a tabela `usuarios` possui identificador inteiro gerado automa
 
 As migrações em `alembic/versions/` provisionam somente o schema; elas não criam contas. Elas criam a tabela de usuários e, em seguida, o esquema de viagens descrito abaixo (migração `a3f1c9d27b45`, que também adiciona `usuarios.criado_em`; contas existentes recebem o horário da migração) e a tabela `tokens_revogados` e a coluna `usuarios.versao_sessao`, usadas pelo logout e pela troca de senha (migração `b7e4d2a91c03`). A revisão `c86992485fcc`, que antes inseria uma conta de demonstração, permanece na cadeia sem alterar dados. A revisão `7059dc664d50` só converte para bcrypt uma conta `usuario@viajajunto.com` que ainda tenha a senha original do seed em texto puro, e nunca sobrescreve uma senha já definida. No ambiente Docker Compose, as migrações pendentes são aplicadas antes da inicialização da API. Os dados do PostgreSQL são mantidos em um volume Docker.
 
+O Compose local executa automaticamente o seed de [demonstração completa](docs/seed-demonstracao.md)
+após as migrações, em `APP_ENV=development`. Bancos novos recebem usuários, permissões,
+viagens e roteiros prontos para testes; cargas já concluídas preservam edições e exclusões.
+Para executar manualmente:
+
+```powershell
+docker compose exec api alembic upgrade head
+docker compose exec api python -m app.adapters.inbound.cli.seed_demo --completo
+```
+
+Ela roda somente em `APP_ENV=development`, preserva dados existentes e imprime os
+IDs dos cenários. Reexecuções mantêm edições e exclusões feitas durante os testes.
+
 A conta de demonstração (`usuario@viajajunto.com` / `changeme123`) é criada à parte, apenas em desenvolvimento:
 
 ```sh
@@ -265,7 +278,7 @@ Com Docker e Docker Compose disponíveis, crie um arquivo `.env` a partir de `.e
 docker compose up -d --build
 ```
 
-O Compose inicia o PostgreSQL, aguarda o banco ficar saudável, aplica as migrações e disponibiliza a API na porta `8000`. O ambiente utiliza recarga automática ao editar os arquivos da aplicação. Também sobe o Mailpit: os emails enviados pela API (recuperação de senha) aparecem em [http://localhost:8025](http://localhost:8025) e nunca saem para a internet. Veja [`docs/recuperacao-de-senha.md`](docs/recuperacao-de-senha.md#como-ver-os-emails-no-ambiente-de-teste).
+O Compose inicia o PostgreSQL, aguarda o banco ficar saudável, aplica as migrações, executa os seeds em desenvolvimento e disponibiliza a API na porta `8000`. O ambiente utiliza recarga automática ao editar os arquivos da aplicação. Também sobe o Mailpit: os emails enviados pela API (recuperação de senha) aparecem em [http://localhost:8025](http://localhost:8025) e nunca saem para a internet. Veja [`docs/recuperacao-de-senha.md`](docs/recuperacao-de-senha.md#como-ver-os-emails-no-ambiente-de-teste).
 
 A configuração da API utiliza `APP_ENV`, `DATABASE_URL`, `JWT_SECRET_KEY` e `JWT_EXPIRE_MINUTES`. O Compose fornece `DATABASE_URL` diretamente ao container da API e repassa `APP_ENV` (padrão `development`), `JWT_SECRET_KEY` e `JWT_EXPIRE_MINUTES` a partir do `.env`.
 
