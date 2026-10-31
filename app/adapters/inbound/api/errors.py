@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from app.domain.errors import (
     AcessoNegado,
     AtividadeCatalogoNaoEncontrada,
+    AtividadeViagemNaoEncontrada,
     DestinoCatalogoNaoEncontrado,
     DestinoViagemNaoEncontrado,
     ErroNegocio,
@@ -28,6 +29,7 @@ async def tratar_erro_negocio(request: Request, error: ErroNegocio) -> JSONRespo
             UsuarioNaoEncontrado,
             ViagemNaoEncontrada,
             AtividadeCatalogoNaoEncontrada,
+            AtividadeViagemNaoEncontrada,
             DestinoCatalogoNaoEncontrado,
             DestinoViagemNaoEncontrado,
         ),

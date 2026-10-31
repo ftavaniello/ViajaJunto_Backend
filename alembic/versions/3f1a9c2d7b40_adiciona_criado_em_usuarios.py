@@ -31,9 +31,12 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.func.now(),
         ),
+        if_not_exists=True,  # O modelo v1 também provisiona esta coluna.
     )
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_column("usuarios", "criado_em")
+    # A coluna compartilhada é removida pelo downgrade de a3f1c9d27b45.
+    # Não removê-la ao recuar só a linha paralela de segurança.
+    pass

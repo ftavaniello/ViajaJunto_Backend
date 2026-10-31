@@ -25,7 +25,7 @@ class PyJWTTokenService(TokenService):
 
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
 
-        def verificar_token(self, token: str) -> DadosToken:
+    def verificar_token(self, token: str) -> DadosToken:
         try:
             payload = jwt.decode(
                 token,

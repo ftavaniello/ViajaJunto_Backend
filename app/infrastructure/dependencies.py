@@ -6,6 +6,9 @@ gravacoes de um caso de uso fiquem na mesma transacao.
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
+from app.adapters.outbound.persistence.atividade_viagem_repository_sqlalchemy import (
+    SQLAlchemyAtividadeViagemRepository,
+)
 from app.adapters.outbound.persistence.catalogo_repository_sqlalchemy import (
     SQLAlchemyCatalogoRepository,
 )
@@ -51,6 +54,7 @@ from app.application.use_cases.criar_viagem import CriarViagem
 from app.application.use_cases.encerrar_sessao import EncerrarSessao
 from app.application.use_cases.excluir_usuario import ExcluirUsuario
 from app.application.use_cases.excluir_viagem import ExcluirViagem
+from app.application.use_cases.gerenciar_atividades_viagem import GerenciarAtividadesViagem
 from app.application.use_cases.gerenciar_destinos_viagem import GerenciarDestinosViagem
 from app.application.use_cases.importar_catalogo import ImportarCatalogo
 from app.application.use_cases.listar_viagens import ListarViagens
@@ -75,7 +79,7 @@ def get_token_service() -> TokenService:
 
 def montar_criar_usuario(db: Session, cache: TotalUsuariosCache) -> CriarUsuario:
     """Composicao reutilizada pela API e por adaptadores de entrada fora do HTTP."""
-        return CriarUsuario(
+    return CriarUsuario(
         SQLAlchemyUsuarioRepository(db), BcryptPasswordHasher(), SQLAlchemyUnitOfWork(db), cache
     )
 
@@ -213,4 +217,11 @@ def get_gerenciar_destinos_viagem(db: Session = Depends(get_db)) -> GerenciarDes
     return GerenciarDestinosViagem(
         SQLAlchemyDestinoViagemRepository(db), SQLAlchemyCatalogoRepository(db),
         _politica_acesso_viagem(db), SQLAlchemyUnitOfWork(db),
+    )
+
+
+def get_gerenciar_atividades_viagem(db: Session = Depends(get_db)) -> GerenciarAtividadesViagem:
+    return GerenciarAtividadesViagem(
+        SQLAlchemyAtividadeViagemRepository(db), SQLAlchemyDestinoViagemRepository(db),
+        SQLAlchemyCatalogoRepository(db), _politica_acesso_viagem(db), SQLAlchemyUnitOfWork(db),
     )

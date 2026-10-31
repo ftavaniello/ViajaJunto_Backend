@@ -37,16 +37,16 @@ def test_nao_permite_email_duplicado():
 
 
 def test_cadastro_registra_data_de_criacao():
-    usuario = CriarUsuario(UsuarioRepositoryMemory(), FakePasswordHasher()).execute(
-        nome="Livia", email="livia@example.com", senha="senha123"
-    )
+    usuario = CriarUsuario(
+        UsuarioRepositoryMemory(), FakePasswordHasher(), UnitOfWorkMemory()
+    ).execute(nome="Livia", email="livia@example.com", senha="senha123")
 
     assert usuario.criado_em is not None
 
 
 def test_cadastro_concorrente_com_mesmo_email_vira_erro_controlado():
     repository = RepositorioComCorrida()
-    criar_usuario = CriarUsuario(repository, FakePasswordHasher())
+    criar_usuario = CriarUsuario(repository, FakePasswordHasher(), UnitOfWorkMemory())
     criar_usuario.execute(nome="Livia", email="livia@example.com", senha="senha123")
 
     # A checagem previa nao ve o primeiro cadastro, mas o salvar e rejeitado.

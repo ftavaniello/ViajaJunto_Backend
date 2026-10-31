@@ -75,10 +75,10 @@ class AtividadeViagemModel(Base):
         Numeric(12, 2), nullable=False, default=Decimal("0"), server_default="0"
     )
     status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default=StatusAtividade.PLANEJADA.value,
-        server_default=StatusAtividade.PLANEJADA.value,
+        String(20), nullable=False, default=StatusAtividade.PENDENTE.value,
+        server_default=StatusAtividade.PENDENTE.value,
     )
-    # Comprovação de "realizada" (D3): quem marcou e quando.
+    # Comprovação da conclusão: nomes físicos mantidos por compatibilidade.
     realizada_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     realizada_por_id: Mapped[int | None] = mapped_column(
         ForeignKey("usuarios.id", ondelete="SET NULL")
@@ -91,7 +91,7 @@ class AtividadeViagemModel(Base):
             "duracao_minutos IS NULL OR duracao_minutos > 0", name="ck_atividades_viagem_duracao"
         ),
         CheckConstraint(
-            "status <> 'realizada' OR realizada_em IS NOT NULL",
+            "status <> 'concluida' OR realizada_em IS NOT NULL",
             name="ck_atividades_viagem_comprovacao",
         ),
     )
