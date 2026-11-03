@@ -1,13 +1,11 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date
 
 import pytest
 
-from app.domain.convite import expiracao_convite, gerar_codigo_convite
 from app.domain.entities.viagem import Viagem
 from app.domain.enums import PapelMembro, StatusViagem
 from app.domain.errors import DadosInvalidos
 from app.domain.permissoes import AcaoViagem, PerfilViagem, perfil_na_viagem, pode
-from app.domain.regras import CODIGO_CONVITE_ALFABETO, CODIGO_CONVITE_TAMANHO
 
 
 def _viagem(**extra) -> Viagem:
@@ -59,19 +57,6 @@ def test_viagem_rejeita_status_fora_do_rf07(status):
 
 def test_descricao_vazia_vira_nula():
     assert _viagem(descricao="  ").descricao is None
-
-
-def test_codigo_convite_usa_alfabeto_e_tamanho_definidos():
-    codigo = gerar_codigo_convite()
-
-    assert len(codigo) == CODIGO_CONVITE_TAMANHO
-    assert set(codigo) <= set(CODIGO_CONVITE_ALFABETO)
-
-
-def test_convite_expira_em_sete_dias():
-    agora = datetime(2026, 10, 29, tzinfo=timezone.utc)
-
-    assert expiracao_convite(agora) == agora + timedelta(days=7)
 
 
 def test_perfil_do_criador_independe_de_ser_membro():

@@ -38,6 +38,8 @@ class Settings:
     SMTP_STARTTLS: bool
     # Pagina do frontend que recebe ?token=... e pede a nova senha.
     RECUPERACAO_SENHA_URL: str
+    # Pagina do frontend que recebe ?token=... e aceita o convite da viagem.
+    CONVITE_URL: str
 
     @property
     def em_desenvolvimento(self) -> bool:
@@ -73,6 +75,7 @@ def carregar_settings(env: Mapping[str, str] = os.environ) -> Settings:
         RECUPERACAO_SENHA_URL=env.get(
             "RECUPERACAO_SENHA_URL", "http://localhost:3000/redefinir-senha"
         ),
+        CONVITE_URL=env.get("CONVITE_URL", "http://localhost:3000/convite"),
     )
 
 

@@ -14,8 +14,6 @@ class Viagem:
         data_fim: date,
         descricao: str | None = None,
         status: StatusViagem | str = StatusViagem.PLANEJANDO,
-        codigo_convite: str | None = None,
-        codigo_convite_expira_em: datetime | None = None,
         id: int | None = None,
         criado_em: datetime | None = None,
         atualizado_em: datetime | None = None,
@@ -38,7 +36,5 @@ class Viagem:
         self.data_inicio = data_inicio
         self.data_fim = data_fim
         self.status = status
-        self.codigo_convite = codigo_convite
-        self.codigo_convite_expira_em = codigo_convite_expira_em
         self.criado_em = criado_em
         self.atualizado_em = atualizado_em

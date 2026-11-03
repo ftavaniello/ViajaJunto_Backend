@@ -86,6 +86,7 @@ services:
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
       RECUPERACAO_SENHA_URL: ${RECUPERACAO_SENHA_URL:-http://localhost:3000/redefinir-senha}
+      CONVITE_URL: ${CONVITE_URL:-http://localhost:3000/convite}
     ports:
       - "8000:8000"
     volumes:

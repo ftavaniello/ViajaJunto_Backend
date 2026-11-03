@@ -44,3 +44,31 @@ class DestinoViagemNaoEncontrado(ErroNegocio):
 
 class AtividadeViagemNaoEncontrada(ErroNegocio):
     pass
+
+
+class ConviteInvalido(ErroNegocio):
+    """Link de convite inexistente ou expirado (mesma mensagem para os dois casos)."""
+
+
+class ConviteJaAceito(ErroNegocio):
+    """O convite e de uso unico e ja foi aceito."""
+
+
+class ConviteDeOutroEmail(AcessoNegado):
+    """O usuario logado nao e o dono do email convidado."""
+
+
+class ConviteNaoEncontrado(ErroNegocio):
+    """Convite pendente inexistente nesta viagem."""
+
+
+class FalhaEnvioConvite(ErroNegocio):
+    """O email do convite nao pode ser enviado; nada foi gravado."""
+
+
+class MembroJaParticipa(ErroNegocio):
+    """Usuario ja e o criador ou colaborador da viagem."""
+
+
+class MembroNaoEncontrado(ErroNegocio):
+    """Usuario nao e colaborador desta viagem."""

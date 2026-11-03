@@ -20,13 +20,15 @@ from app.domain.enums import PapelMembro, StatusViagem
 from app.domain.regras import MOEDA_PADRAO
 from app.infrastructure.database import Base
 
+MEMBROS_VIAGEM_UNIQUE = "uq_membros_viagem_viagem_usuario"
+
 
 class ViagemModel(Base):
     """Viagem.
 
     `id` é a chave técnica (inteiro, como `usuarios.id`) e é a única usada em
-    chaves estrangeiras. `codigo_convite` é um segredo de compartilhamento,
-    separado do id e regenerável (D1 e D4 em docs/decisoes-de-produto.md).
+    chaves estrangeiras. A entrada de colaboradores é por convite por email
+    (`convites_viagem`), nunca pelo id.
     """
 
     __tablename__ = "viagens"
@@ -47,10 +49,6 @@ class ViagemModel(Base):
     # Uma moeda por viagem, ISO 4217 (D7).
     moeda: Mapped[str] = mapped_column(
         String(3), nullable=False, default=MOEDA_PADRAO, server_default=MOEDA_PADRAO
-    )
-    codigo_convite: Mapped[str] = mapped_column(String(12), nullable=False, unique=True)
-    codigo_convite_expira_em: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
     )
     criado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -84,7 +82,7 @@ class MembroViagemModel(Base):
     )
 
     __table_args__ = (
-        UniqueConstraint("viagem_id", "usuario_id", name="uq_membros_viagem_viagem_usuario"),
+        UniqueConstraint("viagem_id", "usuario_id", name=MEMBROS_VIAGEM_UNIQUE),
         check_in("ck_membros_viagem_papel", "papel", PapelMembro),
     )
 
