@@ -18,12 +18,15 @@ from app.adapters.outbound.persistence.usuario_repository_sqlalchemy import (
 from app.adapters.outbound.security.bcrypt_password_hasher import BcryptPasswordHasher
 from app.application.use_cases.criar_usuario import CriarUsuario
 from app.application.use_cases.semear_demonstracao import SemearDemonstracao
+from app.application.use_cases.semear_destinos_reais import SemearDestinosReais
 from app.infrastructure.config import Settings
 from app.infrastructure.dependencies import (
     get_atualizar_viagem,
+    get_avaliar_atividade_viagem,
     get_criar_viagem,
     get_gerenciar_atividades_viagem,
     get_gerenciar_destinos_viagem,
+    get_gerenciar_orcamento_viagem,
 )
 
 
@@ -39,15 +42,23 @@ def executar_seed_completo(
     with connection.begin_nested():
         with Session(bind=connection, join_transaction_mode="create_savepoint") as db:
             usuarios = SQLAlchemyUsuarioRepository(db)
-            caso = SemearDemonstracao(
-                SQLAlchemySeedDemonstracaoRepository(db),
-                usuarios,
-                CriarUsuario(usuarios, BcryptPasswordHasher(), SQLAlchemyUnitOfWork(db)),
+            registro = SQLAlchemySeedDemonstracaoRepository(db)
+            roteiros = SemearDestinosReais(
+                registro,
                 SQLAlchemyCatalogoRepository(db),
                 get_criar_viagem(db),
                 get_atualizar_viagem(db),
                 get_gerenciar_destinos_viagem(db),
                 get_gerenciar_atividades_viagem(db),
+                get_avaliar_atividade_viagem(db),
+                get_gerenciar_orcamento_viagem(db),
+            )
+            caso = SemearDemonstracao(
+                registro,
+                usuarios,
+                CriarUsuario(usuarios, BcryptPasswordHasher(), SQLAlchemyUnitOfWork(db)),
+                get_criar_viagem(db),
+                roteiros,
             )
             resultado = caso.execute(referencia)
             db.commit()

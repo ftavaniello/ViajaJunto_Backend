@@ -116,13 +116,13 @@ da mesma transação, evitando conflito com a remoção em cascata do roteiro.
 ## Testar pelo Swagger com o seed
 
 1. Faça login como `criador.demo@example.com`, senha `DemoViaja123!`, e use **Authorize**.
-2. Em `GET /viagens`, escolha `[Demo] passada` ou `[Demo] compartilhada`.
+2. Em `GET /viagens`, escolha “Cultura e paisagens no Rio de Janeiro” ou “Orlando e Miami em grupo”.
 3. Liste os destinos e atividades. Copie os IDs da viagem, parada e de uma ocorrência
    com `status=concluida` para o PUT da tag **Avaliações**.
 4. Envie nota/comentário. Consulte o detalhe público pelo `catalogo_atividade_id`
    daquela ocorrência. A média, o total e seu review devem aparecer sem autenticação.
 5. Reenvie outra nota como a mesma conta: o total não aumenta e a média muda.
-6. Na viagem compartilhada, entre como `visualizador.demo@example.com` com a mesma
+6. Na viagem da Flórida, entre como `visualizador.demo@example.com` com a mesma
    senha e publique outra nota. O total passa a dois. Teste também como externo,
    sem token e usando uma ocorrência pendente.
 7. Pesquise `/catalogo/atividades?nota_minima=4` e confira os resultados.

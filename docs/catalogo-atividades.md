@@ -59,32 +59,11 @@ Veja [publicação, permissões e exemplos](avaliacoes-atividades.md).
 
 ## Seed automático no desenvolvimento
 
-Ao iniciar a API pelo Docker Compose, a sequência é: migrações, seed e servidor.
-O seed usa `docs/catalogo-exemplo.json`, montado somente para leitura no container,
-e cadastra um destino e duas atividades fictícias **somente se o catálogo estiver
-completamente vazio** (sem destinos nem atividades).
-
-```powershell
-docker compose up -d --build api
-```
-
-Reiniciar a API não duplica nem sobrescreve dados. Se você já importou exemplos ou
-cadastrou qualquer destino/atividade, a carga inicial inteira é ignorada; o seed
-não completa nem modifica catálogos parcialmente preenchidos. Usuários, viagens
-e os demais dados não participam dessa verificação e são preservados.
-
-A carga usa transação e um lock no PostgreSQL para serializar seeds simultâneos.
-Uma falha reverte o lote e impede o servidor de iniciar com uma carga incompleta.
-
-O seed é ativado por padrão apenas no Compose de desenvolvimento. Para desativar,
-defina `SEED_CATALOGO=false` no `.env` e recrie a API. A imagem Docker, executada
-fora desse Compose, não roda seed automaticamente.
-
-Para executar manualmente o mesmo modo seguro, no ambiente Python configurado:
-
-```sh
-python -m app.adapters.inbound.cli.importar_catalogo --se-vazio --exemplo
-```
+O Compose aplica as migrações e carrega [os dados iniciais](seed-demonstracao.md)
+com Orlando, Miami, Rio de Janeiro e Roma. O catálogo antigo de Lisboa não é mais
+carregado automaticamente. O arquivo `docs/catalogo-exemplo.json` continua disponível
+para testar manualmente o importador. Fora do Compose, execute o seed ou o importador
+explicitamente. A imagem de produção não cria dados de teste automaticamente.
 
 ## Origem e abastecimento autorizado
 
