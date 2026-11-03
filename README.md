@@ -75,6 +75,13 @@ permitem planejar atividades do catálogo com data, horário, duração, custo e
 Criador e Editor alteram; Visualizador consulta. A listagem é cronológica, com
 atividades sem horário ao fim de cada dia. Veja [contrato e teste no Swagger](docs/atividades-roteiro.md).
 
+## Orçamento da viagem
+
+`GET /viagens/{viagem_id}/orcamento` retorna o resumo financeiro: orçamento total,
+total planejado nas atividades, saldo e percentuais por categoria, recalculados a
+cada consulta. `PUT` define ou altera o orçamento único da viagem (Criador e Editor).
+Veja [fórmula, arredondamento e casos-limite](docs/orcamento-viagem.md).
+
 ## Destinos do roteiro
 
 As rotas autenticadas `/viagens/{viagem_id}/destinos` permitem listar, consultar,
