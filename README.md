@@ -75,6 +75,14 @@ permitem planejar atividades do catálogo com data, horário, duração, custo e
 Criador e Editor alteram; Visualizador consulta. A listagem é cronológica, com
 atividades sem horário ao fim de cada dia. Veja [contrato e teste no Swagger](docs/atividades-roteiro.md).
 
+## Mapa e países visitados
+
+`GET /usuarios/me/paises-visitados` lista, sem repetição, os países (ISO alfa-2) que o
+usuário autenticado visitou: paradas de viagens próprias ou compartilhadas, `confirmada`
+ou `concluida`, com chegada até hoje. `GET /viagens/{viagem_id}/mapa` devolve as paradas
+na ordem de visita com coordenadas para desenhar o roteiro. O mapa é feito no frontend.
+Veja [critério e contrato](docs/mapa-paises-visitados.md).
+
 ## Orçamento da viagem
 
 `GET /viagens/{viagem_id}/orcamento` retorna o resumo financeiro: orçamento total,
@@ -96,6 +104,13 @@ Veja [contrato, regras e teste pelo Swagger](docs/destinos-roteiro.md).
 `GET /catalogo/destinos/{destino_id}` consulta o detalhe. São consultas públicas,
 sem dados privados de viagens. A carga é operacional e reutiliza o seed e importador
 do catálogo. Veja [contrato e exemplos](docs/catalogo-destinos.md).
+
+## Ranking de destinos
+
+`GET /catalogo/destinos/ranking?limite=10` é público e lista os destinos mais bem
+avaliados para a página inicial. A nota agrega as avaliações das atividades de cada
+destino; a ordem usa média bayesiana com desempate estável, e destinos sem avaliação
+não aparecem. Veja [critério e contrato](docs/ranking-destinos.md).
 
 ## Catálogo público de atividades
 

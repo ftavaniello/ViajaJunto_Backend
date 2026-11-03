@@ -8,6 +8,7 @@ from app.adapters.inbound.api.routes.catalogo import router as catalogo_router
 from app.adapters.inbound.api.routes.destinos_catalogo import router as destinos_catalogo_router
 from app.adapters.inbound.api.routes.destinos_viagem import router as destinos_viagem_router
 from app.adapters.inbound.api.routes.health import router as health_router
+from app.adapters.inbound.api.routes.mapa import router as mapa_router
 from app.adapters.inbound.api.routes.orcamento_viagem import router as orcamento_viagem_router
 from app.adapters.inbound.api.routes.usuario import router as usuario_router
 from app.adapters.inbound.api.routes.viagem import router as viagem_router
@@ -44,6 +45,10 @@ app = FastAPI(
         },
         {"name": "Roteiro", "description": "Destinos e estadias privadas das viagens."},
         {
+            "name": "Mapa",
+            "description": "Países visitados pelo usuário e pontos do roteiro para o mapa.",
+        },
+        {
             "name": "Orçamento",
             "description": "Orçamento total da viagem e resumo financeiro do roteiro.",
         },
@@ -66,3 +71,4 @@ app.include_router(atividades_viagem_router)
 app.include_router(orcamento_viagem_router)
 
 app.include_router(avaliacoes_router)
+app.include_router(mapa_router)
