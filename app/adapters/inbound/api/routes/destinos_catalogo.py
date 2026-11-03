@@ -6,13 +6,19 @@ from app.adapters.inbound.api.schemas.catalogo_schema import (
     DestinoCatalogoResponse,
     FiltrosDestinosCatalogo,
     PaginaDestinosResponse,
+    RankingDestinosResponse,
 )
 from app.application.use_cases.consultar_destinos_catalogo import (
     ConsultarDestinoCatalogo,
     ListarDestinosCatalogo,
 )
+from app.application.use_cases.consultar_ranking_destinos import (
+    LIMITE_MAXIMO,
+    ConsultarRankingDestinos,
+)
 from app.infrastructure.dependencies import (
     get_consultar_destino_catalogo,
+    get_consultar_ranking_destinos,
     get_listar_destinos_catalogo,
 )
 
@@ -41,6 +47,27 @@ def listar(
         tamanho_pagina=resultado.tamanho_pagina,
         tem_proxima=resultado.tem_proxima,
     )
+
+
+# Registrada antes de /{destino_id} para "ranking" não ser lido como id.
+@router.get(
+    "/ranking",
+    response_model=RankingDestinosResponse,
+    summary="Ranking público dos destinos mais bem avaliados",
+    description=(
+        "Consulta sem autenticação, para a página inicial. A nota do destino agrega as "
+        "avaliações das atividades do catálogo que pertencem a ele. Ordena pela média "
+        "bayesiana (decrescente), depois pelo total de avaliações (decrescente) e pelo id "
+        "(crescente). Destinos sem avaliação não aparecem. Ver docs/ranking-destinos.md."
+    ),
+)
+def ranking(
+    caso: Annotated[ConsultarRankingDestinos, Depends(get_consultar_ranking_destinos)],
+    limite: Annotated[
+        int, Query(ge=1, le=LIMITE_MAXIMO, description="Quantidade máxima de destinos.")
+    ] = 10,
+):
+    return RankingDestinosResponse.model_validate(caso.execute(limite))
 
 
 @router.get(

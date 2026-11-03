@@ -9,6 +9,9 @@ from sqlalchemy.orm import Session
 from app.adapters.outbound.persistence.atividade_viagem_repository_sqlalchemy import (
     SQLAlchemyAtividadeViagemRepository,
 )
+from app.adapters.outbound.persistence.avaliacoes_destino_repository_sqlalchemy import (
+    SQLAlchemyAvaliacoesDestinoRepository,
+)
 from app.adapters.outbound.persistence.catalogo_repository_sqlalchemy import (
     SQLAlchemyCatalogoRepository,
 )
@@ -53,6 +56,7 @@ from app.application.use_cases.consultar_destinos_catalogo import (
     ListarDestinosCatalogo,
 )
 from app.application.use_cases.consultar_mapa import ConsultarMapaViagem, ConsultarPaisesVisitados
+from app.application.use_cases.consultar_ranking_destinos import ConsultarRankingDestinos
 from app.application.use_cases.consultar_resumo_usuarios import ConsultarResumoUsuarios
 from app.application.use_cases.consultar_usuario_autenticado import ConsultarUsuarioAutenticado
 from app.application.use_cases.consultar_viagem import ConsultarViagem
@@ -247,3 +251,7 @@ def get_consultar_paises_visitados(db: Session = Depends(get_db)) -> ConsultarPa
 
 def get_consultar_mapa_viagem(db: Session = Depends(get_db)) -> ConsultarMapaViagem:
     return ConsultarMapaViagem(SQLAlchemyDestinoViagemRepository(db), _politica_acesso_viagem(db))
+
+
+def get_consultar_ranking_destinos(db: Session = Depends(get_db)) -> ConsultarRankingDestinos:
+    return ConsultarRankingDestinos(SQLAlchemyAvaliacoesDestinoRepository(db))

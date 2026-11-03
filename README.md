@@ -105,6 +105,13 @@ Veja [contrato, regras e teste pelo Swagger](docs/destinos-roteiro.md).
 sem dados privados de viagens. A carga é operacional e reutiliza o seed e importador
 do catálogo. Veja [contrato e exemplos](docs/catalogo-destinos.md).
 
+## Ranking de destinos
+
+`GET /catalogo/destinos/ranking?limite=10` é público e lista os destinos mais bem
+avaliados para a página inicial. A nota agrega as avaliações das atividades de cada
+destino; a ordem usa média bayesiana com desempate estável, e destinos sem avaliação
+não aparecem. Veja [critério e contrato](docs/ranking-destinos.md).
+
 ## Catálogo público de atividades
 
 A issue #20 disponibiliza `GET /catalogo/atividades` e
