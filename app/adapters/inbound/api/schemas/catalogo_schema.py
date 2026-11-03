@@ -90,3 +90,25 @@ class FiltrosDestinosCatalogo(BaseModel):
     categoria: CategoriaDestino | None = None
     pagina: int = Field(default=1, ge=1)
     tamanho_pagina: int = Field(default=20, ge=1, le=100)
+
+
+class DestinoRanqueadoResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    posicao: int = Field(description="Posição no ranking, a partir de 1.")
+    destino: DestinoCatalogoResponse
+    media_avaliacoes: float = Field(
+        ge=1, le=5, description="Média simples das notas das atividades do destino."
+    )
+    nota_ranking: float = Field(
+        ge=1, le=5, description="Média bayesiana usada na ordenação (duas casas)."
+    )
+    total_avaliacoes: int = Field(ge=1)
+
+
+class RankingDestinosResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    media_geral: float | None = Field(
+        description="Média de todas as avaliações do catálogo (C); nula sem avaliações."
+    )
+    peso_priori: int = Field(description="Peso m da média bayesiana.")
+    itens: list[DestinoRanqueadoResponse]
