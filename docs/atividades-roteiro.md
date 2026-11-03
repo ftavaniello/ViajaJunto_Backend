@@ -52,8 +52,8 @@ não aceita valores negativos, não finitos, acima de 9.999.999.999,99 ou com ma
 duas casas decimais significativas. Para representar decimais com precisão no JSON,
 prefira strings como `"25.50"`; as respostas devolvem esse formato, com duas casas.
 Os valores estão na moeda da viagem (BRL por padrão no banco), sem conversão cambial.
-O resumo financeiro será implementado na #25; não há total agregado persistido
-ou cache de orçamento para atualizar nesta entrega.
+O resumo financeiro soma esses custos a cada consulta, sem total agregado persistido;
+veja [orcamento-viagem.md](orcamento-viagem.md).
 
 A resposta contém IDs de viagem/parada/catálogo/ocorrência, o objeto `atividade`
 com os dados públicos descritivos, o planejamento e `realizada_em`/`realizada_por_id`.

@@ -18,6 +18,9 @@ from app.adapters.outbound.persistence.destino_viagem_repository_sqlalchemy impo
 from app.adapters.outbound.persistence.membro_viagem_repository_sqlalchemy import (
     SQLAlchemyMembroViagemRepository,
 )
+from app.adapters.outbound.persistence.orcamento_repository_sqlalchemy import (
+    SQLAlchemyOrcamentoRepository,
+)
 from app.adapters.outbound.persistence.token_recuperacao_senha_repository_sqlalchemy import (
     SQLAlchemyTokenRecuperacaoSenhaRepository,
 )
@@ -56,6 +59,7 @@ from app.application.use_cases.excluir_usuario import ExcluirUsuario
 from app.application.use_cases.excluir_viagem import ExcluirViagem
 from app.application.use_cases.gerenciar_atividades_viagem import GerenciarAtividadesViagem
 from app.application.use_cases.gerenciar_destinos_viagem import GerenciarDestinosViagem
+from app.application.use_cases.gerenciar_orcamento_viagem import GerenciarOrcamentoViagem
 from app.application.use_cases.importar_catalogo import ImportarCatalogo
 from app.application.use_cases.listar_viagens import ListarViagens
 from app.application.use_cases.redefinir_senha import RedefinirSenha
@@ -224,4 +228,10 @@ def get_gerenciar_atividades_viagem(db: Session = Depends(get_db)) -> GerenciarA
     return GerenciarAtividadesViagem(
         SQLAlchemyAtividadeViagemRepository(db), SQLAlchemyDestinoViagemRepository(db),
         SQLAlchemyCatalogoRepository(db), _politica_acesso_viagem(db), SQLAlchemyUnitOfWork(db),
+    )
+
+
+def get_gerenciar_orcamento_viagem(db: Session = Depends(get_db)) -> GerenciarOrcamentoViagem:
+    return GerenciarOrcamentoViagem(
+        SQLAlchemyOrcamentoRepository(db), _politica_acesso_viagem(db), SQLAlchemyUnitOfWork(db)
     )
