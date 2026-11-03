@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from app.adapters.inbound.api.errors import tratar_erro_negocio
 from app.adapters.inbound.api.routes.atividades_viagem import router as atividades_viagem_router
 from app.adapters.inbound.api.routes.auth import router as auth_router
+from app.adapters.inbound.api.routes.avaliacoes import router as avaliacoes_router
 from app.adapters.inbound.api.routes.catalogo import router as catalogo_router
 from app.adapters.inbound.api.routes.destinos_catalogo import router as destinos_catalogo_router
 from app.adapters.inbound.api.routes.destinos_viagem import router as destinos_viagem_router
@@ -47,6 +48,7 @@ app = FastAPI(
             "description": "Orçamento total da viagem e resumo financeiro do roteiro.",
         },
         {"name": "Catálogo", "description": "Consulta pública de atividades e locais."},
+        {"name": "Avaliações", "description": "Avaliações públicas de atividades realizadas."},
         {"name": "Health", "description": "Verificação de disponibilidade da API."},
     ],
 )
@@ -62,3 +64,5 @@ app.include_router(destinos_catalogo_router)
 app.include_router(destinos_viagem_router)
 app.include_router(atividades_viagem_router)
 app.include_router(orcamento_viagem_router)
+
+app.include_router(avaliacoes_router)

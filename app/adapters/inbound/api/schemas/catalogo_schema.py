@@ -20,7 +20,9 @@ class DestinoCatalogoResponse(BaseModel):
 
 
 class ReviewCatalogoResponse(BaseModel):
-    """Contrato reservado para a integração da issue #23."""
+    """Projeção pública: sem email, identidade técnica ou dados privados da viagem."""
+
+    model_config = ConfigDict(from_attributes=True)
 
     id: int
     nota: int = Field(ge=1, le=5)
@@ -45,9 +47,11 @@ class DadosAtividadeCatalogoResponse(BaseModel):
 
 
 class AtividadeCatalogoResponse(DadosAtividadeCatalogoResponse):
-    avaliacoes_disponiveis: bool = Field(default=False, description="Integração pendente na #23.")
+    avaliacoes_disponiveis: bool = Field(
+        default=True, description="Avaliações públicas disponíveis."
+    )
     media_avaliacoes: float | None = Field(default=None, ge=1, le=5)
-    total_avaliacoes: int | None = Field(default=None, ge=0)
+    total_avaliacoes: int = Field(default=0, ge=0)
     reviews: list[ReviewCatalogoResponse] = Field(default_factory=list)
 
 
@@ -66,6 +70,13 @@ class FiltrosCatalogo(BaseModel):
         default=None,
         max_length=255,
         description="Trecho do nome da cidade, código de país ou endereço, sem distinguir caixa.",
+    )
+    nota_minima: Decimal | None = Field(
+        default=None,
+        ge=1,
+        le=5,
+        allow_inf_nan=False,
+        description="Média mínima inclusiva; atividades sem avaliações não correspondem.",
     )
     destino_catalogo_id: int | None = Field(default=None, ge=1)
     pagina: int = Field(default=1, ge=1)
@@ -90,3 +101,10 @@ class FiltrosDestinosCatalogo(BaseModel):
     categoria: CategoriaDestino | None = None
     pagina: int = Field(default=1, ge=1)
     tamanho_pagina: int = Field(default=20, ge=1, le=100)
+
+
+class PaginaAvaliacoesResponse(BaseModel):
+    itens: list[ReviewCatalogoResponse]
+    pagina: int
+    tamanho_pagina: int
+    tem_proxima: bool

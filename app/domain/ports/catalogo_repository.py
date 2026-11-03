@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from decimal import Decimal
 
 from app.domain.entities.catalogo import AtividadeCatalogo, DestinoCatalogo
 from app.domain.enums import CategoriaAtividade, CategoriaDestino
@@ -50,6 +51,7 @@ class CatalogoRepository(ABC):
         destino_catalogo_id: int | None,
         limite: int,
         deslocamento: int,
+        nota_minima: Decimal | None = None,
     ) -> list[AtividadeCatalogo]:
         """Filtros combinados por E; texto parcial sem distinguir caixa; ordem por id."""
         pass

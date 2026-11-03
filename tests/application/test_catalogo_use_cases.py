@@ -86,8 +86,8 @@ def test_filtros_invalidos_nao_consultam_porta(filtros):
 
 
 def test_detalhe_e_inexistente(repository):
-    caso = ConsultarAtividadeCatalogo(repository)
-    assert caso.execute(1).nome == "Museu Nacional"
+    caso = ConsultarAtividadeCatalogo(repository, Mock())
+    assert caso.execute(1).atividade.nome == "Museu Nacional"
     with pytest.raises(AtividadeCatalogoNaoEncontrada):
         caso.execute(999)
 

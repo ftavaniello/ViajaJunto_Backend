@@ -79,6 +79,8 @@ class AtividadeCatalogo:
     google_place_id: str | None = None
     fonte: str = "manual"
     id: int | None = None
+    media_avaliacoes: Decimal | None = None
+    total_avaliacoes: int = 0
 
     def __post_init__(self):
         for campo, limite, obrigatorio in (

@@ -126,8 +126,9 @@ copie `access_token` para **Authorize**. Troque o token ao mudar de conta.
 Para editar a compartilhada após mudar as contas, refaça login e atualize o token.
 Veja também [destinos](destinos-roteiro.md) e [atividades do roteiro](atividades-roteiro.md)
 para exemplos exatos de payload. As permissões são preparadas pelo seed porque a
-API de gestão de membros ainda não foi implementada. Orçamento completo, avaliações,
-ranking e outros recursos ainda não implementados não são simulados por esta carga.
+API de gestão de membros ainda não foi implementada. Os cenários não incluem reviews prontos: publique-os pelas ocorrências concluídas,
+seguindo o [guia de avaliações](avaliacoes-atividades.md). Ranking e outros recursos
+ainda não implementados não são simulados por esta carga.
 
 ## Reexecução e preservação
 

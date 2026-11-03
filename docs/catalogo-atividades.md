@@ -2,7 +2,7 @@
 
 O catálogo contém dados reutilizáveis de locais e experiências. Uma atividade pertence
 obrigatoriamente a um destino do catálogo. Não contém datas, duração, custos, status
-ou participantes de viagens: esses dados de planejamento pertencem à issue #21.
+ou participantes de viagens: esses dados pertencem ao roteiro privado.
 
 ## Consulta pública
 
@@ -19,13 +19,13 @@ Filtros opcionais, combinados por **E**:
 | `categoria` | `alimentacao`, `transporte`, `cultura`, `lazer`, `compras`, `outros` |
 | `localizacao` | Trecho da cidade, do código de país ou do endereço |
 | `destino_catalogo_id` | Destino exato pelo ID público |
+| `nota_minima` | Média mínima inclusiva entre 1 e 5; exclui atividades sem avaliações |
 | `pagina` | Inteiro a partir de 1; padrão 1 |
 | `tamanho_pagina` | De 1 a 100; padrão 20 |
 
 Textos são aparados; espaços em branco equivalem a filtro ausente. As buscas não
 distinguem maiúsculas de minúsculas, mas não removem acentos. `%` e `_` são
-caracteres literais, não curingas. Campos desconhecidos, incluindo `nota_minima`,
-são rejeitados com 422, pois o filtro por nota pertence à #23.
+caracteres literais, não curingas. Campos desconhecidos são rejeitados com 422.
 
 Exemplo: `/catalogo/atividades?nome=passeio&categoria=cultura&localizacao=lisboa`.
 
@@ -45,19 +45,18 @@ pelo backend. Não são retornados usuários, membros, convites nem dados do rot
 O vocabulário de categorias segue `CategoriaAtividade` e os CHECKs existentes no banco,
 que divergem dos tipos exemplificados no documento inicial de arquitetura.
 
-## Avaliações: contrato preparado para a #23
+## Avaliações — RF22–24
 
-Nesta entrega, `avaliacoes_disponiveis=false`, `media_avaliacoes=null`,
-`total_avaliacoes=null` e `reviews=[]`. Isso significa **integração ainda indisponível**,
-não uma contagem calculada de zero. Não são consultadas nem expostas avaliações já
-inseridas diretamente no banco. O frontend deve ocultar estrelas/médias nesse estado.
-O contrato de review está reservado no OpenAPI: ID, nota de 1 a 5, comentário,
-nome público do autor e data de criação.
+`avaliacoes_disponiveis=true` indica que avaliações públicas estão disponíveis.
+O catálogo retorna média e total calculados de todas as avaliações, inclusive de
+contas excluídas. Sem reviews: média nula, total zero e lista vazia. A listagem
+contém resumos; o detalhe inclui até 20 reviews mais recentes. Todos os reviews
+podem ser consultados em `GET /catalogo/atividades/{atividade_id}/avaliacoes`.
 
-Quando a integração da #23 existir, uma atividade ainda sem avaliações deverá ter
-média nula, total zero e reviews vazios. Não usar nota zero, pois as notas válidas
-vão de 1 a 5. Média real, reviews e filtro por nota continuam pendentes na #23;
-RF23 e RF24 não estão integralmente concluídos nesta issue.
+Cada review contém ID, nota de 1 a 5, comentário opcional, nome público do autor
+(nulo se a conta foi excluída) e data de criação. Não expõe email nem dados de viagem.
+O filtro `nota_minima` é aplicado à média sem arredondamento, antes de paginar.
+Veja [publicação, permissões e exemplos](avaliacoes-atividades.md).
 
 ## Seed automático no desenvolvimento
 
@@ -154,7 +153,7 @@ do mecanismo de atualização deve preservar as referências do roteiro e avalia
 2. Abra `/docs`; as operações da tag **Catálogo** não precisam de Authorize.
 3. Liste as atividades e experimente os filtros e `tamanho_pagina=1`.
 4. Use um ID retornado para consultar o detalhe.
-5. Confira as informações da foto/localização e os campos reservados de avaliações.
+5. Confira as informações da foto/localização e média, total e reviews públicos.
 
 Os testes automatizados usam PostgreSQL exclusivo (`viajajunto_test`) e validam
 persistência, filtros, paginação, consulta anônima, contrato público e rollback.

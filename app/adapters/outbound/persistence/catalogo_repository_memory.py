@@ -1,13 +1,16 @@
 from dataclasses import replace
+from decimal import Decimal
 from typing import cast
 
+from app.adapters.outbound.persistence.avaliacao_repository_memory import AvaliacaoRepositoryMemory
 from app.domain.entities.catalogo import AtividadeCatalogo, DestinoCatalogo
 from app.domain.enums import CategoriaAtividade, CategoriaDestino
 from app.domain.ports.catalogo_repository import CatalogoRepository
 
 
 class CatalogoRepositoryMemory(CatalogoRepository):
-    def __init__(self):
+    def __init__(self, avaliacoes: AvaliacaoRepositoryMemory | None = None):
+        self.avaliacoes = avaliacoes
         self.destinos: dict[int, DestinoCatalogo] = {}
         self.atividades: dict[int, AtividadeCatalogo] = {}
 
@@ -45,7 +48,12 @@ class CatalogoRepositoryMemory(CatalogoRepository):
         return atividade
 
     def buscar_atividade(self, atividade_id: int) -> AtividadeCatalogo | None:
-        return self.atividades.get(atividade_id)
+        atividade = self.atividades.get(atividade_id)
+        return self._com_resumo(atividade) if atividade is not None else None
+
+    def _com_resumo(self, atividade: AtividadeCatalogo) -> AtividadeCatalogo:
+        media, total = self.avaliacoes.resumo(atividade.id) if self.avaliacoes else (None, 0)
+        return replace(atividade, media_avaliacoes=media, total_avaliacoes=total)
 
     def listar_atividades(
         self,
@@ -55,6 +63,7 @@ class CatalogoRepositoryMemory(CatalogoRepository):
         destino_catalogo_id: int | None,
         limite: int,
         deslocamento: int,
+        nota_minima: Decimal | None = None,
     ) -> list[AtividadeCatalogo]:
         itens = []
         for atividade in sorted(self.atividades.values(), key=lambda a: a.id):
@@ -72,6 +81,11 @@ class CatalogoRepositoryMemory(CatalogoRepository):
                     destino.pais_codigo,
                     atividade.endereco or "",
                 )
+            ):
+                continue
+            atividade = self._com_resumo(atividade)
+            if nota_minima is not None and (
+                atividade.media_avaliacoes is None or atividade.media_avaliacoes < nota_minima
             ):
                 continue
             itens.append(atividade)
