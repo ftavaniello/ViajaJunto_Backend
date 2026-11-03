@@ -63,7 +63,6 @@ e agora informa:
 
 ```json
 {
-  "avaliacoes_disponiveis": true,
   "media_avaliacoes": null,
   "total_avaliacoes": 0,
   "reviews": []
@@ -73,8 +72,7 @@ e agora informa:
 O trecho ilustra os campos; no detalhe, `reviews` contém até 20 avaliações mais
 recentes, ordenadas por `criado_em` e ID decrescentes. O total e a média consideram
 **todas** as avaliações, não apenas as primeiras 20. Sem avaliações: média nula,
-total zero e lista vazia. `avaliacoes_disponiveis=true` indica que o recurso está
-implementado, mesmo quando a atividade ainda não recebeu avaliações.
+total zero e lista vazia.
 
 A listagem `/catalogo/atividades` inclui a mesma média e total por item; o campo
 `reviews` fica vazio nessa listagem. Isso evita carregar comentários para todos

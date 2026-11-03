@@ -47,9 +47,6 @@ class DadosAtividadeCatalogoResponse(BaseModel):
 
 
 class AtividadeCatalogoResponse(DadosAtividadeCatalogoResponse):
-    avaliacoes_disponiveis: bool = Field(
-        default=True, description="Avaliações públicas disponíveis."
-    )
     media_avaliacoes: float | None = Field(default=None, ge=1, le=5)
     total_avaliacoes: int = Field(default=0, ge=0)
     reviews: list[ReviewCatalogoResponse] = Field(default_factory=list)

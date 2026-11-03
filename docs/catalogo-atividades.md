@@ -47,7 +47,6 @@ que divergem dos tipos exemplificados no documento inicial de arquitetura.
 
 ## Avaliações — RF22–24
 
-`avaliacoes_disponiveis=true` indica que avaliações públicas estão disponíveis.
 O catálogo retorna média e total calculados de todas as avaliações, inclusive de
 contas excluídas. Sem reviews: média nula, total zero e lista vazia. A listagem
 contém resumos; o detalhe inclui até 20 reviews mais recentes. Todos os reviews

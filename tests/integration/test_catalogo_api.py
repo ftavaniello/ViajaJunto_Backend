@@ -68,7 +68,6 @@ def test_detalhe_publico_sem_token_e_sem_dados_privados(client, catalogo):
     assert body["destino"]["nome"] == "Lisboa"
     assert body["foto_url"] == "https://example.com/foto.jpg"
     assert body["fonte"] == "manual"
-    assert body["avaliacoes_disponiveis"] is True
     assert body["media_avaliacoes"] is None
     assert body["total_avaliacoes"] == 0
     assert body["reviews"] == []
@@ -84,7 +83,6 @@ def test_detalhe_publico_sem_token_e_sem_dados_privados(client, catalogo):
         "google_place_id",
         "fonte",
         "destino",
-        "avaliacoes_disponiveis",
         "media_avaliacoes",
         "total_avaliacoes",
         "reviews",
