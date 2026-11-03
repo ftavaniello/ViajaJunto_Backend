@@ -75,6 +75,14 @@ permitem planejar atividades do catálogo com data, horário, duração, custo e
 Criador e Editor alteram; Visualizador consulta. A listagem é cronológica, com
 atividades sem horário ao fim de cada dia. Veja [contrato e teste no Swagger](docs/atividades-roteiro.md).
 
+## Mapa e países visitados
+
+`GET /usuarios/me/paises-visitados` lista, sem repetição, os países (ISO alfa-2) que o
+usuário autenticado visitou: paradas de viagens próprias ou compartilhadas, `confirmada`
+ou `concluida`, com chegada até hoje. `GET /viagens/{viagem_id}/mapa` devolve as paradas
+na ordem de visita com coordenadas para desenhar o roteiro. O mapa é feito no frontend.
+Veja [critério e contrato](docs/mapa-paises-visitados.md).
+
 ## Orçamento da viagem
 
 `GET /viagens/{viagem_id}/orcamento` retorna o resumo financeiro: orçamento total,
