@@ -68,7 +68,8 @@ def test_detalhe_publico_destino(client, destinos):
         "latitude",
         "longitude",
         "foto_url",
-        "google_place_id",
+        "id_externo",
+        "fonte",
     }
 
 
@@ -156,7 +157,7 @@ def test_lote_so_destinos_publicado_sem_atividades(client, db_session):
                     "latitude": "-27.5",
                     "longitude": "-48.5",
                     "foto_url": "https://example.com/praia.jpg",
-                    "google_place_id": "referencia-curada",
+                    "id_externo": "referencia-curada",
                 }
             }
         }
@@ -170,7 +171,7 @@ def test_lote_so_destinos_publicado_sem_atividades(client, db_session):
     assert itens[0]["categoria"] == "praia"
     assert itens[0]["descricao"] == "Descrição curada"
     assert itens[0]["latitude"] == "-27.500000"
-    assert itens[0]["google_place_id"] == "referencia-curada"
+    assert itens[0]["id_externo"] == "referencia-curada"
     assert client.get("/catalogo/atividades").json()["itens"] == []
 
 

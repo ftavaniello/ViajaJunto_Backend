@@ -48,6 +48,13 @@ class CategoriaAtividade(StrEnum):
     OUTROS = "outros"
 
 
+class FonteCatalogo(StrEnum):
+    """Origem de um registro do catálogo; com `id_externo`, identifica o local no fornecedor."""
+
+    MANUAL = "manual"  # Curadoria da equipe (importador JSON e seed).
+    GEOAPIFY = "geoapify"
+
+
 class TipoNotificacao(StrEnum):
     MEMBRO_ENTROU = "membro_entrou"
     PAPEL_ALTERADO = "papel_alterado"

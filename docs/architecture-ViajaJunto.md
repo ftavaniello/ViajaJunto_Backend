@@ -35,7 +35,7 @@ A aplicação adota uma **arquitetura cliente-servidor** com separação clara e
 - **Frontend (NextJS):** aplicação web responsiva que consome a API REST do backend, renderiza a interface e exibe mapas e cadastros de atividades/locais.
 - **Backend (NestJS):** API REST responsável pela lógica de negócio, autenticação, autorização, persistência e orquestração entre os serviços externos.
 - **Serviço de Mapas:** responsável pela visualização geográfica e roteamento em mapa, com biblioteca como Google Maps ou Leaflet/OpenStreetMap.
-- **Serviço de Locais/Atividades (catálogo_atividades):** integra a API do Google Places para complementar dados de locais, eventos, restaurantes, hotéis e pontos de interesse.
+- **Serviço de Locais/Atividades (catálogo_atividades):** integra um fornecedor de locais por uma porta de aplicação para complementar dados de locais, restaurantes e pontos de interesse. O previsto era o Google Places; a implementação usa a Places API do Geoapify (ver [integração de locais](integracao-locais.md)).
 - **Banco de Dados (PostgreSQL):** armazenamento relacional para usuários, viagens, destinos, atividades, orçamento e avaliações.
 
 ### **2.1 Diagrama de Relações**
@@ -56,7 +56,7 @@ A aplicação adota uma **arquitetura cliente-servidor** com separação clara e
                         ▼                               ▼                               ▼
                 ┌─────────────────────┐       ┌──────────────────────────────┐      ┌─────────────────────┐
                 │  Serviço de Mapas   │       │ Serviço de Locais/Atividades │      │  Banco de Dados     │
-                │  Google Maps /      │       │  Google Places API           │      │  PostgreSQL/        │
+                │  Google Maps /      │       │  Geoapify Places API         │      │  PostgreSQL/        │
                 │  Leaflet + OSM      │       │  - catálogo_atividades       │      │  - usuarios         │
                 │  - geolocalização   │       │  - busca por locais          │      │  - viagens          │
                 │  - rotas            │       │  - dados de pontos de        │      │  - destinos         │
@@ -84,10 +84,10 @@ O sistema é organizado em cinco blocos principais:
 - **Camada de Apresentação (Frontend):** responsável pela interface com o usuário — renderização de telas, formulários, mapa interativo, filtros de busca e consumo da API REST.
 - **Camada de Negócio (Backend / API REST):** responsável pelas regras de negócio, autenticação, controle de permissões, criação de viagens e orquestração de operações sobre dados e integrações externas.
 - **Serviço de Mapas:** encapsula a lógica de renderização geográfica, geolocalização, rotas e marcadores em mapas interativos.
-- **Serviço de Locais/Atividades (catálogo_atividades):** integra a Google Places API para buscar, validar e enriquecer informações de locais, atrações e estabelecimentos que podem ser cadastrados em viagens ou atividades.
+- **Serviço de Locais/Atividades (catálogo_atividades):** integra a Places API do Geoapify, por meio da porta `ProvedorLocais`, para buscar e enriquecer informações de locais, atrações e estabelecimentos que podem ser cadastrados em viagens ou atividades.
 - **Camada de Dados (Banco de Dados):** responsável pela persistência das informações — usuários, viagens, destinos, atividades, orçamento, avaliações e referências ao catálogo externo.
 
-> O backend deve manter um catálogo interno de atividades/locais, sincronizando dados com o Google Places API quando necessário e preservando registros próprios de avaliações e contexto da viagem.
+> O backend deve manter um catálogo interno de atividades/locais, sincronizando dados com o fornecedor externo (Geoapify) quando necessário e preservando registros próprios de avaliações e contexto da viagem.
 
 ### **4.2 Organização do Código**
 
@@ -188,9 +188,9 @@ O modelo relacional é composto pelas entidades abaixo. O diagrama completo pode
 | `pais` | varchar | |
 | `latitude` | float | |
 | `longitude` | float | |
-| `google_place_id` | varchar | UNIQUE |
+| `id_externo` | varchar | UNIQUE com `fonte` |
 | `foto_url` | varchar | |
-| `fonte` | varchar | default: `google_places` |
+| `fonte` | varchar | `manual` ou `geoapify`; default: `manual` |
 | `media_avaliacao` | float | default: 0 |
 | `criado_em` | timestamp | default: `now()` |
 
@@ -256,7 +256,7 @@ destino_catalogo(#id, nome, pais, categoria, descricao, latitude, longitude, fot
 
 destino_viagem(#id, *viagem_id→viagem, *destino_catalogo_id→destino_catalogo, chegada, saida, descricao, ordem)
 
-catalogo_atividade(#id, nome, descricao, tipo_atividade, local, cidade, pais, latitude, longitude, google_place_id, foto_url, fonte, media_avaliacao, criado_em)
+catalogo_atividade(#id, nome, descricao, tipo_atividade, local, cidade, pais, latitude, longitude, id_externo, foto_url, fonte, media_avaliacao, criado_em)
 
 atividade_viagem(#id, *destino_viagem_id→destino_viagem, *catalogo_atividade_id→catalogo_atividade, data_horario, duracao_min, custo_previsto, status)
 

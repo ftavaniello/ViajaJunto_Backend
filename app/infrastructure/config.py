@@ -40,6 +40,11 @@ class Settings:
     RECUPERACAO_SENHA_URL: str
     # Pagina do frontend que recebe ?token=... e aceita o convite da viagem.
     CONVITE_URL: str
+    # Places API do Geoapify (enriquecimento do catalogo pela CLI). A chave vem do
+    # ambiente ou de um arquivo (segredo montado); a API sobe sem ela.
+    GEOAPIFY_API_KEY: str = ""
+    GEOAPIFY_API_KEY_FILE: str = ""
+    LOCAIS_TIMEOUT_SECONDS: int = 10
 
     @property
     def em_desenvolvimento(self) -> bool:
@@ -76,6 +81,9 @@ def carregar_settings(env: Mapping[str, str] = os.environ) -> Settings:
             "RECUPERACAO_SENHA_URL", "http://localhost:3000/redefinir-senha"
         ),
         CONVITE_URL=env.get("CONVITE_URL", "http://localhost:3000/convite"),
+        GEOAPIFY_API_KEY=(env.get("GEOAPIFY_API_KEY") or "").strip(),
+        GEOAPIFY_API_KEY_FILE=(env.get("GEOAPIFY_API_KEY_FILE") or "").strip(),
+        LOCAIS_TIMEOUT_SECONDS=_inteiro(env, "LOCAIS_TIMEOUT_SECONDS", 10),
     )
 
 
@@ -86,6 +94,8 @@ def validar_settings(config: Settings) -> None:
     """
     if config.JWT_EXPIRE_MINUTES <= 0:
         raise ConfiguracaoInvalida("JWT_EXPIRE_MINUTES deve ser maior que zero")
+    if config.LOCAIS_TIMEOUT_SECONDS <= 0:
+        raise ConfiguracaoInvalida("LOCAIS_TIMEOUT_SECONDS deve ser maior que zero")
 
     if config.em_desenvolvimento:
         return

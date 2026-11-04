@@ -76,3 +76,23 @@ class MembroNaoEncontrado(ErroNegocio):
 
 class NotificacaoNaoEncontrada(ErroNegocio):
     """Notificacao inexistente ou de outro usuario (mesma resposta para os dois casos)."""
+
+
+class FalhaProvedorLocais(ErroNegocio):
+    """O fornecedor externo de locais nao respondeu como esperado; nada foi gravado."""
+
+
+class ProvedorLocaisIndisponivel(FalhaProvedorLocais):
+    """Timeout, falha de rede, erro do servidor ou resposta ilegivel."""
+
+
+class LimiteProvedorLocaisExcedido(FalhaProvedorLocais):
+    """Cota ou limite de requisicoes do fornecedor atingido (HTTP 429)."""
+
+    def __init__(self, mensagem: str, tentar_em_segundos: int | None = None):
+        super().__init__(mensagem)
+        self.tentar_em_segundos = tentar_em_segundos
+
+
+class CredencialProvedorLocaisInvalida(FalhaProvedorLocais):
+    """Chave do fornecedor ausente, invalida ou sem permissao (HTTP 401/403)."""

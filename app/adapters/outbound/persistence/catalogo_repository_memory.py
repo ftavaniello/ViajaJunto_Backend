@@ -4,7 +4,7 @@ from typing import cast
 
 from app.adapters.outbound.persistence.avaliacao_repository_memory import AvaliacaoRepositoryMemory
 from app.domain.entities.catalogo import AtividadeCatalogo, DestinoCatalogo
-from app.domain.enums import CategoriaAtividade, CategoriaDestino
+from app.domain.enums import CategoriaAtividade, CategoriaDestino, FonteCatalogo
 from app.domain.ports.catalogo_repository import CatalogoRepository
 
 
@@ -43,9 +43,46 @@ class CatalogoRepositoryMemory(CatalogoRepository):
         return destinos[deslocamento : deslocamento + limite]
 
     def salvar_atividade(self, atividade: AtividadeCatalogo) -> AtividadeCatalogo:
+        # Mesmo efeito da constraint uq_catalogo_atividades_fonte_id_externo do banco.
+        if atividade.id_externo and self.buscar_atividade_externa(
+            atividade.fonte, atividade.id_externo
+        ):
+            raise ValueError("Atividade externa duplicada")
         atividade = cast(AtividadeCatalogo, replace(atividade, id=len(self.atividades) + 1))
         self.atividades[atividade.id] = atividade
         return atividade
+
+    def buscar_atividade_externa(
+        self, fonte: FonteCatalogo, id_externo: str
+    ) -> AtividadeCatalogo | None:
+        return next(
+            (
+                self._com_resumo(a)
+                for a in self.atividades.values()
+                if a.fonte == fonte and a.id_externo == id_externo
+            ),
+            None,
+        )
+
+    def atualizar_atividade(self, atividade: AtividadeCatalogo) -> AtividadeCatalogo:
+        atual = self.atividades[atividade.id]
+        atualizada = replace(
+            atual,
+            **{
+                campo: getattr(atividade, campo)
+                for campo in (
+                    "nome",
+                    "descricao",
+                    "categoria",
+                    "endereco",
+                    "latitude",
+                    "longitude",
+                    "foto_url",
+                )
+            },
+        )
+        self.atividades[atividade.id] = atualizada
+        return atualizada
 
     def buscar_atividade(self, atividade_id: int) -> AtividadeCatalogo | None:
         atividade = self.atividades.get(atividade_id)

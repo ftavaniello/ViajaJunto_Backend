@@ -75,6 +75,7 @@ from app.application.use_cases.consultar_viagem import ConsultarViagem
 from app.application.use_cases.criar_usuario import CriarUsuario
 from app.application.use_cases.criar_viagem import CriarViagem
 from app.application.use_cases.encerrar_sessao import EncerrarSessao
+from app.application.use_cases.enriquecer_catalogo import EnriquecerCatalogo
 from app.application.use_cases.excluir_usuario import ExcluirUsuario
 from app.application.use_cases.excluir_viagem import ExcluirViagem
 from app.application.use_cases.gerenciar_atividades_viagem import GerenciarAtividadesViagem
@@ -87,6 +88,7 @@ from app.application.use_cases.listar_viagens import ListarViagens
 from app.application.use_cases.redefinir_senha import RedefinirSenha
 from app.application.use_cases.solicitar_recuperacao_senha import SolicitarRecuperacaoSenha
 from app.domain.ports.email_sender import EmailSender
+from app.domain.ports.provedor_locais import ProvedorLocais
 from app.domain.ports.token_service import TokenService
 from app.domain.ports.total_usuarios_cache import TotalUsuariosCache
 from app.infrastructure.cache import get_total_usuarios_cache
@@ -245,6 +247,10 @@ def get_consultar_atividade_catalogo(db: Session = Depends(get_db)) -> Consultar
 
 def montar_importar_catalogo(db: Session) -> ImportarCatalogo:
     return ImportarCatalogo(SQLAlchemyCatalogoRepository(db), SQLAlchemyUnitOfWork(db))
+
+
+def montar_enriquecer_catalogo(db: Session, provedor: ProvedorLocais) -> EnriquecerCatalogo:
+    return EnriquecerCatalogo(SQLAlchemyCatalogoRepository(db), provedor, SQLAlchemyUnitOfWork(db))
 
 
 def get_listar_destinos_catalogo(db: Session = Depends(get_db)) -> ListarDestinosCatalogo:

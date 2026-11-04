@@ -25,7 +25,7 @@ class DestinoImportacao(BaseModel):
     latitude: Decimal | None = None
     longitude: Decimal | None = None
     foto_url: str | None = None
-    google_place_id: str | None = None
+    id_externo: str | None = None
 
 
 class AtividadeImportacao(BaseModel):
@@ -38,7 +38,7 @@ class AtividadeImportacao(BaseModel):
     latitude: Decimal | None = None
     longitude: Decimal | None = None
     foto_url: str | None = None
-    google_place_id: str | None = None
+    id_externo: str | None = None
 
 
 class ArquivoCatalogo(BaseModel):

@@ -135,6 +135,17 @@ de desenvolvimento, um seed carrega exemplos automaticamente se o catálogo esti
 (Orlando, Miami, Rio de Janeiro e Roma). Avaliações próprias, médias e filtro por nota
 mínima estão implementados na #26. Veja [contrato, importação e exemplos](docs/catalogo-atividades.md).
 
+## Integração de locais (Geoapify)
+
+O catálogo de atividades pode ser abastecido com locais reais da Places API do
+Geoapify, consultada pela porta `ProvedorLocais` (o Google Places previsto na
+arquitetura não está disponível para a equipe). O operador roda
+`python -m app.adapters.inbound.cli.enriquecer_catalogo --destino <id> --categoria cultura`
+com `GEOAPIFY_API_KEY` configurada. Reexecutar não duplica (`fonte` + `id_externo`)
+e preserva avaliações, roteiros e a curadoria. Nas respostas do catálogo,
+`google_place_id` foi substituído por `id_externo` e `fonte`.
+Veja [regras, falhas e verificação real](docs/integracao-locais.md).
+
 ## Painel pessoal de viagens — RF06
 
 `GET /viagens?pagina=1&tamanho_pagina=20` exige `Authorization: Bearer <token>`.
@@ -165,7 +176,7 @@ Não é necessário alterar o esquema do banco para esta funcionalidade.
 
 ## Arquitetura
 
-A documentação oficial descreve uma arquitetura cliente-servidor com frontend separado, API REST, PostgreSQL e serviços externos de mapas e locais/atividades. Prevê um catálogo interno enriquecido com Google Places, preservando as avaliações próprias e os dados associados às viagens. Essas integrações ainda não existem neste repositório.
+A documentação oficial descreve uma arquitetura cliente-servidor com frontend separado, API REST, PostgreSQL e serviços externos de mapas e locais/atividades. Prevê um catálogo interno enriquecido por um fornecedor de locais, preservando as avaliações próprias e os dados associados às viagens. O enriquecimento usa o Geoapify no lugar do Google Places (veja [integração de locais](docs/integracao-locais.md)); o serviço de mapas fica no frontend.
 
 O documento de arquitetura menciona NextJS para o frontend e NestJS para o backend, embora sua tabela de restrições deixe linguagem e framework a definir. A implementação atual utiliza Python e FastAPI. A organização hexagonal descrita abaixo corresponde ao código presente; a divergência de stack permanece pendente de alinhamento na documentação oficial.
 
@@ -453,7 +464,7 @@ O catálogo público de atividades e sua importação operacional estão documen
 
 Este repositório contém apenas o backend. A interface web e os recursos de colaboração no planejamento de viagens ainda não estão presentes nesta implementação.
 
-Estão fora do escopo da versão especificada: reservas de hotéis, voos e ingressos por APIs externas; chat em tempo real; aplicativo mobile nativo; pagamentos e divisão de custos; edição simultânea em tempo real; e gamificação de avaliações. A integração de catálogo com Google Places prevista na arquitetura não corresponde a uma integração de reservas.
+Estão fora do escopo da versão especificada: reservas de hotéis, voos e ingressos por APIs externas; chat em tempo real; aplicativo mobile nativo; pagamentos e divisão de custos; edição simultânea em tempo real; e gamificação de avaliações. A integração de catálogo com o Geoapify (no lugar do Google Places previsto na arquitetura) não corresponde a uma integração de reservas.
 
 ## Referências de especificação
 

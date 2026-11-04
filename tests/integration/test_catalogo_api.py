@@ -80,7 +80,7 @@ def test_detalhe_publico_sem_token_e_sem_dados_privados(client, catalogo):
         "latitude",
         "longitude",
         "foto_url",
-        "google_place_id",
+        "id_externo",
         "fonte",
         "destino",
         "media_avaliacoes",
@@ -96,7 +96,8 @@ def test_detalhe_publico_sem_token_e_sem_dados_privados(client, catalogo):
         "latitude",
         "longitude",
         "foto_url",
-        "google_place_id",
+        "id_externo",
+        "fonte",
     }
 
 
@@ -188,7 +189,7 @@ def test_importacao_json_persiste_e_aparece_publicamente(client, db_session, tmp
                         "destino": "lisboa",
                         "nome": "Museu",
                         "categoria": "cultura",
-                        "google_place_id": "referencia-curada",
+                        "id_externo": "referencia-curada",
                     }
                 ],
             }
@@ -201,14 +202,14 @@ def test_importacao_json_persiste_e_aparece_publicamente(client, db_session, tmp
     )
     assert importar_json(arquivo.read_text(encoding="utf-8"), caso) == 1
     item = client.get("/catalogo/atividades").json()["itens"][0]
-    assert item["google_place_id"] == "referencia-curada"
+    assert item["id_externo"] == "referencia-curada"
     assert item["fonte"] == "manual"
 
 
 def test_importacao_desfaz_lote_inteiro_em_duplicacao(db_session):
     destino = DestinoCatalogo(nome="Lisboa", pais_codigo="PT")
     atividade = AtividadeCatalogo(
-        destino=destino, nome="Museu", categoria="cultura", google_place_id="duplicada"
+        destino=destino, nome="Museu", categoria="cultura", id_externo="duplicada"
     )
     caso = ImportarCatalogo(
         SQLAlchemyCatalogoRepository(db_session),
