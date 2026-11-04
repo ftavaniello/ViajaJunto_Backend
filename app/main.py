@@ -3,11 +3,14 @@ from fastapi import FastAPI
 from app.adapters.inbound.api.errors import tratar_erro_negocio
 from app.adapters.inbound.api.routes.atividades_viagem import router as atividades_viagem_router
 from app.adapters.inbound.api.routes.auth import router as auth_router
+from app.adapters.inbound.api.routes.avaliacoes import router as avaliacoes_router
 from app.adapters.inbound.api.routes.catalogo import router as catalogo_router
 from app.adapters.inbound.api.routes.destinos_catalogo import router as destinos_catalogo_router
 from app.adapters.inbound.api.routes.destinos_viagem import router as destinos_viagem_router
 from app.adapters.inbound.api.routes.health import router as health_router
 from app.adapters.inbound.api.routes.membros_viagem import router as membros_viagem_router
+from app.adapters.inbound.api.routes.mapa import router as mapa_router
+from app.adapters.inbound.api.routes.orcamento_viagem import router as orcamento_viagem_router
 from app.adapters.inbound.api.routes.usuario import router as usuario_router
 from app.adapters.inbound.api.routes.viagem import router as viagem_router
 from app.domain.errors import ErroNegocio
@@ -46,7 +49,16 @@ app = FastAPI(
             "description": "Planejamento privado de atividades por parada.",
         },
         {"name": "Roteiro", "description": "Destinos e estadias privadas das viagens."},
+        {
+            "name": "Mapa",
+            "description": "Países visitados pelo usuário e pontos do roteiro para o mapa.",
+        },
+        {
+            "name": "Orçamento",
+            "description": "Orçamento total da viagem e resumo financeiro do roteiro.",
+        },
         {"name": "Catálogo", "description": "Consulta pública de atividades e locais."},
+        {"name": "Avaliações", "description": "Avaliações públicas de atividades realizadas."},
         {"name": "Health", "description": "Verificação de disponibilidade da API."},
     ],
 )
@@ -62,3 +74,7 @@ app.include_router(catalogo_router)
 app.include_router(destinos_catalogo_router)
 app.include_router(destinos_viagem_router)
 app.include_router(atividades_viagem_router)
+app.include_router(orcamento_viagem_router)
+
+app.include_router(avaliacoes_router)
+app.include_router(mapa_router)
