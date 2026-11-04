@@ -10,7 +10,7 @@ Este repositório contém a API do projeto. Atualmente, o backend implementa o m
 
 No fluxo previsto, um usuário cria uma viagem com nome, descrição e datas gerais, organiza os destinos na ordem de visita e associa atividades a cada parada. As atividades incluem informações como horário, duração, categoria e custo previsto. O orçamento reúne esses custos para apresentar o total planejado, o saldo disponível e a distribuição por categoria.
 
-O criador compartilha a viagem por código de convite e administra os colaboradores. As permissões são específicas de cada viagem:
+O criador convida colaboradores por email e administra seus papéis. As permissões são específicas de cada viagem:
 
 | Perfil | Participação prevista |
 |---|---|
@@ -33,6 +33,8 @@ A matriz detalhada de permissões (quem edita dados gerais e status, quem exclui
 | Destinos — RF08–RF11 | Múltiplos destinos ordenados, informações da estadia, pesquisa e mapa de países visitados | Catálogo público e destinos do roteiro com datas e ordem de visita (RF08–RF10); mapa de países visitados pendente |
 | Atividades — RF12–RF14 | Atividades por destino, horários, duração, custos e status | Planejamento por parada, ordem cronológica, custos previstos e status implementados (#24) |
 | Orçamento — RF15–RF17 | Limite total, custos previstos e resumo financeiro por categoria | Custos previstos por atividade implementados (RF16); limite e resumo financeiro pendentes (#25) |
+| Colaboração — RF18–RF21 | Convite por código, permissões de Editor/Visualizador e notificações in-app | Convite por código, papéis Editor/Visualizador, alteração de papel e remoção pelo criador implementados (#16, RF18–RF20); notificações in-app (RF21) pendentes |
+| Avaliação e descoberta — RF22–RF25 | Avaliações, páginas públicas, catálogo com filtros e destaques | Catálogo público, detalhe e filtros descritivos implementados (#20); avaliações, nota mínima e destaques pendentes |
 | Colaboração — RF18–RF21 | Convite por código, permissões de Editor/Visualizador e notificações in-app | Ainda não implementado |
 | Avaliação e descoberta — RF22–RF25 | Avaliações, páginas públicas, catálogo com filtros e destaques | Catálogo público, avaliações de atividades concluídas, médias, reviews e nota mínima implementados (#20/#26); destaques de destinos pendentes |
 
@@ -67,6 +69,17 @@ Quem esqueceu a senha pede um link em `POST /auth/recuperar-senha`. A resposta �
 | Recuperação de senha | Envia por email um link de uso único, válido por 60 minutos, sem revelar se o email tem conta; a redefinição encerra todas as sessões |
 | Exclusão de conta | Remove permanentemente o usuário autenticado |
 | Verificação de disponibilidade | Expõe uma rota pública de liveness da API |
+
+## Convites e colaboradores
+
+O criador convida alguém por email em `POST /viagens/{viagem_id}/convites`. O
+convidado recebe um link de uso único, válido por 7 dias, e ao aceitá-lo
+(`POST /viagens/convites/aceitar`) com a conta daquele email entra direto na viagem,
+sempre como Visualizador. Quem ainda não tem conta se cadastra com o email convidado.
+Só o criador promove, rebaixa ou remove colaboradores em
+`/viagens/{viagem_id}/membros/{usuario_id}`. Não há como entrar pelo id da viagem,
+o link não serve para outra conta e não pode ser aceito duas vezes (409).
+Veja [regras, contrato e teste pelo Swagger](docs/convites-e-membros.md).
 
 ## Atividades do roteiro
 
@@ -128,7 +141,7 @@ mínima estão implementados na #26. Veja [contrato, importação e exemplos](do
 Retorna viagens criadas pelo usuário e compartilhadas com ele, sem duplicação.
 Cada item contém os campos da viagem (`id`, `criador_id`, `nome`, `descricao`,
 `data_inicio`, `data_fim`, `status`, `criado_em`, `atualizado_em`) e
-`papel_usuario`: `criador`, `editor` ou `visualizador`. Códigos de convite não são expostos.
+`papel_usuario`: `criador`, `editor` ou `visualizador`.
 
 A resposta é um objeto com `itens`, `pagina`, `tamanho_pagina` e `tem_proxima`.
 Por exemplo, para uma conta sem viagens:
@@ -222,7 +235,7 @@ A proteção das rotas de conta é feita pela dependência `get_usuario_atual`. 
 
 ### Viagens e permissões
 
-O usuário autenticado cria uma viagem com nome, descrição opcional e datas de início e fim; a data de fim não pode ser anterior à de início. Toda viagem nasce com status `planejando` e pode passar livremente para `confirmada` ou `concluida` (RF07). O criador é sempre o usuário do token: um `criador_id` enviado no corpo é ignorado. Na criação também é gerado o código de convite, que ainda não é exposto pela API.
+O usuário autenticado cria uma viagem com nome, descrição opcional e datas de início e fim; a data de fim não pode ser anterior à de início. Toda viagem nasce com status `planejando` e pode passar livremente para `confirmada` ou `concluida` (RF07). O criador é sempre o usuário do token: um `criador_id` enviado no corpo é ignorado. Colaboradores entram por convite por email (ver [Convites e colaboradores](#convites-e-colaboradores)).
 
 A autorização fica em `PoliticaAcessoViagem` (aplicação), que consulta a matriz de `app/domain/permissoes.py`. Os próximos módulos (destinos, atividades, orçamento, membros) devem usar a mesma política.
 
@@ -266,7 +279,7 @@ O comando usa o caso de uso de cadastro, é recusado quando `APP_ENV` não é `d
 
 O modelo oficial prevê também `viagem`, `membro_viagem`, `destino_catalogo`, `destino_viagem`, `catalogo_atividade`, `atividade_viagem`, `orcamento` e `avaliacao`. Ele distingue os dados reutilizáveis do catálogo das informações de cada viagem: por exemplo, a atividade do catálogo descreve um local ou experiência, enquanto sua associação à viagem registra horário, custo previsto e status. Cada viagem possui um orçamento, e as avaliações se vinculam às atividades do catálogo.
 
-Essas tabelas, mais `notificacoes` e `tokens_recuperacao_senha`, foram criadas pela migração `a3f1c9d27b45` conforme as decisões de [`docs/decisoes-de-produto.md`](docs/decisoes-de-produto.md): identificadores inteiros com o código de convite em coluna própria, avaliação de atividades com ranking de destinos derivado, papéis, validade de convites, datas, moeda e efeitos das exclusões. Viagens e membros já têm repositórios (`SQLAlchemyViagemRepository`, `SQLAlchemyMembroViagemRepository`); `tokens_recuperacao_senha` é usada pela recuperação de senha; as demais tabelas ainda são apenas esquema. A migração `e2c7a4f19d36` alinhou os status de viagem ao RF07 (`planejando`, `confirmada`, `concluida`). A tabela `usuarios` ganhou o campo `criado_em` previsto no documento; ela mantém o nome `usuarios` em vez de `usuario`.
+Essas tabelas, mais `notificacoes` e `tokens_recuperacao_senha`, foram criadas pela migração `a3f1c9d27b45` conforme as decisões de [`docs/decisoes-de-produto.md`](docs/decisoes-de-produto.md): identificadores inteiros com o código de convite em coluna própria, avaliação de atividades com ranking de destinos derivado, papéis, validade de convites, datas, moeda e efeitos das exclusões. Viagens e membros já têm repositórios (`SQLAlchemyViagemRepository`, `SQLAlchemyMembroViagemRepository`); `tokens_recuperacao_senha` é usada pela recuperação de senha; as demais tabelas ainda são apenas esquema. A migração `e2c7a4f19d36` alinhou os status de viagem ao RF07 (`planejando`, `confirmada`, `concluida`). A tabela `usuarios` ganhou o campo `criado_em` previsto no documento; ela mantém o nome `usuarios` em vez de `usuario`. A migração `d8a2f5c3e174` (#16) trocou o código de convite da viagem pela tabela `convites_viagem`, com um convite por email.
 
 ## Organização do repositório
 

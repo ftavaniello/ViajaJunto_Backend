@@ -6,6 +6,7 @@ from alembic import context
 from app.adapters.outbound.persistence import (  # noqa: F401
     avaliacao_model,
     catalogo_model,
+    convite_viagem_model,
     notificacao_model,
     recuperacao_senha_model,
     roteiro_model,

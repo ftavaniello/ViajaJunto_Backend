@@ -5,9 +5,15 @@ from app.domain.errors import (
     AcessoNegado,
     AtividadeCatalogoNaoEncontrada,
     AtividadeViagemNaoEncontrada,
+    ConviteInvalido,
+    ConviteJaAceito,
+    ConviteNaoEncontrado,
     DestinoCatalogoNaoEncontrado,
     DestinoViagemNaoEncontrado,
     ErroNegocio,
+    FalhaEnvioConvite,
+    MembroJaParticipa,
+    MembroNaoEncontrado,
     NaoAutenticado,
     UsuarioNaoEncontrado,
     ViagemNaoEncontrada,
@@ -23,11 +29,18 @@ async def tratar_erro_negocio(request: Request, error: ErroNegocio) -> JSONRespo
         headers = {"WWW-Authenticate": "Bearer"}
     elif isinstance(error, AcessoNegado):
         status = 403
+    elif isinstance(error, (MembroJaParticipa, ConviteJaAceito)):
+        status = 409
+    elif isinstance(error, FalhaEnvioConvite):
+        status = 503
     elif isinstance(
         error,
         (
             UsuarioNaoEncontrado,
             ViagemNaoEncontrada,
+            ConviteInvalido,
+            ConviteNaoEncontrado,
+            MembroNaoEncontrado,
             AtividadeCatalogoNaoEncontrada,
             AtividadeViagemNaoEncontrada,
             DestinoCatalogoNaoEncontrado,

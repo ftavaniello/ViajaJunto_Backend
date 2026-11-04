@@ -19,6 +19,9 @@ from app.adapters.outbound.persistence.avaliacoes_destino_repository_sqlalchemy 
 from app.adapters.outbound.persistence.catalogo_repository_sqlalchemy import (
     SQLAlchemyCatalogoRepository,
 )
+from app.adapters.outbound.persistence.convite_viagem_repository_sqlalchemy import (
+    SQLAlchemyConviteViagemRepository,
+)
 from app.adapters.outbound.persistence.destino_viagem_repository_sqlalchemy import (
     SQLAlchemyDestinoViagemRepository,
 )
@@ -72,6 +75,7 @@ from app.application.use_cases.excluir_usuario import ExcluirUsuario
 from app.application.use_cases.excluir_viagem import ExcluirViagem
 from app.application.use_cases.gerenciar_atividades_viagem import GerenciarAtividadesViagem
 from app.application.use_cases.gerenciar_destinos_viagem import GerenciarDestinosViagem
+from app.application.use_cases.gerenciar_membros_viagem import GerenciarMembrosViagem
 from app.application.use_cases.gerenciar_orcamento_viagem import GerenciarOrcamentoViagem
 from app.application.use_cases.importar_catalogo import ImportarCatalogo
 from app.application.use_cases.listar_viagens import ListarViagens
@@ -240,6 +244,22 @@ def get_gerenciar_destinos_viagem(db: Session = Depends(get_db)) -> GerenciarDes
         SQLAlchemyCatalogoRepository(db),
         _politica_acesso_viagem(db),
         SQLAlchemyUnitOfWork(db),
+    )
+
+
+def get_gerenciar_membros_viagem(
+    db: Session = Depends(get_db),
+    email_sender: EmailSender = Depends(get_email_sender),
+) -> GerenciarMembrosViagem:
+    return GerenciarMembrosViagem(
+        SQLAlchemyViagemRepository(db),
+        SQLAlchemyMembroViagemRepository(db),
+        SQLAlchemyConviteViagemRepository(db),
+        SQLAlchemyUsuarioRepository(db),
+        _politica_acesso_viagem(db),
+        email_sender,
+        SQLAlchemyUnitOfWork(db),
+        url_convite=settings.CONVITE_URL,
     )
 
 

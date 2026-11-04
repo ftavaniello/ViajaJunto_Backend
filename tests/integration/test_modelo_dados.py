@@ -17,6 +17,7 @@ from app.adapters.outbound.persistence.catalogo_model import (
     CatalogoAtividadeModel,
     DestinoCatalogoModel,
 )
+from app.adapters.outbound.persistence.convite_viagem_model import ConviteViagemModel
 from app.adapters.outbound.persistence.notificacao_model import NotificacaoModel
 from app.adapters.outbound.persistence.recuperacao_senha_model import (
     TokenRecuperacaoSenhaModel,
@@ -61,8 +62,6 @@ def _viagem(db, criador: UsuarioModel, **extra) -> ViagemModel:
         "nome": f"{PREFIXO}viagem",
         "data_inicio": date(2027, 1, 10),
         "data_fim": date(2027, 1, 20),
-        "codigo_convite": uuid.uuid4().hex[:10].upper(),
-        "codigo_convite_expira_em": _agora() + timedelta(days=7),
     }
     campos.update(extra)
     viagem = ViagemModel(**campos)
@@ -120,22 +119,63 @@ def limpeza(db_session):
     db_session.commit()
 
 
-# --- D1: identificador da viagem x código de convite -----------------------------------
+# --- D1: identificador da viagem x convite por email (issue #16) -----------------------
 
 
-def test_id_da_viagem_e_inteiro_e_distinto_do_codigo_de_convite(db_session):
-    viagem = _viagem(db_session, _usuario(db_session), codigo_convite="ABCD234567")
+def _convite(db, viagem, email="ana@example.com", **extra) -> ConviteViagemModel:
+    campos = {
+        "viagem_id": viagem.id,
+        "email": email,
+        "token_hash": uuid.uuid4().hex + uuid.uuid4().hex,
+        "expira_em": _agora() + timedelta(days=7),
+    }
+    campos.update(extra)
+    convite = ConviteViagemModel(**campos)
+    db.add(convite)
+    db.commit()
+    return convite
+
+
+def test_id_da_viagem_e_inteiro_e_viagem_nao_tem_codigo_de_convite(db_session):
+    viagem = _viagem(db_session, _usuario(db_session))
 
     assert isinstance(viagem.id, int)
-    assert viagem.codigo_convite == "ABCD234567"
+    assert not hasattr(viagem, "codigo_convite")
 
 
-def test_codigo_de_convite_e_unico(db_session):
-    criador = _usuario(db_session)
-    _viagem(db_session, criador, codigo_convite="DUPLICADO22")
+def test_hash_do_token_de_convite_e_unico(db_session):
+    viagem = _viagem(db_session, _usuario(db_session))
+    _convite(db_session, viagem, "ana@example.com", token_hash="a" * 64)
 
     with pytest.raises(IntegrityError):
-        _viagem(db_session, criador, codigo_convite="DUPLICADO22")
+        _convite(db_session, viagem, "bia@example.com", token_hash="a" * 64)
+
+
+def test_um_convite_pendente_por_email_na_viagem(db_session):
+    viagem = _viagem(db_session, _usuario(db_session))
+    _convite(db_session, viagem)
+
+    with pytest.raises(IntegrityError):
+        _convite(db_session, viagem)
+
+
+def test_convite_aceito_nao_bloqueia_novo_convite_ao_mesmo_email(db_session):
+    viagem = _viagem(db_session, _usuario(db_session))
+    _convite(db_session, viagem, aceito_em=_agora())
+
+    assert _convite(db_session, viagem).aceito_em is None
+
+
+def test_excluir_viagem_remove_seus_convites(db_session):
+    criador = _usuario(db_session)
+    viagem = _viagem(db_session, criador)
+    convite = _convite(db_session, viagem, convidado_por_id=criador.id)
+    convite_id = convite.id
+
+    db_session.execute(delete(ViagemModel).where(ViagemModel.id == viagem.id))
+    db_session.commit()
+
+    assert db_session.get(ConviteViagemModel, convite_id) is None
 
 
 def test_periodo_da_viagem_nao_pode_terminar_antes_de_comecar(db_session):

@@ -16,14 +16,10 @@ class SQLAlchemyViagemRepository(ViagemRepository):
 
     def salvar(self, viagem: Viagem) -> Viagem:
         if viagem.id is None:
-            model = ViagemModel(
-                criador_id=viagem.criador_id,
-                codigo_convite=viagem.codigo_convite,
-                codigo_convite_expira_em=viagem.codigo_convite_expira_em,
-            )
+            model = ViagemModel(criador_id=viagem.criador_id)
             self.db.add(model)
         else:
-            # criador e codigo de convite nao mudam por aqui.
+            # O criador nao muda.
             model = self.db.get(ViagemModel, viagem.id)
 
         model.nome = viagem.nome
@@ -80,8 +76,6 @@ class SQLAlchemyViagemRepository(ViagemRepository):
             data_inicio=model.data_inicio,
             data_fim=model.data_fim,
             status=model.status,
-            codigo_convite=model.codigo_convite,
-            codigo_convite_expira_em=model.codigo_convite_expira_em,
             criado_em=model.criado_em,
             atualizado_em=model.atualizado_em,
         )

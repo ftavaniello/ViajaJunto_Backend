@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date
 from unittest.mock import Mock
 
 import pytest
@@ -53,11 +53,10 @@ def viagem_id(viagens, membros) -> int:
     return viagem.id
 
 
-def test_criar_viagem_registra_criador_status_e_convite(viagens):
-    agora = datetime(2026, 10, 29, tzinfo=timezone.utc)
+def test_criar_viagem_registra_criador_e_status(viagens):
     uow = UnitOfWorkMemory()
 
-    viagem = CriarViagem(viagens, uow, agora=lambda: agora).execute(
+    viagem = CriarViagem(viagens, uow).execute(
         criador_id=CRIADOR,
         nome="Europa",
         descricao="Férias",
@@ -68,8 +67,6 @@ def test_criar_viagem_registra_criador_status_e_convite(viagens):
     assert viagem.id is not None
     assert viagem.criador_id == CRIADOR
     assert viagem.status == StatusViagem.PLANEJANDO
-    assert viagem.codigo_convite
-    assert viagem.codigo_convite_expira_em == agora + timedelta(days=7)
     assert (uow.commits, uow.rollbacks) == (1, 0)
 
 
@@ -188,18 +185,6 @@ def test_atualizar_valida_periodo_combinado_com_o_atual(viagens, acesso, viagem_
     assert viagens.buscar_por_id(viagem_id).data_fim == date(2027, 7, 20)
 
 
-def test_atualizar_preserva_convite(viagens, acesso, viagem_id, roteiro):
-    codigo = viagens.buscar_por_id(viagem_id).codigo_convite
-
-    viagem = AtualizarViagem(viagens, acesso, UnitOfWorkMemory(), roteiro).execute(
-        viagem_id,
-        CRIADOR,
-        descricao="Nova descrição",
-    )
-
-    assert viagem.codigo_convite == codigo
-
-
 def test_falha_ao_gravar_atualizacao_desfaz_a_transacao(viagens, acesso, viagem_id, roteiro):
     repository = Mock(wraps=viagens)
     repository.salvar.side_effect = RuntimeError("falha no banco")
@@ -301,10 +286,10 @@ def test_paginas_misturam_proprias_e_compartilhadas_sem_duplicar(viagens, membro
 
 def test_lista_reflete_mudanca_de_papel_e_remocao(viagens, membros, viagem_id):
     listar = ListarViagens(viagens)
-    membros.adicionar(viagem_id, EDITOR, PapelMembro.VISUALIZADOR)
+    membros.alterar_papel(viagem_id, EDITOR, PapelMembro.VISUALIZADOR)
     assert listar.execute(EDITOR).itens[0].papel_usuario == PerfilViagem.VISUALIZADOR
 
-    membros.papeis.pop((viagem_id, EDITOR))
+    membros.remover(viagem_id, EDITOR)
     assert listar.execute(EDITOR).itens == []
     assert listar.execute(CRIADOR).itens[0].viagem.id == viagem_id
 

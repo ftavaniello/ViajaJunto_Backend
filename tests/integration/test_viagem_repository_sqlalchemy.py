@@ -53,7 +53,6 @@ def test_salvar_e_buscar_viagem(db_session, email_teste):
     assert encontrada.descricao == "Férias"
     assert encontrada.criador_id == criador_id
     assert encontrada.status == StatusViagem.PLANEJANDO
-    assert encontrada.codigo_convite == viagem.codigo_convite
     assert encontrada.criado_em is not None
 
 

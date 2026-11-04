@@ -46,8 +46,6 @@ class AtualizarViagem:
                 data_inicio=viagem.data_inicio if data_inicio is None else data_inicio,
                 data_fim=viagem.data_fim if data_fim is None else data_fim,
                 status=viagem.status if status is None else status,
-                codigo_convite=viagem.codigo_convite,
-                codigo_convite_expira_em=viagem.codigo_convite_expira_em,
                 criado_em=viagem.criado_em,
             )
 

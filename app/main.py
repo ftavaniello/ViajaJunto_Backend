@@ -8,6 +8,7 @@ from app.adapters.inbound.api.routes.catalogo import router as catalogo_router
 from app.adapters.inbound.api.routes.destinos_catalogo import router as destinos_catalogo_router
 from app.adapters.inbound.api.routes.destinos_viagem import router as destinos_viagem_router
 from app.adapters.inbound.api.routes.health import router as health_router
+from app.adapters.inbound.api.routes.membros_viagem import router as membros_viagem_router
 from app.adapters.inbound.api.routes.mapa import router as mapa_router
 from app.adapters.inbound.api.routes.orcamento_viagem import router as orcamento_viagem_router
 from app.adapters.inbound.api.routes.usuario import router as usuario_router
@@ -40,6 +41,10 @@ app = FastAPI(
             "description": "Viagens do usuário; acesso restrito ao criador e colaboradores.",
         },
         {
+            "name": "Colaboradores",
+            "description": "Convite por código, papéis e remoção de colaboradores da viagem.",
+        },
+        {
             "name": "Atividades do roteiro",
             "description": "Planejamento privado de atividades por parada.",
         },
@@ -64,6 +69,7 @@ app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(usuario_router)
 app.include_router(viagem_router)
+app.include_router(membros_viagem_router)
 app.include_router(catalogo_router)
 app.include_router(destinos_catalogo_router)
 app.include_router(destinos_viagem_router)

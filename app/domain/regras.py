@@ -2,11 +2,8 @@
 
 from app.domain.enums import PapelMembro
 
-# Convites (RF18)
-CODIGO_CONVITE_TAMANHO = 10
-# Sem I, O, 0 e 1 para evitar confusão ao ditar/digitar o código.
-CODIGO_CONVITE_ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-CODIGO_CONVITE_VALIDADE_DIAS = 7
+# Convites por email (RF18): link de uso único, ligado ao email convidado.
+CONVITE_VALIDADE_DIAS = 7
 PAPEL_INICIAL_CONVIDADO = PapelMembro.VISUALIZADOR
 
 # Recuperação de senha (RF03)
