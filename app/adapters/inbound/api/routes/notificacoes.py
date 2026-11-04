@@ -19,7 +19,7 @@ UsuarioAtual = Annotated[Usuario, Depends(get_usuario_atual)]
 CasoNotificacoes = Annotated[GerenciarNotificacoes, Depends(get_gerenciar_notificacoes)]
 _NAO_AUTENTICADO = {401: {"description": "Token ausente, inválido ou expirado"}}
 
-
+"""testando"""
 def _to_response(notificacao: Notificacao) -> NotificacaoResponse:
     return NotificacaoResponse(
         id=notificacao.id,
