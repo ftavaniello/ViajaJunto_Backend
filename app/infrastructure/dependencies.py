@@ -12,6 +12,7 @@ from app.adapters.outbound.persistence.atividade_viagem_repository_sqlalchemy im
 )
 from app.adapters.outbound.persistence.avaliacao_repository_sqlalchemy import (
     SQLAlchemyAvaliacaoRepository,
+)
 from app.adapters.outbound.persistence.avaliacoes_destino_repository_sqlalchemy import (
     SQLAlchemyAvaliacoesDestinoRepository,
 )
