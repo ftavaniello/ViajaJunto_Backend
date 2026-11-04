@@ -2,8 +2,10 @@ from dataclasses import replace
 from datetime import date
 
 from app.application.acesso_viagem import PoliticaAcessoViagem
+from app.application.notificador_viagem import NotificadorViagem
 from app.domain.entities.destino_viagem import DestinoViagem, validar_reordenacao
 from app.domain.entities.viagem import Viagem
+from app.domain.enums import TipoNotificacao
 from app.domain.errors import (
     DadosInvalidos,
     DestinoCatalogoNaoEncontrado,
@@ -22,11 +24,13 @@ class GerenciarDestinosViagem:
         catalogo: CatalogoRepository,
         acesso: PoliticaAcessoViagem,
         uow: UnitOfWork,
+        notificador: NotificadorViagem | None = None,
     ):
         self.repository = repository
         self.catalogo = catalogo
         self.acesso = acesso
         self.uow = uow
+        self.notificador = notificador
 
     def listar(self, viagem_id: int, usuario_id: int) -> list[DestinoViagem]:
         self.acesso.exigir(viagem_id, usuario_id, AcaoViagem.CONSULTAR)
@@ -47,6 +51,17 @@ class GerenciarDestinosViagem:
         self.repository.bloquear_roteiro(viagem_id)
         # Revalida contexto e datas após adquirir o bloqueio da viagem.
         return self.acesso.exigir(viagem_id, usuario_id, AcaoViagem.EDITAR)
+
+    def _avisar(self, viagem: Viagem, destino: DestinoViagem, usuario_id: int, acao: str) -> None:
+        if self.notificador is None:
+            return
+        self.notificador.notificar(
+            viagem,
+            TipoNotificacao.ROTEIRO_ALTERADO,
+            usuario_id,
+            f"{acao} {destino.destino.nome} ({destino.data_chegada:%d/%m/%Y} a "
+            f'{destino.data_saida:%d/%m/%Y}) no roteiro da viagem "{viagem.nome}".',
+        )
 
     def criar(
         self,
@@ -82,6 +97,7 @@ class GerenciarDestinosViagem:
                 if destino.ordem >= posicao:
                     self.repository.salvar(replace(destino, ordem=destino.ordem + 1))
             salvo = self.repository.salvar(novo)
+            self._avisar(viagem, salvo, usuario_id, "adicionou o destino")
             self.uow.commit()
         return salvo
 
@@ -114,6 +130,9 @@ class GerenciarDestinosViagem:
                     "As atividades existentes devem permanecer no período do destino"
                 )
             salvo = self.repository.salvar(atualizado)
+            # Descrição e hospedagem não geram aviso.
+            if (destino.data_chegada, destino.data_saida) != (salvo.data_chegada, salvo.data_saida):
+                self._avisar(viagem, salvo, usuario_id, "alterou as datas do destino")
             self.uow.commit()
         return salvo
 
@@ -134,10 +153,11 @@ class GerenciarDestinosViagem:
 
     def remover(self, viagem_id: int, destino_id: int, usuario_id: int) -> None:
         with self.uow:
-            self._editar(viagem_id, usuario_id)
+            viagem = self._editar(viagem_id, usuario_id)
             destino = self._destino(viagem_id, destino_id)
             self.repository.deletar(destino)
             for posicao, restante in enumerate(self.repository.listar(viagem_id), start=1):
                 if restante.ordem != posicao:
                     self.repository.salvar(replace(restante, ordem=posicao))
+            self._avisar(viagem, destino, usuario_id, "removeu o destino")
             self.uow.commit()

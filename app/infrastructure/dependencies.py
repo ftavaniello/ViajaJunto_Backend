@@ -28,6 +28,9 @@ from app.adapters.outbound.persistence.destino_viagem_repository_sqlalchemy impo
 from app.adapters.outbound.persistence.membro_viagem_repository_sqlalchemy import (
     SQLAlchemyMembroViagemRepository,
 )
+from app.adapters.outbound.persistence.notificacao_repository_sqlalchemy import (
+    SQLAlchemyNotificacaoRepository,
+)
 from app.adapters.outbound.persistence.orcamento_repository_sqlalchemy import (
     SQLAlchemyOrcamentoRepository,
 )
@@ -50,6 +53,7 @@ from app.adapters.outbound.persistence.viagem_repository_sqlalchemy import (
 from app.adapters.outbound.security.bcrypt_password_hasher import BcryptPasswordHasher
 from app.adapters.outbound.security.pyjwt_token_service import PyJWTTokenService
 from app.application.acesso_viagem import PoliticaAcessoViagem
+from app.application.notificador_viagem import NotificadorViagem
 from app.application.use_cases.alterar_senha import AlterarSenha
 from app.application.use_cases.atualizar_usuario import AtualizarUsuario
 from app.application.use_cases.atualizar_viagem import AtualizarViagem
@@ -76,6 +80,7 @@ from app.application.use_cases.excluir_viagem import ExcluirViagem
 from app.application.use_cases.gerenciar_atividades_viagem import GerenciarAtividadesViagem
 from app.application.use_cases.gerenciar_destinos_viagem import GerenciarDestinosViagem
 from app.application.use_cases.gerenciar_membros_viagem import GerenciarMembrosViagem
+from app.application.use_cases.gerenciar_notificacoes import GerenciarNotificacoes
 from app.application.use_cases.gerenciar_orcamento_viagem import GerenciarOrcamentoViagem
 from app.application.use_cases.importar_catalogo import ImportarCatalogo
 from app.application.use_cases.listar_viagens import ListarViagens
@@ -167,6 +172,14 @@ def _politica_acesso_viagem(db: Session) -> PoliticaAcessoViagem:
     )
 
 
+def _notificador_viagem(db: Session) -> NotificadorViagem:
+    return NotificadorViagem(
+        SQLAlchemyNotificacaoRepository(db),
+        SQLAlchemyMembroViagemRepository(db),
+        SQLAlchemyUsuarioRepository(db),
+    )
+
+
 def get_criar_viagem(db: Session = Depends(get_db)) -> CriarViagem:
     return CriarViagem(SQLAlchemyViagemRepository(db), SQLAlchemyUnitOfWork(db))
 
@@ -185,12 +198,16 @@ def get_atualizar_viagem(db: Session = Depends(get_db)) -> AtualizarViagem:
         _politica_acesso_viagem(db),
         SQLAlchemyUnitOfWork(db),
         SQLAlchemyDestinoViagemRepository(db),
+        notificador=_notificador_viagem(db),
     )
 
 
 def get_excluir_viagem(db: Session = Depends(get_db)) -> ExcluirViagem:
     return ExcluirViagem(
-        SQLAlchemyViagemRepository(db), _politica_acesso_viagem(db), SQLAlchemyUnitOfWork(db)
+        SQLAlchemyViagemRepository(db),
+        _politica_acesso_viagem(db),
+        SQLAlchemyUnitOfWork(db),
+        notificador=_notificador_viagem(db),
     )
 
 
@@ -244,6 +261,7 @@ def get_gerenciar_destinos_viagem(db: Session = Depends(get_db)) -> GerenciarDes
         SQLAlchemyCatalogoRepository(db),
         _politica_acesso_viagem(db),
         SQLAlchemyUnitOfWork(db),
+        notificador=_notificador_viagem(db),
     )
 
 
@@ -260,6 +278,7 @@ def get_gerenciar_membros_viagem(
         email_sender,
         SQLAlchemyUnitOfWork(db),
         url_convite=settings.CONVITE_URL,
+        notificador=_notificador_viagem(db),
     )
 
 
@@ -270,7 +289,12 @@ def get_gerenciar_atividades_viagem(db: Session = Depends(get_db)) -> GerenciarA
         SQLAlchemyCatalogoRepository(db),
         _politica_acesso_viagem(db),
         SQLAlchemyUnitOfWork(db),
+        notificador=_notificador_viagem(db),
     )
+
+
+def get_gerenciar_notificacoes(db: Session = Depends(get_db)) -> GerenciarNotificacoes:
+    return GerenciarNotificacoes(SQLAlchemyNotificacaoRepository(db), SQLAlchemyUnitOfWork(db))
 
 
 def get_gerenciar_orcamento_viagem(db: Session = Depends(get_db)) -> GerenciarOrcamentoViagem:

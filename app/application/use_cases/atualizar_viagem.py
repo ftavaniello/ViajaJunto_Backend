@@ -1,8 +1,9 @@
 from datetime import date
 
 from app.application.acesso_viagem import PoliticaAcessoViagem
+from app.application.notificador_viagem import NotificadorViagem, descrever_mudancas
 from app.domain.entities.viagem import Viagem
-from app.domain.enums import StatusViagem
+from app.domain.enums import StatusViagem, TipoNotificacao
 from app.domain.permissoes import AcaoViagem
 from app.domain.ports.destino_viagem_repository import DestinoViagemRepository
 from app.domain.ports.unit_of_work import UnitOfWork
@@ -16,11 +17,13 @@ class AtualizarViagem:
         acesso: PoliticaAcessoViagem,
         uow: UnitOfWork,
         roteiro: DestinoViagemRepository,
+        notificador: NotificadorViagem | None = None,
     ):
         self.repository = repository
         self.acesso = acesso
         self.uow = uow
         self.roteiro = roteiro
+        self.notificador = notificador
 
     def execute(
         self,
@@ -52,6 +55,30 @@ class AtualizarViagem:
             for destino in self.roteiro.listar(viagem_id):
                 destino.validar_periodo(viagem_atualizada.data_inicio, viagem_atualizada.data_fim)
             salva = self.repository.salvar(viagem_atualizada)
+            self._avisar(viagem, salva, usuario_id)
             self.uow.commit()
 
         return salva
+
+    def _avisar(self, anterior: Viagem, salva: Viagem, usuario_id: int) -> None:
+        # A descrição não gera aviso.
+        mudancas = descrever_mudancas(
+            [
+                ("o nome", anterior.nome != salva.nome),
+                (
+                    "as datas",
+                    (anterior.data_inicio, anterior.data_fim)
+                    != (salva.data_inicio, salva.data_fim),
+                ),
+                (f"o status para {salva.status.value}", anterior.status != salva.status),
+            ]
+        )
+        if self.notificador is None or not mudancas:
+            return
+        self.notificador.notificar(
+            salva,
+            TipoNotificacao.VIAGEM_ALTERADA,
+            usuario_id,
+            f'alterou {mudancas} da viagem "{salva.nome}" '
+            f"({salva.data_inicio:%d/%m/%Y} a {salva.data_fim:%d/%m/%Y}).",
+        )

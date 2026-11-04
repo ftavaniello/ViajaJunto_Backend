@@ -53,3 +53,6 @@ class TipoNotificacao(StrEnum):
     PAPEL_ALTERADO = "papel_alterado"
     MEMBRO_REMOVIDO = "membro_removido"
     VIAGEM_EXCLUIDA = "viagem_excluida"
+    VIAGEM_ALTERADA = "viagem_alterada"
+    ROTEIRO_ALTERADO = "roteiro_alterado"
+    ATIVIDADE_ALTERADA = "atividade_alterada"
