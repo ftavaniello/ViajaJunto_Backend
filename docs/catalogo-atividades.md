@@ -38,7 +38,7 @@ O destino associado inclui também categoria e descrição gerais (issue #18).
 Veja [catálogo de destinos](catalogo-destinos.md) para pesquisa e seleção.
 
 Cada item tem ID, nome, descrição, categoria, endereço, latitude/longitude,
-`foto_url`, `google_place_id`, `fonte` e o destino (ID, cidade, país e dados geográficos).
+`foto_url`, `id_externo`, `fonte` e o destino (ID, cidade, país e dados geográficos).
 O modelo aprovado na migração usa uma foto por registro, representada por URL;
 não há armazenamento ou upload de imagens. URLs são referências e não são baixadas
 pelo backend. Não são retornados usuários, membros, convites nem dados do roteiro.
@@ -67,11 +67,11 @@ explicitamente. A imagem de produção não cria dados de teste automaticamente.
 
 ## Origem e abastecimento autorizado
 
-Nesta versão a origem é **curadoria manual pela equipe operadora**, persistida como
-`fonte=manual`. A migração `f3b8c1d29a40` adiciona essa coluna e atribui o mesmo valor
-a registros anteriores. A referência externa opcional é `google_place_id`; ela não
-significa sincronização nem validação automática no Google Places. A integração
-externa prevista na arquitetura permanece futura; não há credencial externa exigida.
+Há duas origens, gravadas em `fonte`: **curadoria manual pela equipe operadora**
+(`fonte=manual`, importador JSON e seed) e o **fornecedor Geoapify** (`fonte=geoapify`),
+abastecido pelo comando de enriquecimento da issue #23. `id_externo` identifica o local
+no fornecedor e é único por fonte. Veja [integração de locais](integracao-locais.md)
+para o comando, as regras de atualização e a configuração da chave.
 
 Somente operadores com acesso ao servidor/ambiente da aplicação e às credenciais do
 banco podem executar a importação. A autorização é do ambiente operacional; o JWT
@@ -118,7 +118,7 @@ Get-Content -Raw -Encoding utf8 docs/catalogo-exemplo.json | docker compose exec
 A importação valida o arquivo inteiro antes de gravar e confirma o lote numa única
 transação. Nome vazio, categoria inválida, coordenada fora de faixa, referência a
 destino ausente ou URL de foto fora de HTTP/HTTPS são rejeitados. Uma falha no banco
-reverte destinos e atividades do lote inteiro. IDs externos não nulos são únicos.
+reverte destinos e atividades do lote inteiro. IDs externos não nulos são únicos por fonte.
 
 **Importação sem `--se-vazio` é aditiva:** não é atualização nem sincronização idempotente. Reimportar
 um arquivo com IDs externos repetidos cancela o lote; sem IDs externos, reimportar

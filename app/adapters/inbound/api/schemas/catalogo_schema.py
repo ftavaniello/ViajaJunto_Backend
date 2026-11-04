@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.domain.enums import CategoriaAtividade, CategoriaDestino
+from app.domain.enums import CategoriaAtividade, CategoriaDestino, FonteCatalogo
 
 
 class DestinoCatalogoResponse(BaseModel):
@@ -16,7 +16,10 @@ class DestinoCatalogoResponse(BaseModel):
     latitude: Decimal | None
     longitude: Decimal | None
     foto_url: str | None
-    google_place_id: str | None
+    id_externo: str | None = Field(
+        description="Identificador do local no fornecedor indicado em `fonte`."
+    )
+    fonte: FonteCatalogo = Field(description="Origem: `manual` (curadoria) ou `geoapify`.")
 
 
 class ReviewCatalogoResponse(BaseModel):
@@ -41,8 +44,10 @@ class DadosAtividadeCatalogoResponse(BaseModel):
     latitude: Decimal | None
     longitude: Decimal | None
     foto_url: str | None
-    google_place_id: str | None
-    fonte: str
+    id_externo: str | None = Field(
+        description="Identificador do local no fornecedor indicado em `fonte`."
+    )
+    fonte: FonteCatalogo = Field(description="Origem: `manual` (curadoria) ou `geoapify`.")
     destino: DestinoCatalogoResponse
 
 

@@ -17,7 +17,7 @@
       "descricao": "Registro fictício para testar o catálogo público.",
       "endereco": "Lisboa, Portugal",
       "foto_url": null,
-      "google_place_id": null
+      "id_externo": null
     },
     {
       "destino": "lisboa",

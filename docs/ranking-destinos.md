@@ -52,7 +52,7 @@ esconder a seção ou mostrar uma mensagem.
       "posicao": 1,
       "destino": {"id": 1, "nome": "Lisboa", "pais_codigo": "PT", "categoria": "cidade",
                   "descricao": null, "latitude": "38.722300", "longitude": "-9.139300",
-                  "foto_url": null, "google_place_id": null},
+                  "foto_url": null, "id_externo": null, "fonte": "manual"},
       "media_avaliacoes": 4.6,
       "nota_ranking": 4.36,
       "total_avaliacoes": 5

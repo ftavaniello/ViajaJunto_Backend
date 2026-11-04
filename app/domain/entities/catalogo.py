@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from urllib.parse import urlsplit
 
-from app.domain.enums import CategoriaAtividade, CategoriaDestino
+from app.domain.enums import CategoriaAtividade, CategoriaDestino, FonteCatalogo
 from app.domain.errors import DadosInvalidos
 
 
@@ -41,6 +41,13 @@ def validar_pais_codigo(pais_codigo: str) -> None:
         raise DadosInvalidos("País deve ser um código ISO alfa-2 em maiúsculas")
 
 
+def validar_fonte(fonte: FonteCatalogo | str) -> FonteCatalogo:
+    try:
+        return FonteCatalogo(fonte)
+    except (ValueError, TypeError) as error:
+        raise DadosInvalidos("Origem do catálogo não suportada") from error
+
+
 @dataclass(frozen=True, kw_only=True)
 class DestinoCatalogo:
     nome: str
@@ -50,18 +57,21 @@ class DestinoCatalogo:
     latitude: Decimal | None = None
     longitude: Decimal | None = None
     foto_url: str | None = None
-    google_place_id: str | None = None
+    # Com `fonte`, identifica o local no fornecedor; único por fonte.
+    id_externo: str | None = None
+    fonte: FonteCatalogo = FonteCatalogo.MANUAL
     id: int | None = None
 
     def __post_init__(self):
         object.__setattr__(self, "nome", texto(self.nome, "Nome", 255, True))
+        object.__setattr__(self, "fonte", validar_fonte(self.fonte))
         validar_pais_codigo(self.pais_codigo)
         object.__setattr__(self, "descricao", texto(self.descricao, "Descrição", 10000))
         try:
             object.__setattr__(self, "categoria", CategoriaDestino(self.categoria))
         except (ValueError, TypeError) as error:
             raise DadosInvalidos("Categoria de destino inválida") from error
-        for campo, limite in (("foto_url", 500), ("google_place_id", 255)):
+        for campo, limite in (("foto_url", 500), ("id_externo", 255)):
             object.__setattr__(self, campo, texto(getattr(self, campo), campo, limite))
         validar_local(self.latitude, self.longitude, self.foto_url)
 
@@ -76,8 +86,9 @@ class AtividadeCatalogo:
     latitude: Decimal | None = None
     longitude: Decimal | None = None
     foto_url: str | None = None
-    google_place_id: str | None = None
-    fonte: str = "manual"
+    # Com `fonte`, identifica o local no fornecedor; único por fonte.
+    id_externo: str | None = None
+    fonte: FonteCatalogo = FonteCatalogo.MANUAL
     id: int | None = None
     media_avaliacoes: Decimal | None = None
     total_avaliacoes: int = 0
@@ -88,13 +99,14 @@ class AtividadeCatalogo:
             ("descricao", 10000, False),
             ("endereco", 255, False),
             ("foto_url", 500, False),
-            ("google_place_id", 255, False),
+            ("id_externo", 255, False),
         ):
             object.__setattr__(self, campo, texto(getattr(self, campo), campo, limite, obrigatorio))
         try:
             object.__setattr__(self, "categoria", CategoriaAtividade(self.categoria))
         except (ValueError, TypeError) as error:
             raise DadosInvalidos("Categoria de atividade inválida") from error
-        if self.fonte != "manual":
-            raise DadosInvalidos("Origem não suportada; use curadoria manual")
+        object.__setattr__(self, "fonte", validar_fonte(self.fonte))
+        if self.fonte != FonteCatalogo.MANUAL and not self.id_externo:
+            raise DadosInvalidos("Registro de fornecedor exige o identificador externo")
         validar_local(self.latitude, self.longitude, self.foto_url)

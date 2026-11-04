@@ -10,7 +10,7 @@ na issue #19; consultar ou importar o catálogo não altera o planejamento de vi
 - `GET /catalogo/destinos/{destino_id}`: detalhe público, sem login.
 
 Cada destino retorna `id`, `nome`, `pais_codigo`, `categoria`, `descricao`,
-`latitude`, `longitude`, `foto_url` e `google_place_id`. Foto é uma referência HTTP/HTTPS;
+`latitude`, `longitude`, `foto_url`, `id_externo` e `fonte`. Foto é uma referência HTTP/HTTPS;
 não há upload ou download de imagens pelo backend. Descrição, coordenadas, foto e
 referência externa podem ser nulas. Não são retornados usuários, convites, membros,
 datas, custos ou outros dados privados de viagem.
@@ -59,8 +59,9 @@ abastecidas, a migração preenche apenas os campos novos; o seed não altera de
 A carga atual do Compose usa os quatro destinos reais do [seed](seed-demonstracao.md).
 O exemplo de Lisboa pode ser importado manualmente; fora do Compose não há seed automático.
 
-A integração Google Places não faz parte desta issue. `google_place_id` é somente
-uma referência opcional e única; não implica enriquecimento automático.
+`id_externo` é uma referência opcional, única por `fonte`. Os destinos continuam
+curados manualmente; o fornecedor externo abastece só as atividades
+(veja [integração de locais](integracao-locais.md)).
 
 O importador agora aceita lotes **somente de destinos**, sem exigir atividades:
 

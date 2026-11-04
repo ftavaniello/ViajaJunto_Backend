@@ -10,7 +10,7 @@ from app.adapters.outbound.persistence.catalogo_model import (
     DestinoCatalogoModel,
 )
 from app.domain.entities.catalogo import AtividadeCatalogo, DestinoCatalogo
-from app.domain.enums import CategoriaAtividade, CategoriaDestino
+from app.domain.enums import CategoriaAtividade, CategoriaDestino, FonteCatalogo
 from app.domain.ports.catalogo_repository import CatalogoRepository
 
 
@@ -38,7 +38,8 @@ class SQLAlchemyCatalogoRepository(CatalogoRepository):
                     "latitude",
                     "longitude",
                     "foto_url",
-                    "google_place_id",
+                    "id_externo",
+                    "fonte",
                 )
             }
         )
@@ -83,12 +84,40 @@ class SQLAlchemyCatalogoRepository(CatalogoRepository):
                     "latitude",
                     "longitude",
                     "foto_url",
-                    "google_place_id",
+                    "id_externo",
                     "fonte",
                 )
             },
         )
         self.db.add(model)
+        self.db.flush()
+        return self._atividade(model, atividade.destino)
+
+    def buscar_atividade_externa(
+        self, fonte: FonteCatalogo, id_externo: str
+    ) -> AtividadeCatalogo | None:
+        consulta, _ = self._consulta_publica()
+        linha = self.db.execute(
+            consulta.where(
+                CatalogoAtividadeModel.fonte == fonte.value,
+                CatalogoAtividadeModel.id_externo == id_externo,
+            )
+        ).first()
+        return self._atividade_publica(*linha) if linha else None
+
+    def atualizar_atividade(self, atividade: AtividadeCatalogo) -> AtividadeCatalogo:
+        model = self.db.get(CatalogoAtividadeModel, atividade.id)
+        # O id e o destino não mudam: avaliações e roteiros continuam ligados ao registro.
+        for campo in (
+            "nome",
+            "descricao",
+            "categoria",
+            "endereco",
+            "latitude",
+            "longitude",
+            "foto_url",
+        ):
+            setattr(model, campo, getattr(atividade, campo))
         self.db.flush()
         return self._atividade(model, atividade.destino)
 
@@ -183,7 +212,8 @@ class SQLAlchemyCatalogoRepository(CatalogoRepository):
                     "latitude",
                     "longitude",
                     "foto_url",
-                    "google_place_id",
+                    "id_externo",
+                    "fonte",
                 )
             }
         )
@@ -203,7 +233,7 @@ class SQLAlchemyCatalogoRepository(CatalogoRepository):
                     "latitude",
                     "longitude",
                     "foto_url",
-                    "google_place_id",
+                    "id_externo",
                     "fonte",
                 )
             },

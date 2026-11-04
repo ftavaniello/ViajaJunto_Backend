@@ -20,7 +20,7 @@ def test_catalogo_preserva_descricao_foto_e_referencia(destino):
         categoria="cultura",
         descricao=" História ",
         foto_url="https://example.com/museu.jpg",
-        google_place_id="referencia-curada",
+        id_externo="referencia-curada",
         latitude=Decimal("38.7"),
         longitude=Decimal("-9.1"),
     )
@@ -28,7 +28,7 @@ def test_catalogo_preserva_descricao_foto_e_referencia(destino):
     assert atividade.descricao == "História"
     assert atividade.categoria == CategoriaAtividade.CULTURA
     assert atividade.fonte == "manual"
-    assert atividade.google_place_id == "referencia-curada"
+    assert atividade.id_externo == "referencia-curada"
 
 
 @pytest.mark.parametrize(
@@ -41,7 +41,7 @@ def test_catalogo_preserva_descricao_foto_e_referencia(destino):
         {"longitude": Decimal("-181")},
         {"latitude": Decimal("NaN")},
         {"foto_url": "javascript:alert(1)"},
-        {"google_place_id": "x" * 256},
+        {"id_externo": "x" * 256},
         {"endereco": "x" * 256},
         {"fonte": "google_places"},
     ],

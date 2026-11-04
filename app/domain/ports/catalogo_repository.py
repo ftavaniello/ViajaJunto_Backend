@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from decimal import Decimal
 
 from app.domain.entities.catalogo import AtividadeCatalogo, DestinoCatalogo
-from app.domain.enums import CategoriaAtividade, CategoriaDestino
+from app.domain.enums import CategoriaAtividade, CategoriaDestino, FonteCatalogo
 
 
 class CatalogoRepository(ABC):
@@ -40,6 +40,21 @@ class CatalogoRepository(ABC):
 
     @abstractmethod
     def buscar_atividade(self, atividade_id: int) -> AtividadeCatalogo | None:
+        pass
+
+    @abstractmethod
+    def buscar_atividade_externa(
+        self, fonte: FonteCatalogo, id_externo: str
+    ) -> AtividadeCatalogo | None:
+        """Atividade já importada daquele fornecedor, se houver."""
+        pass
+
+    @abstractmethod
+    def atualizar_atividade(self, atividade: AtividadeCatalogo) -> AtividadeCatalogo:
+        """Atualiza os dados descritivos mantendo id, destino, fonte e id_externo.
+
+        Avaliações e atividades de viagem apontam para o id, então continuam válidas.
+        """
         pass
 
     @abstractmethod
