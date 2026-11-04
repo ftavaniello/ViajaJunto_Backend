@@ -5,9 +5,11 @@ from decimal import Decimal
 from typing import TypeVar
 
 from app.application.acesso_viagem import PoliticaAcessoViagem
+from app.application.notificador_viagem import NotificadorViagem, descrever_mudancas
 from app.domain.entities.atividade_viagem import AtividadeViagem
 from app.domain.entities.destino_viagem import DestinoViagem
-from app.domain.enums import StatusAtividade
+from app.domain.entities.viagem import Viagem
+from app.domain.enums import StatusAtividade, TipoNotificacao
 from app.domain.errors import (
     AtividadeCatalogoNaoEncontrada,
     AtividadeViagemNaoEncontrada,
@@ -36,6 +38,7 @@ class GerenciarAtividadesViagem:
         acesso: PoliticaAcessoViagem,
         uow: UnitOfWork,
         agora: Callable[[], datetime] = _agora_utc,
+        notificador: NotificadorViagem | None = None,
     ):
         self.repository = repository
         self.destinos = destinos
@@ -43,19 +46,38 @@ class GerenciarAtividadesViagem:
         self.acesso = acesso
         self.uow = uow
         self.agora = agora
+        self.notificador = notificador
 
     def _contexto(
         self, viagem_id: int, destino_id: int, usuario_id: int, editar: bool = False
-    ) -> DestinoViagem:
+    ) -> tuple[Viagem, DestinoViagem]:
         acao = AcaoViagem.EDITAR if editar else AcaoViagem.CONSULTAR
-        self.acesso.exigir(viagem_id, usuario_id, acao)
+        viagem = self.acesso.exigir(viagem_id, usuario_id, acao)
         if editar:
             self.destinos.bloquear_roteiro(viagem_id)
-            self.acesso.exigir(viagem_id, usuario_id, acao)
+            viagem = self.acesso.exigir(viagem_id, usuario_id, acao)
         destino = self.destinos.buscar(viagem_id, destino_id)
         if destino is None:
             raise DestinoViagemNaoEncontrado("Destino não encontrado nesta viagem")
-        return destino
+        return viagem, destino
+
+    def _avisar(
+        self,
+        viagem: Viagem,
+        destino: DestinoViagem,
+        atividade: AtividadeViagem,
+        usuario_id: int,
+        acao: str,
+    ) -> None:
+        if self.notificador is None:
+            return
+        self.notificador.notificar(
+            viagem,
+            TipoNotificacao.ATIVIDADE_ALTERADA,
+            usuario_id,
+            f'{acao} "{atividade.atividade.nome}" em {destino.destino.nome} '
+            f'({atividade.data:%d/%m/%Y}) na viagem "{viagem.nome}".',
+        )
 
     def _atividade(self, viagem_id: int, destino_id: int, atividade_id: int) -> AtividadeViagem:
         atividade = self.repository.buscar(viagem_id, destino_id, atividade_id)
@@ -98,7 +120,7 @@ class GerenciarAtividadesViagem:
         status: StatusAtividade = StatusAtividade.PENDENTE,
     ) -> AtividadeViagem:
         with self.uow:
-            destino = self._contexto(viagem_id, destino_id, usuario_id, editar=True)
+            viagem, destino = self._contexto(viagem_id, destino_id, usuario_id, editar=True)
             catalogo = self.catalogo.buscar_atividade(catalogo_atividade_id)
             if catalogo is None:
                 raise AtividadeCatalogoNaoEncontrada("Atividade não encontrada no catálogo")
@@ -118,6 +140,7 @@ class GerenciarAtividadesViagem:
             )
             nova.validar_destino(destino)
             salva = self.repository.salvar(nova)
+            self._avisar(viagem, destino, salva, usuario_id, "adicionou a atividade")
             self.uow.commit()
         return salva
 
@@ -136,7 +159,7 @@ class GerenciarAtividadesViagem:
         limpar_duracao: bool = False,
     ) -> AtividadeViagem:
         with self.uow:
-            destino = self._contexto(viagem_id, destino_id, usuario_id, editar=True)
+            viagem, destino = self._contexto(viagem_id, destino_id, usuario_id, editar=True)
             atual = self._atividade(viagem_id, destino_id, atividade_id)
             novo_status = atual.status if status is None else self._status_novo(status)
             realizada_em, realizada_por_id = self._comprovacao(atual, novo_status, usuario_id)
@@ -154,6 +177,16 @@ class GerenciarAtividadesViagem:
             )
             nova.validar_destino(destino)
             salva = self.repository.salvar(nova)
+            # Custo e duração não geram aviso.
+            mudancas = descrever_mudancas(
+                [
+                    ("a data", atual.data != salva.data),
+                    ("o horário", atual.hora_inicio != salva.hora_inicio),
+                    (f"o status para {salva.status.value}", atual.status != salva.status),
+                ]
+            )
+            if mudancas:
+                self._avisar(viagem, destino, salva, usuario_id, f"alterou {mudancas} da atividade")
             self.uow.commit()
         return salva
 
@@ -174,7 +207,8 @@ class GerenciarAtividadesViagem:
 
     def remover(self, viagem_id: int, destino_id: int, atividade_id: int, usuario_id: int) -> None:
         with self.uow:
-            self._contexto(viagem_id, destino_id, usuario_id, editar=True)
+            viagem, destino = self._contexto(viagem_id, destino_id, usuario_id, editar=True)
             atividade = self._atividade(viagem_id, destino_id, atividade_id)
             self.repository.deletar(atividade)
+            self._avisar(viagem, destino, atividade, usuario_id, "removeu a atividade")
             self.uow.commit()

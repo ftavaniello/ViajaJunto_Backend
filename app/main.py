@@ -8,8 +8,9 @@ from app.adapters.inbound.api.routes.catalogo import router as catalogo_router
 from app.adapters.inbound.api.routes.destinos_catalogo import router as destinos_catalogo_router
 from app.adapters.inbound.api.routes.destinos_viagem import router as destinos_viagem_router
 from app.adapters.inbound.api.routes.health import router as health_router
-from app.adapters.inbound.api.routes.membros_viagem import router as membros_viagem_router
 from app.adapters.inbound.api.routes.mapa import router as mapa_router
+from app.adapters.inbound.api.routes.membros_viagem import router as membros_viagem_router
+from app.adapters.inbound.api.routes.notificacoes import router as notificacoes_router
 from app.adapters.inbound.api.routes.orcamento_viagem import router as orcamento_viagem_router
 from app.adapters.inbound.api.routes.usuario import router as usuario_router
 from app.adapters.inbound.api.routes.viagem import router as viagem_router
@@ -57,6 +58,10 @@ app = FastAPI(
             "name": "Orçamento",
             "description": "Orçamento total da viagem e resumo financeiro do roteiro.",
         },
+        {
+            "name": "Notificações",
+            "description": "Avisos in-app de alterações nas viagens do usuário (polling).",
+        },
         {"name": "Catálogo", "description": "Consulta pública de atividades e locais."},
         {"name": "Avaliações", "description": "Avaliações públicas de atividades realizadas."},
         {"name": "Health", "description": "Verificação de disponibilidade da API."},
@@ -78,3 +83,4 @@ app.include_router(orcamento_viagem_router)
 
 app.include_router(avaliacoes_router)
 app.include_router(mapa_router)
+app.include_router(notificacoes_router)

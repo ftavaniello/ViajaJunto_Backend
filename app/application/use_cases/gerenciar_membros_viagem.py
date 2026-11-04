@@ -3,9 +3,10 @@ from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 from app.application.acesso_viagem import PoliticaAcessoViagem
+from app.application.notificador_viagem import NotificadorViagem
 from app.domain.entities.convite_viagem import ConviteViagem
 from app.domain.entities.viagem import Viagem
-from app.domain.enums import PapelMembro
+from app.domain.enums import PapelMembro, TipoNotificacao
 from app.domain.errors import (
     ConviteDeOutroEmail,
     ConviteInvalido,
@@ -53,6 +54,7 @@ class GerenciarMembrosViagem:
         uow: UnitOfWork,
         url_convite: str,
         agora: Callable[[], datetime] = _agora_utc,
+        notificador: NotificadorViagem | None = None,
     ):
         self.viagens = viagens
         self.membros = membros
@@ -63,6 +65,7 @@ class GerenciarMembrosViagem:
         self.uow = uow
         self.url_convite = url_convite
         self.agora = agora
+        self.notificador = notificador
 
     def convidar(self, viagem_id: int, usuario_id: int, email: str) -> ConviteViagem:
         with self.uow:
@@ -129,6 +132,11 @@ class GerenciarMembrosViagem:
             self.membros.adicionar(viagem.id, usuario_id, PAPEL_INICIAL_CONVIDADO)
             convite.marcar_aceito(agora)
             self.convites.salvar(convite)
+            # O novo membro ja esta na lista de participantes, mas e o ator e nao recebe.
+            self._avisar(
+                viagem, TipoNotificacao.MEMBRO_ENTROU, usuario_id,
+                f'entrou na viagem "{viagem.nome}".',
+            )
             self.uow.commit()
         return ParticipacaoViagem(viagem, PAPEL_INICIAL_CONVIDADO)
 
@@ -155,9 +163,15 @@ class GerenciarMembrosViagem:
             viagem = self.acesso.exigir(viagem_id, usuario_id, AcaoViagem.GERENCIAR_MEMBROS)
             if membro_id == viagem.criador_id:
                 raise DadosInvalidos("O papel do criador da viagem não pode ser alterado")
-            self._exigir_membro(viagem_id, membro_id)
+            papel_anterior = self._exigir_membro(viagem_id, membro_id)
             self.membros.alterar_papel(viagem_id, membro_id, papel)
             membro = next(m for m in self.membros.listar(viagem_id) if m.usuario_id == membro_id)
+            if papel != papel_anterior:
+                self._avisar(
+                    viagem, TipoNotificacao.PAPEL_ALTERADO, usuario_id,
+                    f'alterou seu papel para {papel.value} na viagem "{viagem.nome}".',
+                    destinatarios=[membro_id],
+                )
             self.uow.commit()
         return self._participante(membro_id, PerfilViagem(membro.papel.value), membro.entrou_em)
 
@@ -168,6 +182,11 @@ class GerenciarMembrosViagem:
                 raise DadosInvalidos("O criador não pode ser removido da viagem")
             self._exigir_membro(viagem_id, membro_id)
             self.membros.remover(viagem_id, membro_id)
+            self._avisar(
+                viagem, TipoNotificacao.MEMBRO_REMOVIDO, usuario_id,
+                f'removeu você da viagem "{viagem.nome}".',
+                destinatarios=[membro_id],
+            )
             self.uow.commit()
 
     def _participa(self, viagem: Viagem, usuario_id: int) -> bool:
@@ -176,9 +195,22 @@ class GerenciarMembrosViagem:
             or self.membros.buscar_papel(viagem.id, usuario_id) is not None
         )
 
-    def _exigir_membro(self, viagem_id: int, membro_id: int) -> None:
-        if self.membros.buscar_papel(viagem_id, membro_id) is None:
+    def _exigir_membro(self, viagem_id: int, membro_id: int) -> PapelMembro:
+        papel = self.membros.buscar_papel(viagem_id, membro_id)
+        if papel is None:
             raise MembroNaoEncontrado("Colaborador não encontrado nesta viagem")
+        return papel
+
+    def _avisar(
+        self,
+        viagem: Viagem,
+        tipo: TipoNotificacao,
+        ator_id: int,
+        acao: str,
+        destinatarios: list[int] | None = None,
+    ) -> None:
+        if self.notificador is not None:
+            self.notificador.notificar(viagem, tipo, ator_id, acao, destinatarios)
 
     def _participante(
         self, usuario_id: int, perfil: PerfilViagem, entrou_em: datetime | None

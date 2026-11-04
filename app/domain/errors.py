@@ -72,3 +72,7 @@ class MembroJaParticipa(ErroNegocio):
 
 class MembroNaoEncontrado(ErroNegocio):
     """Usuario nao e colaborador desta viagem."""
+
+
+class NotificacaoNaoEncontrada(ErroNegocio):
+    """Notificacao inexistente ou de outro usuario (mesma resposta para os dois casos)."""
