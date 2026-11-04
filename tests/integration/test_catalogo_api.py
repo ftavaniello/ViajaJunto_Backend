@@ -68,9 +68,8 @@ def test_detalhe_publico_sem_token_e_sem_dados_privados(client, catalogo):
     assert body["destino"]["nome"] == "Lisboa"
     assert body["foto_url"] == "https://example.com/foto.jpg"
     assert body["fonte"] == "manual"
-    assert body["avaliacoes_disponiveis"] is False
     assert body["media_avaliacoes"] is None
-    assert body["total_avaliacoes"] is None
+    assert body["total_avaliacoes"] == 0
     assert body["reviews"] == []
     assert set(body) == {
         "id",
@@ -84,7 +83,6 @@ def test_detalhe_publico_sem_token_e_sem_dados_privados(client, catalogo):
         "google_place_id",
         "fonte",
         "destino",
-        "avaliacoes_disponiveis",
         "media_avaliacoes",
         "total_avaliacoes",
         "reviews",
@@ -166,7 +164,7 @@ def test_catalogo_vazio_e_detalhe_inexistente(client):
         {"tamanho_pagina": 0},
         {"categoria": "hotel"},
         {"destino_catalogo_id": -1},
-        {"nota_minima": 4},
+        {"nota_minima": 6},
     ],
 )
 def test_contrato_rejeita_parametros_invalidos(client, filtros):

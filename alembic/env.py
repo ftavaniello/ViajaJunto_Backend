@@ -68,6 +68,11 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    provided_connection = config.attributes.get("connection")
+    if provided_connection is not None:
+        _aplicar_migracoes(provided_connection)
+        return
+
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
@@ -75,10 +80,14 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        _aplicar_migracoes(connection)
 
-        with context.begin_transaction():
-            context.run_migrations()
+
+def _aplicar_migracoes(connection) -> None:
+    # A conexão fornecida mantém DDL e seed na transação externa do reset.
+    context.configure(connection=connection, target_metadata=target_metadata)
+    with context.begin_transaction():
+        context.run_migrations()
 
 
 if context.is_offline_mode():

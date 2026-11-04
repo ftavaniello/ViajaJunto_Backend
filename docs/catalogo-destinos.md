@@ -53,11 +53,11 @@ transacional de [atividades](catalogo-atividades.md). Somente quem tem acesso op
 ao ambiente e ao banco pode abastecer. Não há POST, PATCH ou DELETE públicos para o
 catálogo; um token de usuário comum não autoriza sua manutenção.
 
-O seed do Compose de desenvolvimento usa `catalogo-exemplo.json`, agora com categoria
-e descrição do destino. Continua rodando somente quando não há nenhum destino ou
-atividade no catálogo. Reiniciar não duplica nem sobrescreve registros. Em bases já
+O seed do Compose carrega Orlando, Miami, Rio de Janeiro e Roma, com categorias
+e descrições dos destinos. Reiniciar não duplica nem sobrescreve registros. Em bases já
 abastecidas, a migração preenche apenas os campos novos; o seed não altera descrições.
-Desative com `SEED_CATALOGO=false`. Fora do Compose, não há seed automático.
+A carga atual do Compose usa os quatro destinos reais do [seed](seed-demonstracao.md).
+O exemplo de Lisboa pode ser importado manualmente; fora do Compose não há seed automático.
 
 A integração Google Places não faz parte desta issue. `google_place_id` é somente
 uma referência opcional e única; não implica enriquecimento automático.

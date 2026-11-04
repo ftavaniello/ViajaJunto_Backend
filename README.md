@@ -34,7 +34,7 @@ A matriz detalhada de permissões (quem edita dados gerais e status, quem exclui
 | Atividades — RF12–RF14 | Atividades por destino, horários, duração, custos e status | Planejamento por parada, ordem cronológica, custos previstos e status implementados (#24) |
 | Orçamento — RF15–RF17 | Limite total, custos previstos e resumo financeiro por categoria | Custos previstos por atividade implementados (RF16); limite e resumo financeiro pendentes (#25) |
 | Colaboração — RF18–RF21 | Convite por código, permissões de Editor/Visualizador e notificações in-app | Ainda não implementado |
-| Avaliação e descoberta — RF22–RF25 | Avaliações, páginas públicas, catálogo com filtros e destaques | Catálogo público, detalhe e filtros descritivos implementados (#20); avaliações, nota mínima e destaques pendentes |
+| Avaliação e descoberta — RF22–RF25 | Avaliações, páginas públicas, catálogo com filtros e destaques | Catálogo público, avaliações de atividades concluídas, médias, reviews e nota mínima implementados (#20/#26); destaques de destinos pendentes |
 
 Nas áreas marcadas como "Ainda não implementado", o que existe hoje é apenas o esquema do banco (tabelas e migração), sem casos de uso, rotas ou repositórios.
 
@@ -119,8 +119,8 @@ A issue #20 disponibiliza `GET /catalogo/atividades` e
 categoria, localização e destino, com paginação. O abastecimento é feito pela equipe
 operadora via importação JSON transacional, sem escrita pública. No Docker Compose
 de desenvolvimento, um seed carrega exemplos automaticamente se o catálogo estiver vazio
-(desative com `SEED_CATALOGO=false`). Avaliações e filtro
-por nota ficam para a #23. Veja [contrato, importação e exemplos](docs/catalogo-atividades.md).
+(Orlando, Miami, Rio de Janeiro e Roma). Avaliações próprias, médias e filtro por nota
+mínima estão implementados na #26. Veja [contrato, importação e exemplos](docs/catalogo-atividades.md).
 
 ## Painel pessoal de viagens — RF06
 
@@ -262,7 +262,7 @@ A conta de demonstração (`usuario@viajajunto.com` / `changeme123`) é criada �
 python -m app.adapters.inbound.cli.seed_demo
 ```
 
-O comando usa o caso de uso de cadastro, é recusado quando `APP_ENV` não é `development` nem `test` e mantém sem alterações uma conta que já exista com esse email. O Compose local o executa automaticamente após as migrações quando `APP_ENV=development`. Bancos migrados antes dessa mudança continuam com a conta de demonstração; remova-a manualmente em ambientes que não sejam de desenvolvimento.
+O comando usa o caso de uso de cadastro, é recusado quando `APP_ENV` não é `development` nem `test` e mantém sem alterações uma conta que já exista com esse email. Esse comando é manual; o Compose carrega somente as seis contas do seed completo. Bancos migrados antes dessa mudança continuam com a conta de demonstração; remova-a manualmente em ambientes que não sejam de desenvolvimento.
 
 O modelo oficial prevê também `viagem`, `membro_viagem`, `destino_catalogo`, `destino_viagem`, `catalogo_atividade`, `atividade_viagem`, `orcamento` e `avaliacao`. Ele distingue os dados reutilizáveis do catálogo das informações de cada viagem: por exemplo, a atividade do catálogo descreve um local ou experiência, enquanto sua associação à viagem registra horário, custo previsto e status. Cada viagem possui um orçamento, e as avaliações se vinculam às atividades do catálogo.
 
@@ -447,3 +447,23 @@ Estão fora do escopo da versão especificada: reservas de hotéis, voos e ingre
 Esta descrição considera os documentos oficiais fornecidos pela equipe: `index.md` (visão geral), `requirements.md` (requisitos e regras de negócio) e `architecture.md` (arquitetura e modelo de dados). Os documentos de requisitos e arquitetura identificam a revisão inicial como versão 0.1, de 25/08/2026. Esses arquivos foram consultados externamente e não estão incluídos neste repositório.
 
 Além da divergência de stack, há pontos que precisam de alinhamento entre os documentos: a visão geral e algumas regras mencionam avaliações de destinos, enquanto RF22–RF24 e o modelo relacional descrevem avaliações de atividades; o identificador de viagem é descrito como string/código de convite, mas as chaves estrangeiras correspondentes aparecem como inteiros. Este README registra essas diferenças sem definir uma solução que ainda não foi formalizada pela equipe.
+
+
+## Avaliações de atividades
+
+Participantes podem publicar ou atualizar uma avaliação de uma atividade concluída
+por `PUT /viagens/{viagem_id}/destinos/{destino_id}/atividades/{atividade_id}/avaliacao`.
+O catálogo público agora expõe média, total, reviews paginados e filtro por `nota_minima`.
+Veja as regras, os exemplos e o roteiro de Swagger em [avaliações de atividades](docs/avaliacoes-atividades.md).
+
+
+O seed completo também inclui [destinos reais](docs/seed-destinos-reais.md): Orlando,
+Miami, Rio de Janeiro e Roma, com roteiros, orçamentos e avaliações fictícias.
+A versão atual substitui as cargas antigas: bancos antigos precisam de limpeza explícita.
+Após a primeira carga, reexecuções preservam os dados e as alterações dos testes.
+
+
+Para substituir uma base local antiga pelos dados iniciais atuais, use o
+[reset explícito de desenvolvimento](docs/reset-banco.md). Pare a API, execute
+`docker compose run --rm --no-deps api python -m app.adapters.inbound.cli.reset_banco --confirmar`
+e inicie a API novamente. A inicialização normal nunca apaga o banco.

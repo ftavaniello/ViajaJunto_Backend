@@ -3,11 +3,15 @@
 Repositorios e UnitOfWork de uma requisicao recebem a mesma Session, para que as
 gravacoes de um caso de uso fiquem na mesma transacao.
 """
+
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.adapters.outbound.persistence.atividade_viagem_repository_sqlalchemy import (
     SQLAlchemyAtividadeViagemRepository,
+)
+from app.adapters.outbound.persistence.avaliacao_repository_sqlalchemy import (
+    SQLAlchemyAvaliacaoRepository,
 )
 from app.adapters.outbound.persistence.avaliacoes_destino_repository_sqlalchemy import (
     SQLAlchemyAvaliacoesDestinoRepository,
@@ -47,6 +51,7 @@ from app.application.use_cases.alterar_senha import AlterarSenha
 from app.application.use_cases.atualizar_usuario import AtualizarUsuario
 from app.application.use_cases.atualizar_viagem import AtualizarViagem
 from app.application.use_cases.autenticar_usuario import AutenticarUsuario
+from app.application.use_cases.avaliar_atividade_viagem import AvaliarAtividadeViagem
 from app.application.use_cases.consultar_catalogo import (
     ConsultarAtividadeCatalogo,
     ListarAtividadesCatalogo,
@@ -172,7 +177,9 @@ def get_consultar_viagem(db: Session = Depends(get_db)) -> ConsultarViagem:
 
 def get_atualizar_viagem(db: Session = Depends(get_db)) -> AtualizarViagem:
     return AtualizarViagem(
-        SQLAlchemyViagemRepository(db), _politica_acesso_viagem(db), SQLAlchemyUnitOfWork(db),
+        SQLAlchemyViagemRepository(db),
+        _politica_acesso_viagem(db),
+        SQLAlchemyUnitOfWork(db),
         SQLAlchemyDestinoViagemRepository(db),
     )
 
@@ -210,7 +217,9 @@ def get_listar_catalogo(db: Session = Depends(get_db)) -> ListarAtividadesCatalo
 
 
 def get_consultar_atividade_catalogo(db: Session = Depends(get_db)) -> ConsultarAtividadeCatalogo:
-    return ConsultarAtividadeCatalogo(SQLAlchemyCatalogoRepository(db))
+    return ConsultarAtividadeCatalogo(
+        SQLAlchemyCatalogoRepository(db), SQLAlchemyAvaliacaoRepository(db)
+    )
 
 
 def montar_importar_catalogo(db: Session) -> ImportarCatalogo:
@@ -227,15 +236,20 @@ def get_consultar_destino_catalogo(db: Session = Depends(get_db)) -> ConsultarDe
 
 def get_gerenciar_destinos_viagem(db: Session = Depends(get_db)) -> GerenciarDestinosViagem:
     return GerenciarDestinosViagem(
-        SQLAlchemyDestinoViagemRepository(db), SQLAlchemyCatalogoRepository(db),
-        _politica_acesso_viagem(db), SQLAlchemyUnitOfWork(db),
+        SQLAlchemyDestinoViagemRepository(db),
+        SQLAlchemyCatalogoRepository(db),
+        _politica_acesso_viagem(db),
+        SQLAlchemyUnitOfWork(db),
     )
 
 
 def get_gerenciar_atividades_viagem(db: Session = Depends(get_db)) -> GerenciarAtividadesViagem:
     return GerenciarAtividadesViagem(
-        SQLAlchemyAtividadeViagemRepository(db), SQLAlchemyDestinoViagemRepository(db),
-        SQLAlchemyCatalogoRepository(db), _politica_acesso_viagem(db), SQLAlchemyUnitOfWork(db),
+        SQLAlchemyAtividadeViagemRepository(db),
+        SQLAlchemyDestinoViagemRepository(db),
+        SQLAlchemyCatalogoRepository(db),
+        _politica_acesso_viagem(db),
+        SQLAlchemyUnitOfWork(db),
     )
 
 
@@ -245,6 +259,14 @@ def get_gerenciar_orcamento_viagem(db: Session = Depends(get_db)) -> GerenciarOr
     )
 
 
+def get_avaliar_atividade_viagem(db: Session = Depends(get_db)) -> AvaliarAtividadeViagem:
+    return AvaliarAtividadeViagem(
+        SQLAlchemyAtividadeViagemRepository(db),
+        SQLAlchemyDestinoViagemRepository(db),
+        _politica_acesso_viagem(db),
+        SQLAlchemyAvaliacaoRepository(db),
+        SQLAlchemyUnitOfWork(db),
+    )
 def get_consultar_paises_visitados(db: Session = Depends(get_db)) -> ConsultarPaisesVisitados:
     return ConsultarPaisesVisitados(SQLAlchemyParadasParticipanteRepository(db))
 

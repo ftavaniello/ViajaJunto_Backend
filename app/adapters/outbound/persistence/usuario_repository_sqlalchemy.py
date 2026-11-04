@@ -1,7 +1,8 @@
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.adapters.outbound.persistence.roteiro_model import AtividadeViagemModel
 from app.adapters.outbound.persistence.usuario_model import USUARIOS_EMAIL_UNIQUE, UsuarioModel
 from app.domain.entities.usuario import Usuario
 from app.domain.errors import EmailDuplicado, UsuarioNaoEncontrado
@@ -64,6 +65,13 @@ class SQLAlchemyUsuarioRepository(UsuarioRepository):
         model = self.db.get(UsuarioModel, usuario_id)
 
         if model is not None:
+            # Evita que SET NULL do ator atualize atividades enquanto outra cadeia
+            # CASCADE da mesma conta remove suas paradas. Mantém a data da conclusão.
+            self.db.execute(
+                update(AtividadeViagemModel)
+                .where(AtividadeViagemModel.realizada_por_id == usuario_id)
+                .values(realizada_por_id=None)
+            )
             self.db.delete(model)
             self.db.flush()
 
