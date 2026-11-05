@@ -1,0 +1,129 @@
+from dataclasses import replace
+from decimal import Decimal
+from typing import cast
+
+from app.adapters.outbound.persistence.avaliacao_repository_memory import AvaliacaoRepositoryMemory
+from app.domain.entities.catalogo import AtividadeCatalogo, DestinoCatalogo
+from app.domain.enums import CategoriaAtividade, CategoriaDestino, FonteCatalogo
+from app.domain.ports.catalogo_repository import CatalogoRepository
+
+
+class CatalogoRepositoryMemory(CatalogoRepository):
+    def __init__(self, avaliacoes: AvaliacaoRepositoryMemory | None = None):
+        self.avaliacoes = avaliacoes
+        self.destinos: dict[int, DestinoCatalogo] = {}
+        self.atividades: dict[int, AtividadeCatalogo] = {}
+
+    def reservar_carga_inicial(self) -> bool:
+        return not self.destinos and not self.atividades
+
+    def salvar_destino(self, destino: DestinoCatalogo) -> DestinoCatalogo:
+        destino = cast(DestinoCatalogo, replace(destino, id=len(self.destinos) + 1))
+        self.destinos[destino.id] = destino
+        return destino
+
+    def buscar_destino(self, destino_id: int) -> DestinoCatalogo | None:
+        return self.destinos.get(destino_id)
+
+    def listar_destinos(
+        self,
+        nome: str | None,
+        pais_codigo: str | None,
+        categoria: CategoriaDestino | None,
+        limite: int,
+        deslocamento: int,
+    ) -> list[DestinoCatalogo]:
+        destinos = [
+            destino
+            for destino in sorted(self.destinos.values(), key=lambda d: d.id)
+            if (not nome or nome.lower() in destino.nome.lower())
+            and (not pais_codigo or destino.pais_codigo == pais_codigo)
+            and (not categoria or destino.categoria == categoria)
+        ]
+        return destinos[deslocamento : deslocamento + limite]
+
+    def salvar_atividade(self, atividade: AtividadeCatalogo) -> AtividadeCatalogo:
+        # Mesmo efeito da constraint uq_catalogo_atividades_fonte_id_externo do banco.
+        if atividade.id_externo and self.buscar_atividade_externa(
+            atividade.fonte, atividade.id_externo
+        ):
+            raise ValueError("Atividade externa duplicada")
+        atividade = cast(AtividadeCatalogo, replace(atividade, id=len(self.atividades) + 1))
+        self.atividades[atividade.id] = atividade
+        return atividade
+
+    def buscar_atividade_externa(
+        self, fonte: FonteCatalogo, id_externo: str
+    ) -> AtividadeCatalogo | None:
+        return next(
+            (
+                self._com_resumo(a)
+                for a in self.atividades.values()
+                if a.fonte == fonte and a.id_externo == id_externo
+            ),
+            None,
+        )
+
+    def atualizar_atividade(self, atividade: AtividadeCatalogo) -> AtividadeCatalogo:
+        atual = self.atividades[atividade.id]
+        atualizada = replace(
+            atual,
+            **{
+                campo: getattr(atividade, campo)
+                for campo in (
+                    "nome",
+                    "descricao",
+                    "categoria",
+                    "endereco",
+                    "latitude",
+                    "longitude",
+                    "foto_url",
+                )
+            },
+        )
+        self.atividades[atividade.id] = atualizada
+        return atualizada
+
+    def buscar_atividade(self, atividade_id: int) -> AtividadeCatalogo | None:
+        atividade = self.atividades.get(atividade_id)
+        return self._com_resumo(atividade) if atividade is not None else None
+
+    def _com_resumo(self, atividade: AtividadeCatalogo) -> AtividadeCatalogo:
+        media, total = self.avaliacoes.resumo(atividade.id) if self.avaliacoes else (None, 0)
+        return replace(atividade, media_avaliacoes=media, total_avaliacoes=total)
+
+    def listar_atividades(
+        self,
+        nome: str | None,
+        categoria: CategoriaAtividade | None,
+        localizacao: str | None,
+        destino_catalogo_id: int | None,
+        limite: int,
+        deslocamento: int,
+        nota_minima: Decimal | None = None,
+    ) -> list[AtividadeCatalogo]:
+        itens = []
+        for atividade in sorted(self.atividades.values(), key=lambda a: a.id):
+            destino = atividade.destino
+            if nome and nome.lower() not in atividade.nome.lower():
+                continue
+            if categoria and atividade.categoria != categoria:
+                continue
+            if destino_catalogo_id and destino.id != destino_catalogo_id:
+                continue
+            if localizacao and not any(
+                localizacao.lower() in campo.lower()
+                for campo in (
+                    destino.nome,
+                    destino.pais_codigo,
+                    atividade.endereco or "",
+                )
+            ):
+                continue
+            atividade = self._com_resumo(atividade)
+            if nota_minima is not None and (
+                atividade.media_avaliacoes is None or atividade.media_avaliacoes < nota_minima
+            ):
+                continue
+            itens.append(atividade)
+        return itens[deslocamento : deslocamento + limite]

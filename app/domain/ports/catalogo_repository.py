@@ -1,0 +1,72 @@
+from abc import ABC, abstractmethod
+from decimal import Decimal
+
+from app.domain.entities.catalogo import AtividadeCatalogo, DestinoCatalogo
+from app.domain.enums import CategoriaAtividade, CategoriaDestino, FonteCatalogo
+
+
+class CatalogoRepository(ABC):
+    @abstractmethod
+    def reservar_carga_inicial(self) -> bool:
+        """Reserva a inicialização até o fim da transação; True se o catálogo está vazio.
+
+        Considera destinos e atividades; cargas iniciais simultâneas devem ser serializadas.
+        """
+        pass
+
+    @abstractmethod
+    def salvar_destino(self, destino: DestinoCatalogo) -> DestinoCatalogo:
+        pass
+
+    @abstractmethod
+    def buscar_destino(self, destino_id: int) -> DestinoCatalogo | None:
+        pass
+
+    @abstractmethod
+    def listar_destinos(
+        self,
+        nome: str | None,
+        pais_codigo: str | None,
+        categoria: CategoriaDestino | None,
+        limite: int,
+        deslocamento: int,
+    ) -> list[DestinoCatalogo]:
+        """Filtros combinados por E, nome parcial sem distinguir caixa; ordem crescente por id."""
+        pass
+
+    @abstractmethod
+    def salvar_atividade(self, atividade: AtividadeCatalogo) -> AtividadeCatalogo:
+        pass
+
+    @abstractmethod
+    def buscar_atividade(self, atividade_id: int) -> AtividadeCatalogo | None:
+        pass
+
+    @abstractmethod
+    def buscar_atividade_externa(
+        self, fonte: FonteCatalogo, id_externo: str
+    ) -> AtividadeCatalogo | None:
+        """Atividade já importada daquele fornecedor, se houver."""
+        pass
+
+    @abstractmethod
+    def atualizar_atividade(self, atividade: AtividadeCatalogo) -> AtividadeCatalogo:
+        """Atualiza os dados descritivos mantendo id, destino, fonte e id_externo.
+
+        Avaliações e atividades de viagem apontam para o id, então continuam válidas.
+        """
+        pass
+
+    @abstractmethod
+    def listar_atividades(
+        self,
+        nome: str | None,
+        categoria: CategoriaAtividade | None,
+        localizacao: str | None,
+        destino_catalogo_id: int | None,
+        limite: int,
+        deslocamento: int,
+        nota_minima: Decimal | None = None,
+    ) -> list[AtividadeCatalogo]:
+        """Filtros combinados por E; texto parcial sem distinguir caixa; ordem por id."""
+        pass

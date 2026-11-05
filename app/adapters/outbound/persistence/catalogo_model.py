@@ -1,11 +1,21 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Numeric, String, Text, func
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.adapters.outbound.persistence._constraints import check_in
-from app.domain.enums import CategoriaAtividade
+from app.domain.enums import CategoriaAtividade, CategoriaDestino, FonteCatalogo
 from app.infrastructure.database import Base
 
 
@@ -18,18 +28,30 @@ class DestinoCatalogoModel(Base):
     nome: Mapped[str] = mapped_column(String(255), nullable=False)
     # ISO 3166-1 alfa-2 em maiúsculas. Base do critério de "país visitado" (D5).
     pais_codigo: Mapped[str] = mapped_column(String(2), nullable=False)
+    categoria: Mapped[str] = mapped_column(
+        String(20), nullable=False, default=CategoriaDestino.CIDADE.value,
+        server_default=CategoriaDestino.CIDADE.value,
+    )
+    descricao: Mapped[str | None] = mapped_column(Text)
     latitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
     longitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
     # Nome IANA (ex.: "Europe/Lisbon"), usado só para exibir horários (D6).
     fuso_horario: Mapped[str | None] = mapped_column(String(64))
     # Referência externa à foto; o sistema não armazena arquivos de imagem (D8).
     foto_url: Mapped[str | None] = mapped_column(String(500))
-    google_place_id: Mapped[str | None] = mapped_column(String(255), unique=True)
+    # Identificador do local no fornecedor indicado em `fonte` (ex.: place_id do Geoapify).
+    id_externo: Mapped[str | None] = mapped_column(String(255))
+    fonte: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="manual", server_default="manual"
+    )
     criado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
     __table_args__ = (
+        check_in("ck_destinos_catalogo_categoria", "categoria", CategoriaDestino),
+        check_in("ck_destinos_catalogo_fonte", "fonte", FonteCatalogo),
+        UniqueConstraint("fonte", "id_externo", name="uq_destinos_catalogo_fonte_id_externo"),
         CheckConstraint("pais_codigo = upper(pais_codigo) AND length(pais_codigo) = 2",
                         name="ck_destinos_catalogo_pais"),
         CheckConstraint("latitude IS NULL OR latitude BETWEEN -90 AND 90",
@@ -59,13 +81,19 @@ class CatalogoAtividadeModel(Base):
     latitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
     longitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
     foto_url: Mapped[str | None] = mapped_column(String(500))
-    google_place_id: Mapped[str | None] = mapped_column(String(255), unique=True)
+    # Identificador do local no fornecedor indicado em `fonte` (ex.: place_id do Geoapify).
+    id_externo: Mapped[str | None] = mapped_column(String(255))
+    fonte: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="manual", server_default="manual"
+    )
     criado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
     __table_args__ = (
         check_in("ck_catalogo_atividades_categoria", "categoria", CategoriaAtividade),
+        check_in("ck_catalogo_atividades_fonte", "fonte", FonteCatalogo),
+        UniqueConstraint("fonte", "id_externo", name="uq_catalogo_atividades_fonte_id_externo"),
         CheckConstraint("latitude IS NULL OR latitude BETWEEN -90 AND 90",
                         name="ck_catalogo_atividades_latitude"),
         CheckConstraint("longitude IS NULL OR longitude BETWEEN -180 AND 180",

@@ -1,0 +1,189 @@
+{
+  "data_utc": "2026-11-05T00:47:01.651685+00:00",
+  "dataset": {
+    "usuarios": 50,
+    "viagens": 2000,
+    "membros_viagem": 588,
+    "destinos_catalogo": 50,
+    "catalogo_atividades": 1000,
+    "destinos_viagem": 2000,
+    "atividades_viagem": 11000,
+    "avaliacoes": 20000,
+    "orcamentos": 2000
+  },
+  "ambiente": {
+    "python": "3.13.1",
+    "so": "Windows-10-10.0.19045-SP0",
+    "cpus_logicas": 8,
+    "postgresql": "PostgreSQL 16.15 (Debian 16.15-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+    "transporte": "HTTP TCP loopback, urllib sem pool de keep-alive",
+    "servidor": "uvicorn, 1 worker",
+    "cache_usuarios": "BYPASS",
+    "cpu": "Intel64 Family 6 Model 142 Stepping 12, GenuineIntel"
+  },
+  "aquecimento_por_cenario": 5,
+  "percentil": "nearest rank",
+  "resultados": [
+    {
+      "endpoint": "/viagens?pagina=1&tamanho_pagina=20",
+      "concorrencia": 1,
+      "requisicoes": 100,
+      "erros": 0,
+      "p50_ms": 14.31,
+      "p95_ms": 33.24,
+      "p99_ms": 36.34,
+      "max_ms": 37.02,
+      "requisicoes_segundo": 61.03
+    },
+    {
+      "endpoint": "/viagens?pagina=10&tamanho_pagina=20",
+      "concorrencia": 1,
+      "requisicoes": 100,
+      "erros": 0,
+      "p50_ms": 11.86,
+      "p95_ms": 33.79,
+      "p99_ms": 37.38,
+      "max_ms": 56.61,
+      "requisicoes_segundo": 57.33
+    },
+    {
+      "endpoint": "/catalogo/atividades?tamanho_pagina=20",
+      "concorrencia": 1,
+      "requisicoes": 100,
+      "erros": 0,
+      "p50_ms": 8.37,
+      "p95_ms": 34.09,
+      "p99_ms": 37.19,
+      "max_ms": 45.47,
+      "requisicoes_segundo": 65.55
+    },
+    {
+      "endpoint": "/catalogo/atividades?nota_minima=4&tamanho_pagina=20",
+      "concorrencia": 1,
+      "requisicoes": 100,
+      "erros": 0,
+      "p50_ms": 11.05,
+      "p95_ms": 31.14,
+      "p99_ms": 32.99,
+      "max_ms": 33.08,
+      "requisicoes_segundo": 72.4
+    },
+    {
+      "endpoint": "/catalogo/atividades?localizacao=Roma&tamanho_pagina=20",
+      "concorrencia": 1,
+      "requisicoes": 100,
+      "erros": 0,
+      "p50_ms": 15.12,
+      "p95_ms": 34.34,
+      "p99_ms": 38.75,
+      "max_ms": 40.23,
+      "requisicoes_segundo": 54.4
+    },
+    {
+      "endpoint": "/viagens/1/orcamento",
+      "concorrencia": 1,
+      "requisicoes": 100,
+      "erros": 0,
+      "p50_ms": 13.98,
+      "p95_ms": 40.79,
+      "p99_ms": 77.12,
+      "max_ms": 84.79,
+      "requisicoes_segundo": 52.05
+    },
+    {
+      "endpoint": "/usuarios/resumo",
+      "concorrencia": 1,
+      "requisicoes": 100,
+      "erros": 0,
+      "p50_ms": 9.44,
+      "p95_ms": 32.02,
+      "p99_ms": 35.39,
+      "max_ms": 57.74,
+      "requisicoes_segundo": 70.69
+    },
+    {
+      "endpoint": "/viagens?pagina=1&tamanho_pagina=20",
+      "concorrencia": 5,
+      "requisicoes": 100,
+      "erros": 0,
+      "p50_ms": 31.92,
+      "p95_ms": 53.34,
+      "p99_ms": 58.5,
+      "max_ms": 69.25,
+      "requisicoes_segundo": 146.0
+    },
+    {
+      "endpoint": "/viagens?pagina=10&tamanho_pagina=20",
+      "concorrencia": 5,
+      "requisicoes": 100,
+      "erros": 0,
+      "p50_ms": 41.68,
+      "p95_ms": 53.67,
+      "p99_ms": 64.11,
+      "max_ms": 75.29,
+      "requisicoes_segundo": 121.13
+    },
+    {
+      "endpoint": "/catalogo/atividades?tamanho_pagina=20",
+      "concorrencia": 5,
+      "requisicoes": 100,
+      "erros": 0,
+      "p50_ms": 34.44,
+      "p95_ms": 39.66,
+      "p99_ms": 52.13,
+      "max_ms": 54.92,
+      "requisicoes_segundo": 139.78
+    },
+    {
+      "endpoint": "/catalogo/atividades?nota_minima=4&tamanho_pagina=20",
+      "concorrencia": 5,
+      "requisicoes": 100,
+      "erros": 0,
+      "p50_ms": 35.88,
+      "p95_ms": 64.85,
+      "p99_ms": 73.52,
+      "max_ms": 73.59,
+      "requisicoes_segundo": 126.32
+    },
+    {
+      "endpoint": "/catalogo/atividades?localizacao=Roma&tamanho_pagina=20",
+      "concorrencia": 5,
+      "requisicoes": 100,
+      "erros": 0,
+      "p50_ms": 47.66,
+      "p95_ms": 71.06,
+      "p99_ms": 84.6,
+      "max_ms": 113.61,
+      "requisicoes_segundo": 102.64
+    },
+    {
+      "endpoint": "/viagens/1/orcamento",
+      "concorrencia": 5,
+      "requisicoes": 100,
+      "erros": 0,
+      "p50_ms": 37.85,
+      "p95_ms": 46.7,
+      "p99_ms": 58.14,
+      "max_ms": 69.43,
+      "requisicoes_segundo": 128.13
+    },
+    {
+      "endpoint": "/usuarios/resumo",
+      "concorrencia": 5,
+      "requisicoes": 100,
+      "erros": 0,
+      "p50_ms": 34.19,
+      "p95_ms": 55.34,
+      "p99_ms": 70.61,
+      "max_ms": 89.81,
+      "requisicoes_segundo": 134.4
+    }
+  ],
+  "limitacoes": [
+    "Sem navegador, frontend, rede externa, TLS ou balanceador",
+    "Carga fechada: novo pedido após resposta, sem taxa de chegada fixa",
+    "Instância local e dataset sintético; não é capacidade de produção",
+    "JWT real; login, bcrypt e envio de email fora da medição",
+    "Buffers e pool aquecidos; não mede partida a frio"
+  ]
+}

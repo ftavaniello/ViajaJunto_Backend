@@ -47,7 +47,7 @@ def criar(
     caso: CriarUsuario = Depends(get_criar_usuario),
 ):
     usuario = caso.execute(nome=request.nome, email=request.email, senha=request.senha)
-    return UsuarioResponse(id=usuario.id, nome=usuario.nome, email=usuario.email)
+    return UsuarioResponse.de_usuario(usuario)
 
 
 @router.get(
@@ -90,11 +90,7 @@ def resumo(
     },
 )
 def me(usuario_atual: Usuario = Depends(get_usuario_atual)):
-    return UsuarioResponse(
-        id=usuario_atual.id,
-        nome=usuario_atual.nome,
-        email=usuario_atual.email,
-    )
+    return UsuarioResponse.de_usuario(usuario_atual)
 
 
 @router.patch(
@@ -116,14 +112,19 @@ def atualizar_me(
     caso: AtualizarUsuario = Depends(get_atualizar_usuario),
 ):
     usuario = caso.execute(usuario_id=usuario_atual.id, nome=request.nome, email=request.email)
-    return UsuarioResponse(id=usuario.id, nome=usuario.nome, email=usuario.email)
+    return UsuarioResponse.de_usuario(usuario)
 
 
 @router.patch(
     "/me/senha",
     status_code=204,
     summary="Altera a senha do usuário autenticado",
-    description="Exige a senha atual para autorizar a troca. Requer token JWT válido.",
+    description=(
+        "Exige a senha atual para autorizar a troca. Requer token JWT válido. "
+        "A troca encerra todas as sessões do usuário, inclusive a usada nesta "
+        "requisição: os tokens emitidos antes passam a receber 401 e é preciso "
+        "fazer login novamente com a nova senha."
+    ),
     responses={
         400: {"description": "Senha atual incorreta"},
         401: {"description": "Token ausente, inválido ou expirado"},
@@ -143,8 +144,14 @@ def alterar_senha(
     "/me",
     status_code=204,
     summary="Exclui a conta do usuário autenticado",
-    description="Remove permanentemente o usuário autenticado. Requer token JWT válido.",
+    description=(
+        "Exclui a conta e suas viagens sem colaboradores. Bloqueia com 409 se o usuário "
+        "criou alguma viagem com colaboradores. Remove participações em outras viagens "
+        "sem apagar o planejamento delas. Preserva avaliações com autor anônimo. "
+        "Após o sucesso, os tokens da conta deixam de ser aceitos. Requer JWT válido."
+    ),
     responses={
+        409: {"description": "Criador de viagem com colaboradores; nenhum dado foi excluído"},
         401: {"description": "Token ausente, inválido ou expirado"},
     },
 )

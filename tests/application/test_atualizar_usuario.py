@@ -6,7 +6,8 @@ from app.adapters.outbound.persistence.usuario_repository_memory import (
 )
 from app.application.use_cases.atualizar_usuario import AtualizarUsuario
 from app.application.use_cases.criar_usuario import CriarUsuario
-from tests.application.fakes import FakePasswordHasher
+from app.domain.errors import EmailDuplicado
+from tests.application.fakes import FakePasswordHasher, RepositorioComCorrida
 
 
 def _repository_com_usuario() -> UsuarioRepositoryMemory:
@@ -60,3 +61,28 @@ def test_usuario_inexistente_levanta_erro():
         AtualizarUsuario(repository, UnitOfWorkMemory()).execute(
             usuario_id=999, nome="X", email=None
         )
+
+
+def test_atualizacao_preserva_data_de_criacao():
+    repository = _repository_com_usuario()
+    criado_em = repository.buscar_por_id(1).criado_em
+
+    usuario = AtualizarUsuario(repository, UnitOfWorkMemory()).execute(
+        usuario_id=1, nome="Livia B", email=None
+    )
+
+    assert usuario.criado_em == criado_em
+
+
+def test_troca_de_email_concorrente_vira_erro_controlado():
+    repository = RepositorioComCorrida()
+    criar_usuario = CriarUsuario(repository, FakePasswordHasher(), UnitOfWorkMemory())
+    criar_usuario.execute(nome="Livia", email="livia@example.com", senha="senha123")
+    criar_usuario.execute(nome="Outro", email="outro@example.com", senha="senha123")
+
+    with pytest.raises(EmailDuplicado):
+        AtualizarUsuario(repository, UnitOfWorkMemory()).execute(
+            usuario_id=1, nome=None, email="outro@example.com"
+        )
+
+    assert repository.buscar_por_id(1).email == "livia@example.com"

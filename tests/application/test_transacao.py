@@ -70,6 +70,7 @@ def test_atualizar_alterar_senha_e_excluir_confirmam_a_transacao():
     AlterarSenha(repository, FakePasswordHasher(), uow).execute(
         usuario_id=1, senha_atual="senha123", senha_nova="senhaNova456"
     )
-    ExcluirUsuario(repository, uow).execute(usuario_id=1)
+    ExcluirUsuario(repository, uow, Mock(
+        bloquear_e_verificar_colaboradores=Mock(return_value=False))).execute(usuario_id=1)
 
     assert (uow.commits, uow.rollbacks) == (3, 0)

@@ -18,25 +18,42 @@ class PapelMembro(StrEnum):
 
 
 class StatusViagem(StrEnum):
+    """Status definido pelos participantes (RF07); qualquer transição é permitida."""
+
     PLANEJANDO = "planejando"
-    EM_ANDAMENTO = "em_andamento"
+    CONFIRMADA = "confirmada"
     CONCLUIDA = "concluida"
-    CANCELADA = "cancelada"
 
 
 class StatusAtividade(StrEnum):
-    PLANEJADA = "planejada"
-    REALIZADA = "realizada"
-    CANCELADA = "cancelada"
+    PENDENTE = "pendente"
+    CONFIRMADA = "confirmada"
+    CONCLUIDA = "concluida"
+    CANCELADA = "cancelada"  # Somente leitura/preservação de registros legados.
+
+
+class CategoriaDestino(StrEnum):
+    CIDADE = "cidade"
+    PRAIA = "praia"
+    NATUREZA = "natureza"
+    CULTURAL = "cultural"
 
 
 class CategoriaAtividade(StrEnum):
-    ALIMENTACAO = "alimentacao"
+    """Tipos de atividade definidos no documento original de arquitetura."""
+
+    PASSEIO = "passeio"
+    REFEICAO = "refeicao"
+    HOSPEDAGEM = "hospedagem"
     TRANSPORTE = "transporte"
-    CULTURA = "cultura"
-    LAZER = "lazer"
-    COMPRAS = "compras"
-    OUTROS = "outros"
+    OUTRO = "outro"
+
+
+class FonteCatalogo(StrEnum):
+    """Origem de um registro do catálogo; com `id_externo`, identifica o local no fornecedor."""
+
+    MANUAL = "manual"  # Curadoria da equipe (importador JSON e seed).
+    GEOAPIFY = "geoapify"
 
 
 class TipoNotificacao(StrEnum):
@@ -44,3 +61,6 @@ class TipoNotificacao(StrEnum):
     PAPEL_ALTERADO = "papel_alterado"
     MEMBRO_REMOVIDO = "membro_removido"
     VIAGEM_EXCLUIDA = "viagem_excluida"
+    VIAGEM_ALTERADA = "viagem_alterada"
+    ROTEIRO_ALTERADO = "roteiro_alterado"
+    ATIVIDADE_ALTERADA = "atividade_alterada"

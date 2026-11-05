@@ -29,7 +29,9 @@ def test_autentica_com_credenciais_corretas_e_retorna_token_valido():
     token = autenticar_usuario.execute(email="livia@example.com", senha="senha123")
 
     assert isinstance(token, str)
-    assert token_service.verificar_token(token) == 1
+    dados = token_service.verificar_token(token)
+    assert dados.usuario_id == 1
+    assert dados.versao_sessao == 0
 
 
 def test_rejeita_senha_incorreta():

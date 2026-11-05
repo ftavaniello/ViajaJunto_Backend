@@ -34,6 +34,7 @@ def upgrade() -> None:
     op.add_column(
         "usuarios",
         _timestamptz("criado_em", nullable=False, server_default=sa.func.now()),
+        if_not_exists=True,  # Compatibilidade com a revisão paralela 3f1a9c2d7b40.
     )
 
     # --- viagens ---

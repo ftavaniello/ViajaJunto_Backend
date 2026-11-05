@@ -1,0 +1,185 @@
+# Catálogo interno de atividades — issue #20
+
+O catálogo contém dados reutilizáveis de locais e experiências. Uma atividade pertence
+obrigatoriamente a um destino do catálogo. Não contém datas, duração, custos, status
+ou participantes de viagens: esses dados pertencem ao roteiro privado.
+
+## Consulta pública
+
+Não exige token, inclusive para visitantes:
+
+- `GET /catalogo/atividades`: busca paginada.
+- `GET /catalogo/atividades/{atividade_id}`: detalhe; 404 se não existir, 422 para ID inválido.
+
+Filtros opcionais, combinados por **E**:
+
+| Parâmetro | Significado |
+|---|---|
+| `nome` | Trecho do nome da atividade |
+| `categoria` | `passeio`, `refeicao`, `hospedagem`, `transporte`, `outro` |
+| `localizacao` | Trecho da cidade, do código de país ou do endereço |
+| `destino_catalogo_id` | Destino exato pelo ID público |
+| `nota_minima` | Média mínima inclusiva entre 1 e 5; exclui atividades sem avaliações |
+| `pagina` | Inteiro a partir de 1; padrão 1 |
+| `tamanho_pagina` | De 1 a 100; padrão 20 |
+
+Textos são aparados; espaços em branco equivalem a filtro ausente. As buscas não
+distinguem maiúsculas de minúsculas, mas não removem acentos. `%` e `_` são
+caracteres literais, não curingas. Campos desconhecidos são rejeitados com 422.
+
+Exemplo: `/catalogo/atividades?nome=passeio&categoria=passeio&localizacao=lisboa`.
+
+A resposta contém `itens`, `pagina`, `tamanho_pagina` e `tem_proxima`.
+Ordenação crescente por ID, com limite e deslocamento aplicados no PostgreSQL.
+Sem resultados ou após a última página, `itens=[]` e `tem_proxima=false`.
+Inserções ou exclusões entre consultas podem alterar a composição das páginas.
+
+O destino associado inclui também categoria e descrição gerais (issue #18).
+Veja [catálogo de destinos](catalogo-destinos.md) para pesquisa e seleção.
+
+Cada item tem ID, nome, descrição, categoria, endereço, latitude/longitude,
+`foto_url`, `id_externo`, `fonte` e o destino (ID, cidade, país e dados geográficos).
+O modelo aprovado na migração usa uma foto por registro, representada por URL;
+não há armazenamento ou upload de imagens. URLs são referências e não são baixadas
+pelo backend. Não são retornados usuários, membros, convites nem dados do roteiro.
+Os tipos seguem o documento original de arquitetura: `passeio`, `refeicao`,
+`hospedagem`, `transporte` e `outro`. O campo da API continua se chamando `categoria`.
+Veja [tipos e conversão dos registros existentes](#tipos-de-atividades).
+
+## Avaliações — RF22–24
+
+O catálogo retorna média e total calculados de todas as avaliações, inclusive de
+contas excluídas. Sem reviews: média nula, total zero e lista vazia. A listagem
+contém resumos; o detalhe inclui até 20 reviews mais recentes. Todos os reviews
+podem ser consultados em `GET /catalogo/atividades/{atividade_id}/avaliacoes`.
+
+Cada review contém ID, nota de 1 a 5, comentário opcional, nome público do autor
+(nulo se a conta foi excluída) e data de criação. Não expõe email nem dados de viagem.
+O filtro `nota_minima` é aplicado à média sem arredondamento, antes de paginar.
+Veja [publicação, permissões e exemplos](avaliacoes-atividades.md).
+
+## Seed automático no desenvolvimento
+
+O Compose aplica as migrações e carrega [os dados iniciais](seed-demonstracao.md)
+com Orlando, Miami, Rio de Janeiro e Roma. O catálogo antigo de Lisboa não é mais
+carregado automaticamente. O arquivo `docs/catalogo-exemplo.json` continua disponível
+para testar manualmente o importador. Fora do Compose, execute o seed ou o importador
+explicitamente. A imagem de produção não cria dados de teste automaticamente.
+
+## Origem e abastecimento autorizado
+
+Há duas origens, gravadas em `fonte`: **curadoria manual pela equipe operadora**
+(`fonte=manual`, importador JSON e seed) e o **fornecedor Geoapify** (`fonte=geoapify`),
+abastecido pelo comando de enriquecimento da issue #23. `id_externo` identifica o local
+no fornecedor e é único por fonte. Veja [integração de locais](integracao-locais.md)
+para o comando, as regras de atualização e a configuração da chave.
+
+Somente operadores com acesso ao servidor/ambiente da aplicação e às credenciais do
+banco podem executar a importação. A autorização é do ambiente operacional; o JWT
+de um usuário comum não concede acesso ao comando. Não há endpoint público ou
+endpoint de usuário para cadastrar, editar ou remover registros do catálogo.
+
+Revise a origem, as descrições e as permissões de uso das fotos antes de importar
+um arquivo. Use dados que a equipe esteja autorizada a disponibilizar publicamente.
+O arquivo `docs/catalogo-exemplo.json` contém dados fictícios para desenvolvimento.
+O importador não aceita caminhos de arquivos em argumentos. Para lotes personalizados,
+recebe JSON pela entrada padrão; `--exemplo` seleciona exclusivamente o arquivo fixo
+do projeto, sem permitir escolher outro caminho. No PowerShell local, por exemplo:
+
+```powershell
+$OutputEncoding = [System.Text.UTF8Encoding]::new()
+Get-Content -Raw -Encoding utf8 meu-lote.json | python -m app.adapters.inbound.cli.importar_catalogo
+```
+
+O lote pode conter apenas destinos, omitindo `atividades`; a mensagem final conta
+atividades, portanto informa zero nesses lotes, mesmo com destinos cadastrados.
+As chaves de `destinos`, como `lisboa`, são referências locais ao arquivo, não IDs
+persistidos. Cada atividade referencia uma dessas chaves em `destino`.
+
+No ambiente Python com dependências instaladas e `DATABASE_URL` configurada:
+
+```sh
+alembic upgrade head
+python -m app.adapters.inbound.cli.importar_catalogo --exemplo
+```
+
+Com a API do Docker Compose, após reconstruir a imagem para incluir o comando:
+
+```sh
+docker compose up -d --build api
+docker compose exec -T api python -m app.adapters.inbound.cli.importar_catalogo < docs/catalogo-exemplo.json
+```
+
+A segunda linha usa redirecionamento de shell POSIX/cmd. No PowerShell, use:
+
+```powershell
+Get-Content -Raw -Encoding utf8 docs/catalogo-exemplo.json | docker compose exec -T api python -m app.adapters.inbound.cli.importar_catalogo
+```
+
+A importação valida o arquivo inteiro antes de gravar e confirma o lote numa única
+transação. Nome vazio, categoria inválida, coordenada fora de faixa, referência a
+destino ausente ou URL de foto fora de HTTP/HTTPS são rejeitados. Uma falha no banco
+reverte destinos e atividades do lote inteiro. IDs externos não nulos são únicos por fonte.
+
+**Importação sem `--se-vazio` é aditiva:** não é atualização nem sincronização idempotente. Reimportar
+um arquivo com IDs externos repetidos cancela o lote; sem IDs externos, reimportar
+cria novos registros. Execute cada lote uma vez e confira o resultado. A evolução
+do mecanismo de atualização deve preservar as referências do roteiro e avaliações.
+
+## Teste no Swagger
+
+1. Inicie a API pelo Docker Compose; em catálogo vazio, o seed abastece os exemplos automaticamente.
+2. Abra `/docs`; as operações da tag **Catálogo** não precisam de Authorize.
+3. Liste as atividades e experimente os filtros e `tamanho_pagina=1`.
+4. Use um ID retornado para consultar o detalhe.
+5. Confira as informações da foto/localização e média, total e reviews públicos.
+
+Os testes automatizados usam PostgreSQL exclusivo (`viajajunto_test`) e validam
+persistência, filtros, paginação, consulta anônima, contrato público e rollback.
+
+## Tipos de atividades
+
+O domínio e a API adotam os cinco tipos especificados pelos criadores do projeto:
+`passeio`, `refeicao`, `hospedagem`, `transporte` e `outro`.
+Na API os valores usam minúsculas sem acentos; os nomes do enum são PASSEIO,
+REFEICAO, HOSPEDAGEM, TRANSPORTE e OUTRO. O campo permanece `categoria`.
+As categorias de destinos (`cidade`, `praia`, `natureza`, `cultural`) são independentes.
+
+### Conversão de bancos existentes
+
+A revisão Alembic `f8c2d6e41b90` converte apenas a categoria das atividades:
+
+| Categoria antiga | Tipo atual |
+| --- | --- |
+| `cultura`, `lazer` | `passeio` |
+| `alimentacao` | `refeicao` |
+| `transporte` | `transporte` |
+| `compras`, `outros` | `outro` |
+
+Não apaga registros nem muda IDs, vínculos de roteiro, custos ou avaliações.
+Não recria o banco e não executa novamente o seed. O seed novo já usa esses tipos.
+O resumo financeiro passa a retornar cinco grupos; valores das categorias unificadas
+são somados, mantendo o total planejado e o saldo. Filtros e lotes novos devem usar
+os valores atuais; valores antigos retornam erro de validação, não são aliases.
+
+Aplique com `alembic upgrade head` no ambiente da API. O Compose já aplica as
+migrações no início do serviço; reiniciar/recriar o serviço executa esse fluxo.
+
+O downgrade mantém registros, mas não recupera distinções que foram unificadas:
+`passeio` volta para `cultura`, `refeicao` para `alimentacao`, `hospedagem` e `outro`
+para `outros`, e `transporte` permanece. Não use downgrade para recuperar a
+classificação original exata; a conversão muitos-para-um perde essa distinção.
+
+### Hospedagem no catálogo
+
+Pode ser importada no catálogo com `categoria: "hospedagem"` ou buscada com:
+
+```bash
+python -m app.adapters.inbound.cli.enriquecer_catalogo --destino 1 --categoria hospedagem
+```
+
+O adaptador usa a categoria oficial `accommodation` do
+[Geoapify](https://apidocs.geoapify.com/docs/places/). É catálogo de locais, sem
+reservas ou pagamentos. Uma hospedagem cadastrada pode entrar no roteiro como
+qualquer atividade, com datas, custo e status, e participa do resumo financeiro.
+O campo livre `hospedagem` da parada continua disponível para anotações.

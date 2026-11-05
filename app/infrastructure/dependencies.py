@@ -3,27 +3,101 @@
 Repositorios e UnitOfWork de uma requisicao recebem a mesma Session, para que as
 gravacoes de um caso de uso fiquem na mesma transacao.
 """
+
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
+from app.adapters.outbound.persistence.atividade_viagem_repository_sqlalchemy import (
+    SQLAlchemyAtividadeViagemRepository,
+)
+from app.adapters.outbound.persistence.avaliacao_repository_sqlalchemy import (
+    SQLAlchemyAvaliacaoRepository,
+)
+from app.adapters.outbound.persistence.avaliacoes_destino_repository_sqlalchemy import (
+    SQLAlchemyAvaliacoesDestinoRepository,
+)
+from app.adapters.outbound.persistence.catalogo_repository_sqlalchemy import (
+    SQLAlchemyCatalogoRepository,
+)
+from app.adapters.outbound.persistence.convite_viagem_repository_sqlalchemy import (
+    SQLAlchemyConviteViagemRepository,
+)
+from app.adapters.outbound.persistence.destino_viagem_repository_sqlalchemy import (
+    SQLAlchemyDestinoViagemRepository,
+)
+from app.adapters.outbound.persistence.membro_viagem_repository_sqlalchemy import (
+    SQLAlchemyMembroViagemRepository,
+)
+from app.adapters.outbound.persistence.notificacao_repository_sqlalchemy import (
+    SQLAlchemyNotificacaoRepository,
+)
+from app.adapters.outbound.persistence.orcamento_repository_sqlalchemy import (
+    SQLAlchemyOrcamentoRepository,
+)
+from app.adapters.outbound.persistence.paradas_participante_repository_sqlalchemy import (
+    SQLAlchemyParadasParticipanteRepository,
+)
+from app.adapters.outbound.persistence.token_recuperacao_senha_repository_sqlalchemy import (
+    SQLAlchemyTokenRecuperacaoSenhaRepository,
+)
+from app.adapters.outbound.persistence.token_revogado_repository_sqlalchemy import (
+    SQLAlchemyTokenRevogadoRepository,
+)
 from app.adapters.outbound.persistence.unit_of_work_sqlalchemy import SQLAlchemyUnitOfWork
 from app.adapters.outbound.persistence.usuario_repository_sqlalchemy import (
     SQLAlchemyUsuarioRepository,
 )
+from app.adapters.outbound.persistence.viagem_repository_sqlalchemy import (
+    SQLAlchemyViagemRepository,
+)
+from app.adapters.outbound.persistence.vinculos_conta_repository_sqlalchemy import (
+    SQLAlchemyVinculosContaRepository,
+)
 from app.adapters.outbound.security.bcrypt_password_hasher import BcryptPasswordHasher
 from app.adapters.outbound.security.pyjwt_token_service import PyJWTTokenService
+from app.application.acesso_viagem import PoliticaAcessoViagem
+from app.application.notificador_viagem import NotificadorViagem
 from app.application.use_cases.alterar_senha import AlterarSenha
 from app.application.use_cases.atualizar_usuario import AtualizarUsuario
+from app.application.use_cases.atualizar_viagem import AtualizarViagem
 from app.application.use_cases.autenticar_usuario import AutenticarUsuario
+from app.application.use_cases.avaliar_atividade_viagem import AvaliarAtividadeViagem
+from app.application.use_cases.consultar_catalogo import (
+    ConsultarAtividadeCatalogo,
+    ListarAtividadesCatalogo,
+)
+from app.application.use_cases.consultar_destinos_catalogo import (
+    ConsultarDestinoCatalogo,
+    ListarDestinosCatalogo,
+)
+from app.application.use_cases.consultar_mapa import ConsultarMapaViagem, ConsultarPaisesVisitados
+from app.application.use_cases.consultar_ranking_destinos import ConsultarRankingDestinos
 from app.application.use_cases.consultar_resumo_usuarios import ConsultarResumoUsuarios
 from app.application.use_cases.consultar_usuario_autenticado import ConsultarUsuarioAutenticado
+from app.application.use_cases.consultar_viagem import ConsultarViagem
 from app.application.use_cases.criar_usuario import CriarUsuario
+from app.application.use_cases.criar_viagem import CriarViagem
+from app.application.use_cases.encerrar_sessao import EncerrarSessao
+from app.application.use_cases.enriquecer_catalogo import EnriquecerCatalogo
 from app.application.use_cases.excluir_usuario import ExcluirUsuario
+from app.application.use_cases.excluir_viagem import ExcluirViagem
+from app.application.use_cases.gerenciar_atividades_viagem import GerenciarAtividadesViagem
+from app.application.use_cases.gerenciar_destinos_viagem import GerenciarDestinosViagem
+from app.application.use_cases.gerenciar_membros_viagem import GerenciarMembrosViagem
+from app.application.use_cases.gerenciar_notificacoes import GerenciarNotificacoes
+from app.application.use_cases.gerenciar_orcamento_viagem import GerenciarOrcamentoViagem
+from app.application.use_cases.importar_catalogo import ImportarCatalogo
+from app.application.use_cases.listar_viagens import ListarViagens
+from app.application.use_cases.redefinir_senha import RedefinirSenha
+from app.application.use_cases.solicitar_recuperacao_senha import SolicitarRecuperacaoSenha
+from app.domain.ports.email_sender import EmailSender
+from app.domain.ports.provedor_locais import ProvedorLocais
 from app.domain.ports.token_service import TokenService
 from app.domain.ports.total_usuarios_cache import TotalUsuariosCache
-from app.infrastructure.cache import get_total_usuarios_cache
+from app.infrastructure.cache import get_ranking_destinos_cache, get_total_usuarios_cache
 from app.infrastructure.config import settings
 from app.infrastructure.database import get_db
+from app.infrastructure.email import get_email_sender
 
 
 def get_token_service() -> TokenService:
@@ -34,20 +108,28 @@ def get_token_service() -> TokenService:
     )
 
 
+def montar_criar_usuario(db: Session, cache: TotalUsuariosCache) -> CriarUsuario:
+    """Composicao reutilizada pela API e por adaptadores de entrada fora do HTTP."""
+    return CriarUsuario(
+        SQLAlchemyUsuarioRepository(db), BcryptPasswordHasher(), SQLAlchemyUnitOfWork(db), cache
+    )
+
+
 def get_criar_usuario(
     db: Session = Depends(get_db),
     cache: TotalUsuariosCache = Depends(get_total_usuarios_cache),
 ) -> CriarUsuario:
-    return CriarUsuario(
-        SQLAlchemyUsuarioRepository(db), BcryptPasswordHasher(), SQLAlchemyUnitOfWork(db), cache
-    )
+    return montar_criar_usuario(db, cache)
 
 
 def get_excluir_usuario(
     db: Session = Depends(get_db),
     cache: TotalUsuariosCache = Depends(get_total_usuarios_cache),
 ) -> ExcluirUsuario:
-    return ExcluirUsuario(SQLAlchemyUsuarioRepository(db), SQLAlchemyUnitOfWork(db), cache)
+    return ExcluirUsuario(
+        SQLAlchemyUsuarioRepository(db), SQLAlchemyUnitOfWork(db),
+        SQLAlchemyVinculosContaRepository(db), cache,
+    )
 
 
 def get_atualizar_usuario(db: Session = Depends(get_db)) -> AtualizarUsuario:
@@ -71,7 +153,18 @@ def get_consultar_usuario_autenticado(
     db: Session = Depends(get_db),
     token_service: TokenService = Depends(get_token_service),
 ) -> ConsultarUsuarioAutenticado:
-    return ConsultarUsuarioAutenticado(SQLAlchemyUsuarioRepository(db), token_service)
+    return ConsultarUsuarioAutenticado(
+        SQLAlchemyUsuarioRepository(db), token_service, SQLAlchemyTokenRevogadoRepository(db)
+    )
+
+
+def get_encerrar_sessao(
+    db: Session = Depends(get_db),
+    token_service: TokenService = Depends(get_token_service),
+) -> EncerrarSessao:
+    return EncerrarSessao(
+        token_service, SQLAlchemyTokenRevogadoRepository(db), SQLAlchemyUnitOfWork(db)
+    )
 
 
 def get_consultar_resumo(
@@ -79,3 +172,169 @@ def get_consultar_resumo(
     cache: TotalUsuariosCache = Depends(get_total_usuarios_cache),
 ) -> ConsultarResumoUsuarios:
     return ConsultarResumoUsuarios(SQLAlchemyUsuarioRepository(db), cache)
+
+
+def _politica_acesso_viagem(db: Session) -> PoliticaAcessoViagem:
+    return PoliticaAcessoViagem(
+        SQLAlchemyViagemRepository(db), SQLAlchemyMembroViagemRepository(db)
+    )
+
+
+def _notificador_viagem(db: Session) -> NotificadorViagem:
+    return NotificadorViagem(
+        SQLAlchemyNotificacaoRepository(db),
+        SQLAlchemyMembroViagemRepository(db),
+        SQLAlchemyUsuarioRepository(db),
+    )
+
+
+def get_criar_viagem(db: Session = Depends(get_db)) -> CriarViagem:
+    return CriarViagem(SQLAlchemyViagemRepository(db), SQLAlchemyUnitOfWork(db))
+
+
+def get_listar_viagens(db: Session = Depends(get_db)) -> ListarViagens:
+    return ListarViagens(SQLAlchemyViagemRepository(db))
+
+
+def get_consultar_viagem(db: Session = Depends(get_db)) -> ConsultarViagem:
+    return ConsultarViagem(_politica_acesso_viagem(db))
+
+
+def get_atualizar_viagem(db: Session = Depends(get_db)) -> AtualizarViagem:
+    return AtualizarViagem(
+        SQLAlchemyViagemRepository(db),
+        _politica_acesso_viagem(db),
+        SQLAlchemyUnitOfWork(db),
+        SQLAlchemyDestinoViagemRepository(db),
+        notificador=_notificador_viagem(db),
+    )
+
+
+def get_excluir_viagem(db: Session = Depends(get_db)) -> ExcluirViagem:
+    return ExcluirViagem(
+        SQLAlchemyViagemRepository(db),
+        _politica_acesso_viagem(db),
+        SQLAlchemyUnitOfWork(db),
+        notificador=_notificador_viagem(db),
+    )
+
+
+def get_solicitar_recuperacao_senha(
+    db: Session = Depends(get_db),
+    email_sender: EmailSender = Depends(get_email_sender),
+) -> SolicitarRecuperacaoSenha:
+    return SolicitarRecuperacaoSenha(
+        SQLAlchemyUsuarioRepository(db),
+        SQLAlchemyTokenRecuperacaoSenhaRepository(db),
+        email_sender,
+        SQLAlchemyUnitOfWork(db),
+        url_redefinicao=settings.RECUPERACAO_SENHA_URL,
+    )
+
+
+def get_redefinir_senha(db: Session = Depends(get_db)) -> RedefinirSenha:
+    return RedefinirSenha(
+        SQLAlchemyUsuarioRepository(db),
+        SQLAlchemyTokenRecuperacaoSenhaRepository(db),
+        BcryptPasswordHasher(),
+        SQLAlchemyUnitOfWork(db),
+    )
+
+
+def get_listar_catalogo(db: Session = Depends(get_db)) -> ListarAtividadesCatalogo:
+    return ListarAtividadesCatalogo(SQLAlchemyCatalogoRepository(db))
+
+
+def get_consultar_atividade_catalogo(db: Session = Depends(get_db)) -> ConsultarAtividadeCatalogo:
+    return ConsultarAtividadeCatalogo(
+        SQLAlchemyCatalogoRepository(db), SQLAlchemyAvaliacaoRepository(db)
+    )
+
+
+def montar_importar_catalogo(db: Session) -> ImportarCatalogo:
+    return ImportarCatalogo(
+        SQLAlchemyCatalogoRepository(db), SQLAlchemyUnitOfWork(db), get_ranking_destinos_cache()
+    )
+
+
+def montar_enriquecer_catalogo(db: Session, provedor: ProvedorLocais) -> EnriquecerCatalogo:
+    return EnriquecerCatalogo(SQLAlchemyCatalogoRepository(db), provedor, SQLAlchemyUnitOfWork(db))
+
+
+def get_listar_destinos_catalogo(db: Session = Depends(get_db)) -> ListarDestinosCatalogo:
+    return ListarDestinosCatalogo(SQLAlchemyCatalogoRepository(db))
+
+
+def get_consultar_destino_catalogo(db: Session = Depends(get_db)) -> ConsultarDestinoCatalogo:
+    return ConsultarDestinoCatalogo(SQLAlchemyCatalogoRepository(db))
+
+
+def get_gerenciar_destinos_viagem(db: Session = Depends(get_db)) -> GerenciarDestinosViagem:
+    return GerenciarDestinosViagem(
+        SQLAlchemyDestinoViagemRepository(db),
+        SQLAlchemyCatalogoRepository(db),
+        _politica_acesso_viagem(db),
+        SQLAlchemyUnitOfWork(db),
+        notificador=_notificador_viagem(db),
+    )
+
+
+def get_gerenciar_membros_viagem(
+    db: Session = Depends(get_db),
+    email_sender: EmailSender = Depends(get_email_sender),
+) -> GerenciarMembrosViagem:
+    return GerenciarMembrosViagem(
+        SQLAlchemyViagemRepository(db),
+        SQLAlchemyMembroViagemRepository(db),
+        SQLAlchemyConviteViagemRepository(db),
+        SQLAlchemyUsuarioRepository(db),
+        _politica_acesso_viagem(db),
+        email_sender,
+        SQLAlchemyUnitOfWork(db),
+        url_convite=settings.CONVITE_URL,
+        notificador=_notificador_viagem(db),
+    )
+
+
+def get_gerenciar_atividades_viagem(db: Session = Depends(get_db)) -> GerenciarAtividadesViagem:
+    return GerenciarAtividadesViagem(
+        SQLAlchemyAtividadeViagemRepository(db),
+        SQLAlchemyDestinoViagemRepository(db),
+        SQLAlchemyCatalogoRepository(db),
+        _politica_acesso_viagem(db),
+        SQLAlchemyUnitOfWork(db),
+        notificador=_notificador_viagem(db),
+    )
+
+
+def get_gerenciar_notificacoes(db: Session = Depends(get_db)) -> GerenciarNotificacoes:
+    return GerenciarNotificacoes(SQLAlchemyNotificacaoRepository(db), SQLAlchemyUnitOfWork(db))
+
+
+def get_gerenciar_orcamento_viagem(db: Session = Depends(get_db)) -> GerenciarOrcamentoViagem:
+    return GerenciarOrcamentoViagem(
+        SQLAlchemyOrcamentoRepository(db), _politica_acesso_viagem(db), SQLAlchemyUnitOfWork(db)
+    )
+
+
+def get_avaliar_atividade_viagem(db: Session = Depends(get_db)) -> AvaliarAtividadeViagem:
+    return AvaliarAtividadeViagem(
+        SQLAlchemyAtividadeViagemRepository(db),
+        SQLAlchemyDestinoViagemRepository(db),
+        _politica_acesso_viagem(db),
+        SQLAlchemyAvaliacaoRepository(db),
+        SQLAlchemyUnitOfWork(db),
+        cache=get_ranking_destinos_cache(),
+    )
+def get_consultar_paises_visitados(db: Session = Depends(get_db)) -> ConsultarPaisesVisitados:
+    return ConsultarPaisesVisitados(SQLAlchemyParadasParticipanteRepository(db))
+
+
+def get_consultar_mapa_viagem(db: Session = Depends(get_db)) -> ConsultarMapaViagem:
+    return ConsultarMapaViagem(SQLAlchemyDestinoViagemRepository(db), _politica_acesso_viagem(db))
+
+
+def get_consultar_ranking_destinos(db: Session = Depends(get_db)) -> ConsultarRankingDestinos:
+    return ConsultarRankingDestinos(
+        SQLAlchemyAvaliacoesDestinoRepository(db), get_ranking_destinos_cache()
+    )

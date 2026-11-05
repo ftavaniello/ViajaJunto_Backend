@@ -17,6 +17,7 @@ from app.adapters.outbound.persistence.catalogo_model import (
     CatalogoAtividadeModel,
     DestinoCatalogoModel,
 )
+from app.adapters.outbound.persistence.convite_viagem_model import ConviteViagemModel
 from app.adapters.outbound.persistence.notificacao_model import NotificacaoModel
 from app.adapters.outbound.persistence.recuperacao_senha_model import (
     TokenRecuperacaoSenhaModel,
@@ -61,8 +62,6 @@ def _viagem(db, criador: UsuarioModel, **extra) -> ViagemModel:
         "nome": f"{PREFIXO}viagem",
         "data_inicio": date(2027, 1, 10),
         "data_fim": date(2027, 1, 20),
-        "codigo_convite": uuid.uuid4().hex[:10].upper(),
-        "codigo_convite_expira_em": _agora() + timedelta(days=7),
     }
     campos.update(extra)
     viagem = ViagemModel(**campos)
@@ -76,7 +75,7 @@ def _catalogo(db) -> tuple[DestinoCatalogoModel, CatalogoAtividadeModel]:
     db.add(destino)
     db.commit()
     atividade = CatalogoAtividadeModel(
-        destino_catalogo_id=destino.id, nome=f"{PREFIXO}Torre de Belém", categoria="cultura"
+        destino_catalogo_id=destino.id, nome=f"{PREFIXO}Torre de Belém", categoria="passeio"
     )
     db.add(atividade)
     db.commit()
@@ -97,7 +96,7 @@ def _roteiro(db, viagem, destino, atividade, realizada=True):
         destino_viagem_id=parada.id,
         catalogo_atividade_id=atividade.id,
         data=date(2027, 1, 11),
-        status=StatusAtividade.REALIZADA.value if realizada else "planejada",
+        status=StatusAtividade.CONCLUIDA.value if realizada else "pendente",
         realizada_em=_agora() if realizada else None,
     )
     db.add(ativ)
@@ -120,22 +119,63 @@ def limpeza(db_session):
     db_session.commit()
 
 
-# --- D1: identificador da viagem x código de convite -----------------------------------
+# --- D1: identificador da viagem x convite por email (issue #16) -----------------------
 
 
-def test_id_da_viagem_e_inteiro_e_distinto_do_codigo_de_convite(db_session):
-    viagem = _viagem(db_session, _usuario(db_session), codigo_convite="ABCD234567")
+def _convite(db, viagem, email="ana@example.com", **extra) -> ConviteViagemModel:
+    campos = {
+        "viagem_id": viagem.id,
+        "email": email,
+        "token_hash": uuid.uuid4().hex + uuid.uuid4().hex,
+        "expira_em": _agora() + timedelta(days=7),
+    }
+    campos.update(extra)
+    convite = ConviteViagemModel(**campos)
+    db.add(convite)
+    db.commit()
+    return convite
+
+
+def test_id_da_viagem_e_inteiro_e_viagem_nao_tem_codigo_de_convite(db_session):
+    viagem = _viagem(db_session, _usuario(db_session))
 
     assert isinstance(viagem.id, int)
-    assert viagem.codigo_convite == "ABCD234567"
+    assert not hasattr(viagem, "codigo_convite")
 
 
-def test_codigo_de_convite_e_unico(db_session):
-    criador = _usuario(db_session)
-    _viagem(db_session, criador, codigo_convite="DUPLICADO22")
+def test_hash_do_token_de_convite_e_unico(db_session):
+    viagem = _viagem(db_session, _usuario(db_session))
+    _convite(db_session, viagem, "ana@example.com", token_hash="a" * 64)
 
     with pytest.raises(IntegrityError):
-        _viagem(db_session, criador, codigo_convite="DUPLICADO22")
+        _convite(db_session, viagem, "bia@example.com", token_hash="a" * 64)
+
+
+def test_um_convite_pendente_por_email_na_viagem(db_session):
+    viagem = _viagem(db_session, _usuario(db_session))
+    _convite(db_session, viagem)
+
+    with pytest.raises(IntegrityError):
+        _convite(db_session, viagem)
+
+
+def test_convite_aceito_nao_bloqueia_novo_convite_ao_mesmo_email(db_session):
+    viagem = _viagem(db_session, _usuario(db_session))
+    _convite(db_session, viagem, aceito_em=_agora())
+
+    assert _convite(db_session, viagem).aceito_em is None
+
+
+def test_excluir_viagem_remove_seus_convites(db_session):
+    criador = _usuario(db_session)
+    viagem = _viagem(db_session, criador)
+    convite = _convite(db_session, viagem, convidado_por_id=criador.id)
+    convite_id = convite.id
+
+    db_session.execute(delete(ViagemModel).where(ViagemModel.id == viagem.id))
+    db_session.commit()
+
+    assert db_session.get(ConviteViagemModel, convite_id) is None
 
 
 def test_periodo_da_viagem_nao_pode_terminar_antes_de_comecar(db_session):
@@ -236,7 +276,7 @@ def test_atividade_marcada_como_realizada_exige_data_da_comprovacao(db_session):
     destino, atividade = _catalogo(db_session)
     _, ativ = _roteiro(db_session, viagem, destino, atividade, realizada=False)
 
-    ativ.status = StatusAtividade.REALIZADA.value
+    ativ.status = StatusAtividade.CONCLUIDA.value
     with pytest.raises(IntegrityError):
         db_session.commit()
 
@@ -352,15 +392,9 @@ def test_excluir_viagem_preserva_a_notificacao_dos_membros(db_session):
     assert kept is not None and kept.viagem_id is None
 
 
-def test_excluir_conta_do_criador_remove_suas_viagens_e_anonimiza_avaliacoes(db_session):
+def test_excluir_criador_sem_colaboradores_remove_viagens_e_anonimiza_avaliacoes(db_session):
     criador = _usuario(db_session)
-    membro = _usuario(db_session)
     viagem = _viagem(db_session, criador)
-    db_session.add(
-        MembroViagemModel(
-            viagem_id=viagem.id, usuario_id=membro.id, papel=PapelMembro.EDITOR.value
-        )
-    )
     _, atividade = _catalogo(db_session)
     avaliacao = AvaliacaoModel(usuario_id=criador.id, catalogo_atividade_id=atividade.id, nota=5)
     db_session.add(avaliacao)

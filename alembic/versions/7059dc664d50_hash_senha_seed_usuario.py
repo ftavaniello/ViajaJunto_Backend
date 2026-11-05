@@ -31,18 +31,18 @@ SENHA_SEED = "changeme123"
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # O seed anterior gravou a senha em texto puro (o port de hashing ainda não
-    # existia). Agora que POST /auth/login valida a senha com bcrypt, o hash
-    # precisa ser real para esse usuário continuar conseguindo logar.
+    # O seed antigo gravou a senha em texto puro. So converte para bcrypt se o
+    # registro ainda tiver exatamente esse valor: uma conta com o mesmo email
+    # cuja senha ja e um hash (trocada ou cadastrada pela API) nao e tocada.
     senha_hash = bcrypt.hashpw(SENHA_SEED.encode(), bcrypt.gensalt()).decode()
 
     op.execute(
-        usuarios.update().where(usuarios.c.email == EMAIL_SEED).values(senha_hash=senha_hash)
+        usuarios.update()
+        .where(usuarios.c.email == EMAIL_SEED, usuarios.c.senha_hash == SENHA_SEED)
+        .values(senha_hash=senha_hash)
     )
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.execute(
-        usuarios.update().where(usuarios.c.email == EMAIL_SEED).values(senha_hash=SENHA_SEED)
-    )
+    # Nao volta a gravar senha em texto puro: o hash continua valido para login.
