@@ -28,7 +28,7 @@ de exemplo são para desenvolvimento. Configurações estão em [.env.example](.
 
 O Compose provisiona o cache no MiniStack com AWS CLI/CloudFormation, aguarda o
 PostgreSQL, aplica Alembic e, em `APP_ENV=development`, executa o seed antes de
-iniciar a API. O Redis guarda somente a contagem de usuários. O passo a passo de
+iniciar a API. O Redis guarda a contagem de usuários e um snapshot do ranking público de destinos. O passo a passo de
 MiniStack, CloudFormation e Redis está em [infra/README.md](infra/README.md).
 
 Para conferir a inicialização:

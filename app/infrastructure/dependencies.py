@@ -94,7 +94,7 @@ from app.domain.ports.email_sender import EmailSender
 from app.domain.ports.provedor_locais import ProvedorLocais
 from app.domain.ports.token_service import TokenService
 from app.domain.ports.total_usuarios_cache import TotalUsuariosCache
-from app.infrastructure.cache import get_total_usuarios_cache
+from app.infrastructure.cache import get_ranking_destinos_cache, get_total_usuarios_cache
 from app.infrastructure.config import settings
 from app.infrastructure.database import get_db
 from app.infrastructure.email import get_email_sender
@@ -252,7 +252,9 @@ def get_consultar_atividade_catalogo(db: Session = Depends(get_db)) -> Consultar
 
 
 def montar_importar_catalogo(db: Session) -> ImportarCatalogo:
-    return ImportarCatalogo(SQLAlchemyCatalogoRepository(db), SQLAlchemyUnitOfWork(db))
+    return ImportarCatalogo(
+        SQLAlchemyCatalogoRepository(db), SQLAlchemyUnitOfWork(db), get_ranking_destinos_cache()
+    )
 
 
 def montar_enriquecer_catalogo(db: Session, provedor: ProvedorLocais) -> EnriquecerCatalogo:
@@ -322,6 +324,7 @@ def get_avaliar_atividade_viagem(db: Session = Depends(get_db)) -> AvaliarAtivid
         _politica_acesso_viagem(db),
         SQLAlchemyAvaliacaoRepository(db),
         SQLAlchemyUnitOfWork(db),
+        cache=get_ranking_destinos_cache(),
     )
 def get_consultar_paises_visitados(db: Session = Depends(get_db)) -> ConsultarPaisesVisitados:
     return ConsultarPaisesVisitados(SQLAlchemyParadasParticipanteRepository(db))
@@ -332,4 +335,6 @@ def get_consultar_mapa_viagem(db: Session = Depends(get_db)) -> ConsultarMapaVia
 
 
 def get_consultar_ranking_destinos(db: Session = Depends(get_db)) -> ConsultarRankingDestinos:
-    return ConsultarRankingDestinos(SQLAlchemyAvaliacoesDestinoRepository(db))
+    return ConsultarRankingDestinos(
+        SQLAlchemyAvaliacoesDestinoRepository(db), get_ranking_destinos_cache()
+    )

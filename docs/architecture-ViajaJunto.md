@@ -141,7 +141,7 @@ remoção, mesmo existindo cascata no banco. Veja [exclusão de conta](exclusao-
 
 ## Infraestrutura e operação
 
-PostgreSQL é a fonte persistente. Redis guarda somente a contagem de usuários,
+PostgreSQL é a fonte persistente. Redis guarda a contagem de usuários e o ranking público de destinos,
 com TTL e invalidação após alterações; não é a fonte das permissões ou sessões.
 No ambiente local, MiniStack provisiona Redis por CloudFormation/AWS CLI.
 O Compose aplica migrações e executa o seed idempotente em desenvolvimento antes

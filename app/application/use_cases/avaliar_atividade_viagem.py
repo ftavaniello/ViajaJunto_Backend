@@ -5,6 +5,7 @@ from app.domain.permissoes import AcaoViagem
 from app.domain.ports.atividade_viagem_repository import AtividadeViagemRepository
 from app.domain.ports.avaliacao_repository import AvaliacaoRepository
 from app.domain.ports.destino_viagem_repository import DestinoViagemRepository
+from app.domain.ports.ranking_destinos_cache import RankingDestinosCache
 from app.domain.ports.unit_of_work import UnitOfWork
 
 
@@ -16,12 +17,14 @@ class AvaliarAtividadeViagem:
         acesso: PoliticaAcessoViagem,
         avaliacoes: AvaliacaoRepository,
         uow: UnitOfWork,
+        cache: RankingDestinosCache | None = None,
     ):
         self.atividades = atividades
         self.destinos = destinos
         self.acesso = acesso
         self.avaliacoes = avaliacoes
         self.uow = uow
+        self.cache = cache
 
     def execute(
         self,
@@ -49,4 +52,6 @@ class AvaliarAtividadeViagem:
             )
             review = self.avaliacoes.salvar(avaliacao)
             self.uow.commit()
+        if self.cache is not None:
+            self.cache.invalidar()
         return review

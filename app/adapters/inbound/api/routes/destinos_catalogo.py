@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, Path, Query, Response
 
 from app.adapters.inbound.api.schemas.catalogo_schema import (
     DestinoCatalogoResponse,
@@ -54,20 +54,36 @@ def listar(
     "/ranking",
     response_model=RankingDestinosResponse,
     summary="Ranking público dos destinos mais bem avaliados",
+    responses={
+        200: {
+            "headers": {
+                "X-Cache": {
+                    "description": "HIT: Redis; MISS: SQL e cache preenchido; BYPASS: sem cache",
+                    "schema": {"type": "string", "enum": ["HIT", "MISS", "BYPASS"]},
+                }
+            }
+        }
+    },
     description=(
         "Consulta sem autenticação, para a página inicial. A nota do destino agrega as "
         "avaliações das atividades do catálogo que pertencem a ele. Ordena pela média "
         "bayesiana (decrescente), depois pelo total de avaliações (decrescente) e pelo id "
-        "(crescente). Destinos sem avaliação não aparecem. Ver docs/ranking-destinos.md."
+        "(crescente). Destinos sem avaliação não aparecem. Cache Redis com TTL; "
+        "X-Cache indica HIT, MISS ou BYPASS. "
+        "Ver docs/ranking-destinos.md."
     ),
 )
 def ranking(
+    response: Response,
     caso: Annotated[ConsultarRankingDestinos, Depends(get_consultar_ranking_destinos)],
     limite: Annotated[
         int, Query(ge=1, le=LIMITE_MAXIMO, description="Quantidade máxima de destinos.")
     ] = 10,
 ):
-    return RankingDestinosResponse.model_validate(caso.execute(limite))
+    resultado, origem = caso.execute_com_origem(limite)
+    response.headers["X-Cache"] = origem
+    response.headers["Cache-Control"] = "no-store"
+    return RankingDestinosResponse.model_validate(resultado)
 
 
 @router.get(

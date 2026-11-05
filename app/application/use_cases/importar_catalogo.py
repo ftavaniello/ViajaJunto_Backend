@@ -3,6 +3,7 @@ from dataclasses import dataclass, replace
 from app.domain.entities.catalogo import AtividadeCatalogo, DestinoCatalogo
 from app.domain.errors import DadosInvalidos
 from app.domain.ports.catalogo_repository import CatalogoRepository
+from app.domain.ports.ranking_destinos_cache import RankingDestinosCache
 from app.domain.ports.unit_of_work import UnitOfWork
 
 
@@ -18,9 +19,15 @@ class ImportarCatalogo:
     A autorização é fornecida pelo acesso ao comando, não por um endpoint público.
     """
 
-    def __init__(self, repository: CatalogoRepository, uow: UnitOfWork):
+    def __init__(
+        self,
+        repository: CatalogoRepository,
+        uow: UnitOfWork,
+        cache: RankingDestinosCache | None = None,
+    ):
         self.repository = repository
         self.uow = uow
+        self.cache = cache
 
     def execute(self, lote: LoteCatalogo, apenas_se_vazio: bool = False) -> int:
         if not lote.destinos:
@@ -38,4 +45,6 @@ class ImportarCatalogo:
             for chave, atividade in lote.atividades:
                 self.repository.salvar_atividade(replace(atividade, destino=destinos[chave]))
             self.uow.commit()
+        if self.cache is not None:
+            self.cache.invalidar()
         return len(lote.atividades)

@@ -20,7 +20,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.application.use_cases.criar_usuario import CriarUsuario
 from app.domain.errors import DadosInvalidos, EmailDuplicado
-from app.infrastructure.cache import get_total_usuarios_cache
+from app.infrastructure.cache import get_ranking_destinos_cache, get_total_usuarios_cache
 from app.infrastructure.config import Settings, settings
 from app.infrastructure.database import SessionLocal, engine
 from app.infrastructure.dependencies import montar_criar_usuario
@@ -74,6 +74,7 @@ def carregar_cenarios(referencia: date) -> int:
             criado, manifesto = executar_seed_completo(settings, connection, referencia)
         if criado:
             get_total_usuarios_cache().invalidar()
+            get_ranking_destinos_cache().invalidar()
         print("Seed completo criado." if criado else "Seed já executado; dados mantidos.")
         print(json.dumps(manifesto, ensure_ascii=False, indent=2))
     except (PermissionError, DadosInvalidos) as error:

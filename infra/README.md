@@ -102,7 +102,8 @@ Inicie tudo na raiz: `docker compose up -d --build`.
 
 O AWS CLI cria o ElastiCache e grava seu endereco atual no volume `cache-endpoint`.
 A API le esse endereco em `REDIS_URL_FILE`. Nao existe um novo container para isso.
-Somente a contagem de usuarios e guardada, na chave `viajajunto:usuarios:total:v1`.
+A contagem de usuários usa a chave `viajajunto:usuarios:total:v1`. O ranking público
+de destinos também usa Redis; veja [cache do ranking](../docs/ranking-destinos.md#cache-redis).
 Nao sao guardados emails, senhas ou tokens.
 
 ### Preparação para quem acabou de baixar o projeto

@@ -228,6 +228,17 @@ Resultado esperado: **404**, pois essa conta não participa da viagem.
 
 ## 8. Concluir a atividade e publicar uma avaliação
 
+Antes de avaliar, na seção **Catálogo**, execute **GET
+`/catalogo/destinos/ranking`**, com `limite = 10`, duas vezes. Em **Response headers**,
+mostre `x-cache`: `MISS` na primeira consulta e `HIT` na segunda. Se o ranking já
+estiver cacheado, a primeira também pode ser `HIT`; após o TTL (60 segundos por
+padrão), uma nova consulta volta a `MISS`.
+
+Fala sugerida: “O ranking é público e compartilhado. Redis evita repetir a
+agregação das avaliações a cada acesso. Vamos publicar uma avaliação e observar
+a invalidação desse resultado.”
+
+
 Na seção **Autenticação**, use **POST `/auth/login`** novamente como `criador.demo@example.com`, com senha `DemoViaja123!`,
 e substitua o token em **Authorize**.
 
@@ -264,6 +275,11 @@ Consulte os resultados públicos:
 
 Aqui o ID é **3, do catálogo**, e não A, da ocorrência privada. Se o usuário já
 avaliou Disney Springs, o PUT atualiza sua avaliação existente, sem duplicá-la.
+
+Após o PUT de avaliação, retorne à seção **Catálogo** e execute **GET
+`/catalogo/destinos/ranking`**, com `limite = 10`: espere `x-cache: MISS`; repetindo,
+espere `HIT`. A publicação invalida o ranking, mesmo que a posição dos destinos
+não mude. `BYPASS` significa que o cache está indisponível, com fallback para SQL.
 
 ## 9. Encerrar com os dados geográficos
 

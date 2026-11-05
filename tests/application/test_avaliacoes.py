@@ -157,3 +157,26 @@ def test_falha_persistencia_nao_confirma(contexto):
     with pytest.raises(RuntimeError):
         caso.execute(1, 1, 1, 1, 5)
     assert (uow.commits, uow.rollbacks) == (0, 1)
+
+
+def test_cache_invalidado_somente_depois_do_commit(contexto):
+    caso, _, _, _, uow = contexto
+    caso.cache = Mock()
+    caso.cache.invalidar.side_effect = lambda: (
+        pytest.fail("Invalidou antes do commit") if uow.commits == 0 else None
+    )
+    caso.execute(1, 1, 1, 1, 5)
+    caso.cache.invalidar.assert_called_once()
+
+
+def test_falha_commit_nao_invalida_cache(contexto, monkeypatch):
+    caso, _, _, _, uow = contexto
+    caso.cache = Mock()
+
+    def falhar():
+        raise RuntimeError("commit falhou")
+
+    monkeypatch.setattr(uow, "commit", falhar)
+    with pytest.raises(RuntimeError, match="commit falhou"):
+        caso.execute(1, 1, 1, 1, 5)
+    caso.cache.invalidar.assert_not_called()

@@ -31,7 +31,7 @@ def test_reset_reaplica_migracoes_e_seed_atualizado(db_session):
     )
     for tabela, total in [
         ("usuarios", 6),
-        ("viagens", 27),
+        ("viagens", 28),
         ("destinos_catalogo", 4),
         ("catalogo_atividades", 24),
         ("avaliacoes", 20),

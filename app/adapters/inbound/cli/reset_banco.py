@@ -11,7 +11,7 @@ from alembic.util.exc import CommandError
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.domain.errors import ErroNegocio
-from app.infrastructure.cache import get_total_usuarios_cache
+from app.infrastructure.cache import get_ranking_destinos_cache, get_total_usuarios_cache
 from app.infrastructure.config import settings
 from app.infrastructure.reset_banco import resetar_banco
 
@@ -38,6 +38,7 @@ def main() -> int:
         )
         return 1
     get_total_usuarios_cache().invalidar()
+    get_ranking_destinos_cache().invalidar()
     print("Banco local viajajunto recriado com migrações e seed atualizado.")
     print(
         f"Usuários: {len(manifesto['usuarios'])}; destinos: {len(manifesto['destinos_catalogo'])}; "

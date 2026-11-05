@@ -69,3 +69,42 @@ esconder a seção ou mostrar uma mensagem.
 A regra fica em `app/domain/ranking_destinos.py`. O banco agrega contagem e soma por
 destino em uma consulta; não há migração, porque `avaliacoes` e os índices em
 `catalogo_atividade_id` e `destino_catalogo_id` já existem.
+
+
+## Cache Redis
+
+A rota pública retorna `X-Cache: MISS` quando consulta o PostgreSQL e preenche o
+Redis; `HIT` quando reutiliza o snapshot; `BYPASS` quando o cache está indisponível
+ou não foi possível gravar o snapshot. A resposta JSON mantém o mesmo contrato.
+`Cache-Control: no-store` evita confundir esse cache interno com o do navegador.
+
+O TTL é `CACHE_TTL_SECONDS` (60 segundos por padrão). Um snapshot com os primeiros
+50 destinos atende a todos os valores de `limite`, sem recalcular a agregação SQL.
+A média geral continua considerando todas as avaliações, não só o recorte retornado.
+O cálculo e a ordenação exata permanecem no domínio.
+
+- Dados: `viajajunto:ranking:destinos:v1`.
+- Versão de invalidação: `viajajunto:ranking:destinos:v1:versao`.
+- Publicar/atualizar uma avaliação ou importar o catálogo invalida após commit.
+- Reset e criação efetiva do seed completo invalidam após a transação externa.
+- Excluir conta ou viagem não exige invalidação: as avaliações são preservadas,
+  e o ranking não expõe a autoria nem os dados privados do roteiro.
+- Enriquecimento Geoapify preserva os destinos e vínculos existentes; atividades
+  novas não têm avaliações, portanto não alteram esse ranking.
+
+Uma versão impede que uma consulta iniciada antes da invalidação regrave um
+snapshot obsoleto depois dela. Falhas no Redis não impedem consultas ou avaliações;
+uma falha de invalidação pode manter o snapshot anterior até o TTL. Alterações
+manuais no banco também só aparecem após expiração ou invalidação explícita.
+
+### Demonstrar no Swagger
+
+Na seção **Catálogo**, execute **GET `/catalogo/destinos/ranking`**, com `limite = 10`,
+duas vezes em menos de 60 segundos. Observe **Response headers → x-cache**:
+`MISS` seguido de `HIT` (a primeira pode ser `HIT` se já houver cache).
+
+Para mostrar invalidação, aqueça o ranking, publique/atualize uma avaliação válida
+pela API e consulte novamente: `MISS`, depois `HIT`. Não é necessário que a ordem
+mude: a média pode arredondar para o mesmo valor e os demais destinos podem manter
+suas posições. Se aparecer `BYPASS`, confira MiniStack, o provisionamento AWS CLI
+e o Redis em [infra/README.md](../infra/README.md).
