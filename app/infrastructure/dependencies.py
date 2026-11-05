@@ -50,6 +50,9 @@ from app.adapters.outbound.persistence.usuario_repository_sqlalchemy import (
 from app.adapters.outbound.persistence.viagem_repository_sqlalchemy import (
     SQLAlchemyViagemRepository,
 )
+from app.adapters.outbound.persistence.vinculos_conta_repository_sqlalchemy import (
+    SQLAlchemyVinculosContaRepository,
+)
 from app.adapters.outbound.security.bcrypt_password_hasher import BcryptPasswordHasher
 from app.adapters.outbound.security.pyjwt_token_service import PyJWTTokenService
 from app.application.acesso_viagem import PoliticaAcessoViagem
@@ -123,7 +126,10 @@ def get_excluir_usuario(
     db: Session = Depends(get_db),
     cache: TotalUsuariosCache = Depends(get_total_usuarios_cache),
 ) -> ExcluirUsuario:
-    return ExcluirUsuario(SQLAlchemyUsuarioRepository(db), SQLAlchemyUnitOfWork(db), cache)
+    return ExcluirUsuario(
+        SQLAlchemyUsuarioRepository(db), SQLAlchemyUnitOfWork(db),
+        SQLAlchemyVinculosContaRepository(db), cache,
+    )
 
 
 def get_atualizar_usuario(db: Session = Depends(get_db)) -> AtualizarUsuario:

@@ -392,15 +392,9 @@ def test_excluir_viagem_preserva_a_notificacao_dos_membros(db_session):
     assert kept is not None and kept.viagem_id is None
 
 
-def test_excluir_conta_do_criador_remove_suas_viagens_e_anonimiza_avaliacoes(db_session):
+def test_excluir_criador_sem_colaboradores_remove_viagens_e_anonimiza_avaliacoes(db_session):
     criador = _usuario(db_session)
-    membro = _usuario(db_session)
     viagem = _viagem(db_session, criador)
-    db_session.add(
-        MembroViagemModel(
-            viagem_id=viagem.id, usuario_id=membro.id, papel=PapelMembro.EDITOR.value
-        )
-    )
     _, atividade = _catalogo(db_session)
     avaliacao = AvaliacaoModel(usuario_id=criador.id, catalogo_atividade_id=atividade.id, nota=5)
     db_session.add(avaliacao)

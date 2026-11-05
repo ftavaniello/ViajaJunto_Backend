@@ -144,8 +144,14 @@ def alterar_senha(
     "/me",
     status_code=204,
     summary="Exclui a conta do usuário autenticado",
-    description="Remove permanentemente o usuário autenticado. Requer token JWT válido.",
+    description=(
+        "Exclui a conta e suas viagens sem colaboradores. Bloqueia com 409 se o usuário "
+        "criou alguma viagem com colaboradores. Remove participações em outras viagens "
+        "sem apagar o planejamento delas. Preserva avaliações com autor anônimo. "
+        "Após o sucesso, os tokens da conta deixam de ser aceitos. Requer JWT válido."
+    ),
     responses={
+        409: {"description": "Criador de viagem com colaboradores; nenhum dado foi excluído"},
         401: {"description": "Token ausente, inválido ou expirado"},
     },
 )
