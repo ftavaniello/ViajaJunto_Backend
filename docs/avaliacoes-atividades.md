@@ -129,3 +129,6 @@ da mesma transação, evitando conflito com a remoção em cascata do roteiro.
 
 Os seeds existentes não são reexecutados ou sobrescritos por esta entrega. Os exemplos
 já contêm ocorrências concluídas para publicar avaliações pelos fluxos reais da API.
+
+A exclusão de contas segue a [política da issue #30](exclusao-conta.md):
+criadores com colaboradores recebem `409`, sem alteração de suas avaliações.

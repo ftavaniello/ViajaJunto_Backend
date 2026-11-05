@@ -10,6 +10,10 @@ class EmailDuplicado(ErroNegocio):
     pass
 
 
+class ContaComViagensCompartilhadas(ErroNegocio):
+    """A exclusão da conta apagaria planejamento de outros participantes."""
+
+
 class UsuarioNaoEncontrado(ErroNegocio):
     pass
 
