@@ -81,6 +81,9 @@ jobs:
   sonarqube:
     name: SonarQube Quality Gate
     needs: pytest
+    # O plano gratuito do SonarCloud só analisa a branch principal e pull requests;
+    # pushes em outras branches (ex.: develop) seriam recusados.
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
