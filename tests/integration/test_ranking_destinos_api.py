@@ -32,7 +32,7 @@ def catalogo(db_session):
     }
     atividades = {
         nome: repo.salvar_atividade(
-            AtividadeCatalogo(destino=destinos[destino], nome=nome, categoria="cultura")
+            AtividadeCatalogo(destino=destinos[destino], nome=nome, categoria="passeio")
         ).id
         for nome, destino in (
             ("Museu", "Lisboa"), ("Elétrico", "Lisboa"), ("Cristo", "Rio"), ("Louvre", "Paris"),

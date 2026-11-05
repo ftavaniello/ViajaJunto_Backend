@@ -48,8 +48,8 @@ def contexto():
     catalogo = CatalogoRepositoryMemory()
     cidade = catalogo.salvar_destino(DestinoCatalogo(nome="Lisboa", pais_codigo="PT"))
     outra = catalogo.salvar_destino(DestinoCatalogo(nome="Porto", pais_codigo="PT"))
-    catalogo.salvar_atividade(AtividadeCatalogo(destino=cidade, nome="Museu", categoria="cultura"))
-    catalogo.salvar_atividade(AtividadeCatalogo(destino=outra, nome="Passeio", categoria="lazer"))
+    catalogo.salvar_atividade(AtividadeCatalogo(destino=cidade, nome="Museu", categoria="passeio"))
+    catalogo.salvar_atividade(AtividadeCatalogo(destino=outra, nome="Passeio", categoria="passeio"))
     destinos = DestinoViagemRepositoryMemory()
     for ordem in (1, 2):
         destinos.salvar(

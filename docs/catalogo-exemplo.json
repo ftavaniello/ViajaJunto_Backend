@@ -13,7 +13,7 @@
     {
       "destino": "lisboa",
       "nome": "Passeio cultural de exemplo",
-      "categoria": "cultura",
+      "categoria": "passeio",
       "descricao": "Registro fictício para testar o catálogo público.",
       "endereco": "Lisboa, Portugal",
       "foto_url": null,
@@ -22,7 +22,7 @@
     {
       "destino": "lisboa",
       "nome": "Refeição de exemplo",
-      "categoria": "alimentacao",
+      "categoria": "refeicao",
       "descricao": "Registro fictício de demonstração.",
       "endereco": "Lisboa, Portugal"
     }

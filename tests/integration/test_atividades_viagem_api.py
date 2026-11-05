@@ -69,14 +69,14 @@ def cenario(db_session, email_teste):
         AtividadeCatalogo(
             destino=lisboa,
             nome="Museu",
-            categoria="cultura",
+            categoria="passeio",
             descricao="Descrição pública",
             endereco="Rua Azul",
             foto_url="https://example.com/museu.jpg",
         )
     )
     outra_atividade = catalogo.salvar_atividade(
-        AtividadeCatalogo(destino=porto, nome="Passeio", categoria="lazer")
+        AtividadeCatalogo(destino=porto, nome="Passeio", categoria="passeio")
     )
     repo_destinos = SQLAlchemyDestinoViagemRepository(db_session)
     paradas = [

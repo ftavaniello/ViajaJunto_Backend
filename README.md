@@ -140,7 +140,7 @@ mínima estão implementados na #26. Veja [contrato, importação e exemplos](do
 O catálogo de atividades pode ser abastecido com locais reais da Places API do
 Geoapify, consultada pela porta `ProvedorLocais` (o Google Places previsto na
 arquitetura não está disponível para a equipe). O operador roda
-`python -m app.adapters.inbound.cli.enriquecer_catalogo --destino <id> --categoria cultura`
+`python -m app.adapters.inbound.cli.enriquecer_catalogo --destino <id> --categoria passeio`
 com `GEOAPIFY_API_KEY` configurada. Reexecutar não duplica (`fonte` + `id_externo`)
 e preserva avaliações, roteiros e a curadoria. Nas respostas do catálogo,
 `google_place_id` foi substituído por `id_externo` e `fonte`.

@@ -17,7 +17,7 @@ def test_catalogo_preserva_descricao_foto_e_referencia(destino):
     atividade = AtividadeCatalogo(
         destino=destino,
         nome=" Museu ",
-        categoria="cultura",
+        categoria="passeio",
         descricao=" História ",
         foto_url="https://example.com/museu.jpg",
         id_externo="referencia-curada",
@@ -26,7 +26,7 @@ def test_catalogo_preserva_descricao_foto_e_referencia(destino):
     )
     assert atividade.nome == "Museu"
     assert atividade.descricao == "História"
-    assert atividade.categoria == CategoriaAtividade.CULTURA
+    assert atividade.categoria == CategoriaAtividade.PASSEIO
     assert atividade.fonte == "manual"
     assert atividade.id_externo == "referencia-curada"
 
@@ -52,7 +52,7 @@ def test_rejeita_atividade_invalida(destino, mudanca):
             **{
                 "destino": destino,
                 "nome": "Museu",
-                "categoria": "cultura",
+                "categoria": "passeio",
                 **mudanca,
             }
         )
@@ -65,7 +65,7 @@ def test_rejeita_pais_invalido(pais):
 
 
 def test_campos_opcionais_vazios_sao_normalizados(destino):
-    atividade = AtividadeCatalogo(destino=destino, nome="Museu", categoria="cultura")
+    atividade = AtividadeCatalogo(destino=destino, nome="Museu", categoria="passeio")
     assert replace(atividade, descricao="   ", foto_url="").descricao is None
 
 

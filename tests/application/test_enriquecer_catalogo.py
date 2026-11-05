@@ -19,7 +19,7 @@ from app.domain.errors import (
 )
 from app.domain.ports.provedor_locais import LocalExterno
 
-CULTURA = CategoriaAtividade.CULTURA
+PASSEIO = CategoriaAtividade.PASSEIO
 
 
 def local(id_externo: str, nome: str, endereco: str | None = "Rua A, Orlando") -> LocalExterno:
@@ -44,7 +44,7 @@ def contexto():
         )
     )
     provedor = ProvedorLocaisMemory()
-    provedor.locais[CULTURA] = [local("geo-1", "Museu de Arte"), local("geo-2", "Teatro")]
+    provedor.locais[PASSEIO] = [local("geo-1", "Museu de Arte"), local("geo-2", "Teatro")]
     uow = UnitOfWorkMemory()
     return EnriquecerCatalogo(catalogo, provedor, uow), catalogo, provedor, uow, orlando
 
@@ -52,27 +52,27 @@ def contexto():
 def test_cria_atividades_ligadas_ao_destino_com_fonte_e_id_externo(contexto):
     caso, catalogo, provedor, uow, orlando = contexto
 
-    resultado = caso.execute(orlando.id, "cultura", raio_metros=3_000, limite=10)
+    resultado = caso.execute(orlando.id, "passeio", raio_metros=3_000, limite=10)
 
     assert (resultado.criadas, resultado.atualizadas, resultado.ignoradas) == (2, 0, 0)
     museu = catalogo.buscar_atividade_externa(FonteCatalogo.GEOAPIFY, "geo-1")
     assert museu.nome == "Museu de Arte"
     assert museu.destino.id == orlando.id
-    assert museu.categoria == CULTURA
+    assert museu.categoria == PASSEIO
     assert museu.fonte == FonteCatalogo.GEOAPIFY
     assert museu.endereco == "Rua A, Orlando"
     # A busca usa as coordenadas do destino e os parâmetros pedidos.
-    assert provedor.buscas == [(orlando.latitude, orlando.longitude, CULTURA, 3_000, 10)]
+    assert provedor.buscas == [(orlando.latitude, orlando.longitude, PASSEIO, 3_000, 10)]
     assert (uow.commits, uow.rollbacks) == (1, 0)
 
 
 def test_reexecutar_nao_duplica_e_atualiza_o_mesmo_registro(contexto):
     caso, catalogo, provedor, _, orlando = contexto
-    caso.execute(orlando.id, CULTURA)
+    caso.execute(orlando.id, PASSEIO)
     id_original = catalogo.buscar_atividade_externa(FonteCatalogo.GEOAPIFY, "geo-1").id
-    provedor.locais[CULTURA] = [local("geo-1", "Museu de Arte de Orlando", "Rua B")]
+    provedor.locais[PASSEIO] = [local("geo-1", "Museu de Arte de Orlando", "Rua B")]
 
-    resultado = caso.execute(orlando.id, CULTURA)
+    resultado = caso.execute(orlando.id, PASSEIO)
 
     assert (resultado.criadas, resultado.atualizadas) == (0, 1)
     assert len(catalogo.atividades) == 2
@@ -83,14 +83,14 @@ def test_reexecutar_nao_duplica_e_atualiza_o_mesmo_registro(contexto):
 
 def test_atualizacao_preserva_curadoria_categoria_e_destino(contexto):
     caso, catalogo, provedor, _, orlando = contexto
-    caso.execute(orlando.id, CULTURA)
+    caso.execute(orlando.id, PASSEIO)
     museu = catalogo.buscar_atividade_externa(FonteCatalogo.GEOAPIFY, "geo-1")
     # A equipe curou a descrição, a foto e a categoria depois da importação.
     catalogo.atividades[museu.id] = replace(
         catalogo.atividades[museu.id],
         descricao="Texto da equipe",
         foto_url="https://example.com/museu.jpg",
-        categoria=CategoriaAtividade.LAZER,
+        categoria=CategoriaAtividade.OUTRO,
     )
     miami = catalogo.salvar_destino(
         DestinoCatalogo(
@@ -98,20 +98,20 @@ def test_atualizacao_preserva_curadoria_categoria_e_destino(contexto):
         )
     )
 
-    caso.execute(miami.id, CULTURA)  # o mesmo local aparece buscando de outro destino
+    caso.execute(miami.id, PASSEIO)  # o mesmo local aparece buscando de outro destino
 
     atual = catalogo.buscar_atividade(museu.id)
     assert atual.descricao == "Texto da equipe"
     assert atual.foto_url == "https://example.com/museu.jpg"
-    assert atual.categoria == CategoriaAtividade.LAZER
+    assert atual.categoria == CategoriaAtividade.OUTRO
     assert atual.destino.id == orlando.id
 
 
 def test_local_repetido_na_resposta_conta_uma_vez(contexto):
     caso, catalogo, provedor, _, orlando = contexto
-    provedor.locais[CULTURA] = [local("geo-1", "Museu"), local("geo-1", "Museu (de novo)")]
+    provedor.locais[PASSEIO] = [local("geo-1", "Museu"), local("geo-1", "Museu (de novo)")]
 
-    resultado = caso.execute(orlando.id, CULTURA)
+    resultado = caso.execute(orlando.id, PASSEIO)
 
     assert (resultado.criadas, resultado.atualizadas) == (1, 0)
     assert catalogo.buscar_atividade_externa(FonteCatalogo.GEOAPIFY, "geo-1").nome == "Museu"
@@ -119,9 +119,9 @@ def test_local_repetido_na_resposta_conta_uma_vez(contexto):
 
 def test_local_invalido_e_ignorado_sem_cancelar_o_lote(contexto):
     caso, catalogo, provedor, uow, orlando = contexto
-    provedor.locais[CULTURA] = [local("geo-1", "Museu"), local("geo-2", "   ")]
+    provedor.locais[PASSEIO] = [local("geo-1", "Museu"), local("geo-2", "   ")]
 
-    resultado = caso.execute(orlando.id, CULTURA)
+    resultado = caso.execute(orlando.id, PASSEIO)
 
     assert (resultado.criadas, resultado.ignoradas) == (1, 1)
     assert uow.commits == 1
@@ -130,10 +130,10 @@ def test_local_invalido_e_ignorado_sem_cancelar_o_lote(contexto):
 def test_registro_manual_com_mesmo_id_externo_nao_e_tocado(contexto):
     caso, catalogo, _, _, orlando = contexto
     manual = catalogo.salvar_atividade(
-        AtividadeCatalogo(destino=orlando, nome="Curado", categoria=CULTURA, id_externo="geo-1")
+        AtividadeCatalogo(destino=orlando, nome="Curado", categoria=PASSEIO, id_externo="geo-1")
     )
 
-    caso.execute(orlando.id, CULTURA)
+    caso.execute(orlando.id, PASSEIO)
 
     assert catalogo.buscar_atividade(manual.id).nome == "Curado"
     assert catalogo.buscar_atividade_externa(FonteCatalogo.GEOAPIFY, "geo-1").id != manual.id
@@ -153,7 +153,7 @@ def test_falha_do_fornecedor_nao_grava_nem_abre_transacao(contexto, falha):
     provedor.falha = falha
 
     with pytest.raises(type(falha)):
-        caso.execute(orlando.id, CULTURA)
+        caso.execute(orlando.id, PASSEIO)
 
     assert catalogo.atividades == {}
     assert (uow.commits, uow.rollbacks) == (0, 0)
@@ -173,7 +173,7 @@ def test_falha_ao_gravar_desfaz_o_lote(contexto):
     catalogo.salvar_atividade = salvar_e_falhar
 
     with pytest.raises(RuntimeError):
-        caso.execute(orlando.id, CULTURA)
+        caso.execute(orlando.id, PASSEIO)
 
     assert (uow.commits, uow.rollbacks) == (0, 1)
 
@@ -182,7 +182,7 @@ def test_destino_inexistente(contexto):
     caso, _, provedor, _, _ = contexto
 
     with pytest.raises(DestinoCatalogoNaoEncontrado):
-        caso.execute(999, CULTURA)
+        caso.execute(999, PASSEIO)
     assert provedor.buscas == []
 
 
@@ -191,7 +191,7 @@ def test_destino_sem_coordenadas_nao_consulta_o_fornecedor(contexto):
     sem_mapa = catalogo.salvar_destino(DestinoCatalogo(nome="Sem mapa", pais_codigo="BR"))
 
     with pytest.raises(DadosInvalidos, match="latitude e longitude"):
-        caso.execute(sem_mapa.id, CULTURA)
+        caso.execute(sem_mapa.id, PASSEIO)
     assert provedor.buscas == []
 
 
@@ -209,5 +209,5 @@ def test_parametros_invalidos_nao_consultam_o_fornecedor(contexto, parametros):
     caso, _, provedor, _, orlando = contexto
 
     with pytest.raises(DadosInvalidos):
-        caso.execute(**{"destino_id": orlando.id, "categoria": CULTURA, **parametros})
+        caso.execute(**{"destino_id": orlando.id, "categoria": PASSEIO, **parametros})
     assert provedor.buscas == []

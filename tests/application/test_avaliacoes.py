@@ -47,10 +47,10 @@ def contexto():
     catalogo = CatalogoRepositoryMemory(avaliacoes)
     lugar = catalogo.salvar_destino(DestinoCatalogo(nome="Lisboa", pais_codigo="PT"))
     atividade = catalogo.salvar_atividade(
-        AtividadeCatalogo(destino=lugar, nome="Museu", categoria="cultura")
+        AtividadeCatalogo(destino=lugar, nome="Museu", categoria="passeio")
     )
     catalogo.salvar_atividade(
-        AtividadeCatalogo(destino=lugar, nome="Sem reviews", categoria="lazer")
+        AtividadeCatalogo(destino=lugar, nome="Sem reviews", categoria="passeio")
     )
     viagens = ViagemRepositoryMemory(membros)
     viagens.salvar(

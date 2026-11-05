@@ -66,7 +66,7 @@ def provedor(http: Http) -> GeoapifyProvedorLocais:
     return GeoapifyProvedorLocais(CHAVE, timeout_segundos=7, abrir=http)
 
 
-def buscar(http: Http, categoria=CategoriaAtividade.CULTURA):
+def buscar(http: Http, categoria=CategoriaAtividade.PASSEIO):
     return provedor(http).buscar_proximos(LAT, LON, categoria, 2_500, 15)
 
 
@@ -87,7 +87,10 @@ def test_monta_a_consulta_com_longitude_primeiro_e_timeout():
     assert requisicao.full_url.startswith("https://api.geoapify.com/v2/places?")
     assert timeout == 7
     assert http.parametros() == {
-        "categories": "entertainment.museum,entertainment.culture,tourism.sights",
+        "categories": (
+            "entertainment.museum,entertainment.culture,tourism.sights,"
+            "leisure.park,beach,entertainment.zoo,entertainment.theme_park,tourism.attraction"
+        ),
         "filter": "circle:-81.379234,28.538336,2500",
         "bias": "proximity:-81.379234,28.538336",
         "limit": "15",
@@ -208,3 +211,9 @@ def test_api_sobe_sem_chave_mas_recusa_timeout_invalido():
     validar_settings(carregar_settings({}))
     with pytest.raises(ConfiguracaoInvalida, match="LOCAIS_TIMEOUT_SECONDS"):
         validar_settings(carregar_settings({"LOCAIS_TIMEOUT_SECONDS": "0"}))
+
+
+def test_busca_hospedagem_usa_accommodation():
+    http = Http()
+    buscar(http, CategoriaAtividade.HOSPEDAGEM)
+    assert http.parametros()["categories"] == "accommodation"

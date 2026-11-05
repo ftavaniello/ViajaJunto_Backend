@@ -44,7 +44,7 @@ from app.infrastructure.database import get_db
 from app.infrastructure.dependencies import montar_enriquecer_catalogo
 from app.main import app
 
-CULTURA = CategoriaAtividade.CULTURA
+PASSEIO = CategoriaAtividade.PASSEIO
 
 
 def local(nome: str, id_externo: str = "geo-museu") -> LocalExterno:
@@ -85,7 +85,7 @@ def orlando(db_session):
 @pytest.fixture
 def provedor():
     provedor = ProvedorLocaisMemory()
-    provedor.locais[CULTURA] = [local("Orlando Museum of Art")]
+    provedor.locais[PASSEIO] = [local("Orlando Museum of Art")]
     return provedor
 
 
@@ -127,12 +127,12 @@ def test_atualizar_dados_externos_preserva_avaliacoes_e_roteiros(
     client, db_session, email_teste, orlando, provedor
 ):
     caso = montar_enriquecer_catalogo(db_session, provedor)
-    assert caso.execute(orlando.id, CULTURA).criadas == 1
+    assert caso.execute(orlando.id, PASSEIO).criadas == 1
     atividade_id = db_session.scalar(select(CatalogoAtividadeModel.id))
     no_roteiro_id = _usar_em_viagem_e_avaliar(db_session, email_teste, orlando, atividade_id)
-    provedor.locais[CULTURA] = [local("Orlando Museum of Art (OMA)")]
+    provedor.locais[PASSEIO] = [local("Orlando Museum of Art (OMA)")]
 
-    resultado = caso.execute(orlando.id, CULTURA)
+    resultado = caso.execute(orlando.id, PASSEIO)
 
     assert (resultado.criadas, resultado.atualizadas) == (0, 1)
     assert db_session.scalar(select(func.count()).select_from(CatalogoAtividadeModel)) == 1
@@ -151,7 +151,7 @@ def test_falha_do_fornecedor_nao_grava(db_session, orlando, provedor):
     provedor.falha = ProvedorLocaisIndisponivel("Geoapify indisponível (HTTP 503)")
 
     with pytest.raises(ProvedorLocaisIndisponivel):
-        montar_enriquecer_catalogo(db_session, provedor).execute(orlando.id, CULTURA)
+        montar_enriquecer_catalogo(db_session, provedor).execute(orlando.id, PASSEIO)
 
     assert db_session.scalar(select(func.count()).select_from(CatalogoAtividadeModel)) == 0
 
@@ -161,7 +161,7 @@ def test_banco_impede_duplicar_o_mesmo_local_do_mesmo_fornecedor(db_session, orl
         return CatalogoAtividadeModel(
             destino_catalogo_id=orlando.id,
             nome="Museu",
-            categoria="cultura",
+            categoria="passeio",
             fonte=fonte,
             id_externo="mesmo-id",
         )
@@ -178,7 +178,7 @@ def test_banco_impede_duplicar_o_mesmo_local_do_mesmo_fornecedor(db_session, orl
 def test_banco_recusa_fonte_desconhecida(db_session, orlando):
     db_session.add(
         CatalogoAtividadeModel(
-            destino_catalogo_id=orlando.id, nome="Museu", categoria="cultura", fonte="google"
+            destino_catalogo_id=orlando.id, nome="Museu", categoria="passeio", fonte="google"
         )
     )
     with pytest.raises(IntegrityError):
@@ -197,12 +197,12 @@ def test_cli_grava_e_resume_o_resultado(db_session, orlando, provedor, monkeypat
     monkeypatch.setattr(cli, "SessionLocal", sessao)
     monkeypatch.setattr(cli, "criar_provedor_locais", lambda _config: provedor)
 
-    cli.main(["--destino", str(orlando.id), "--categoria", "cultura", "--limite", "5"])
+    cli.main(["--destino", str(orlando.id), "--categoria", "passeio", "--limite", "5"])
 
     assert capsys.readouterr().out.strip() == (
         "Catálogo enriquecido: 1 criada(s), 0 atualizada(s), 0 ignorada(s)."
     )
-    assert provedor.buscas[0][2:] == (CULTURA, 5_000, 5)
+    assert provedor.buscas[0][2:] == (PASSEIO, 5_000, 5)
     assert db_session.scalar(
         select(CatalogoAtividadeModel.fonte).where(CatalogoAtividadeModel.id_externo == "geo-museu")
     ) == FonteCatalogo.GEOAPIFY.value
@@ -213,7 +213,7 @@ def test_cli_sem_chave_explica_e_nao_grava(db_session, orlando, monkeypatch, cap
     monkeypatch.setattr(cli, "settings", carregar_settings({}))
 
     with pytest.raises(SystemExit) as saida:
-        cli.main(["--destino", str(orlando.id), "--categoria", "cultura"])
+        cli.main(["--destino", str(orlando.id), "--categoria", "passeio"])
 
     assert saida.value.code == 2
     assert "Configure GEOAPIFY_API_KEY" in capsys.readouterr().err

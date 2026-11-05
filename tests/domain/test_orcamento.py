@@ -43,24 +43,24 @@ def test_orcamento_rejeita_valor_invalido(valor):
 
 
 def test_exemplo_da_issue_1000_menos_300_sobra_700():
-    resultado = resumo(Decimal("1000"), cultura="200", lazer="100")
+    resultado = resumo(Decimal("1000"), passeio="200", hospedagem="100")
 
     assert resultado.orcamento_total == Decimal("1000.00")
     assert resultado.total_planejado == Decimal("300.00")
     assert resultado.saldo_disponivel == Decimal("700.00")
     assert resultado.percentual_consumido == Decimal("30.00")
     assert resultado.orcamento_excedido is False
-    cultura = categoria(resultado, "cultura")
+    cultura = categoria(resultado, "passeio")
     assert cultura.total_planejado == Decimal("200.00")
     assert cultura.percentual_orcamento == Decimal("20.00")
     assert cultura.percentual_planejado == Decimal("66.67")
 
 
 def test_todas_as_categorias_aparecem_na_ordem_do_enum_mesmo_zeradas():
-    resultado = resumo(Decimal("100"), lazer="10")
+    resultado = resumo(Decimal("100"), hospedagem="10")
 
     assert [c.categoria for c in resultado.categorias] == list(CategoriaAtividade)
-    compras = categoria(resultado, "compras")
+    compras = categoria(resultado, "outro")
     assert compras.total_planejado == Decimal("0.00")
     assert compras.percentual_orcamento == Decimal("0.00")
     assert compras.percentual_planejado == Decimal("0.00")
@@ -76,13 +76,13 @@ def test_sem_atividades_saldo_igual_ao_orcamento_e_sem_participacao():
 
 
 def test_orcamento_zero_nao_divide_por_zero():
-    resultado = resumo(Decimal("0"), cultura="50")
+    resultado = resumo(Decimal("0"), passeio="50")
 
     assert resultado.saldo_disponivel == Decimal("-50.00")
     assert resultado.percentual_consumido is None
     assert resultado.orcamento_excedido is True
-    assert categoria(resultado, "cultura").percentual_orcamento is None
-    assert categoria(resultado, "cultura").percentual_planejado == Decimal("100.00")
+    assert categoria(resultado, "passeio").percentual_orcamento is None
+    assert categoria(resultado, "passeio").percentual_planejado == Decimal("100.00")
 
 
 def test_orcamento_zero_sem_atividades_nao_esta_excedido():
@@ -105,7 +105,7 @@ def test_sem_orcamento_definido_mostra_apenas_o_planejado():
 
 
 def test_estouro_gera_saldo_negativo_e_percentual_acima_de_100():
-    resultado = resumo(Decimal("1000"), alimentacao="900", transporte="350.50")
+    resultado = resumo(Decimal("1000"), refeicao="900", transporte="350.50")
 
     assert resultado.total_planejado == Decimal("1250.50")
     assert resultado.saldo_disponivel == Decimal("-250.50")
@@ -114,7 +114,7 @@ def test_estouro_gera_saldo_negativo_e_percentual_acima_de_100():
 
 
 def test_gastar_exatamente_o_orcamento_nao_e_estouro():
-    resultado = resumo(Decimal("100"), lazer="100")
+    resultado = resumo(Decimal("100"), hospedagem="100")
 
     assert resultado.saldo_disponivel == Decimal("0.00")
     assert resultado.orcamento_excedido is False
@@ -132,15 +132,15 @@ def test_gastar_exatamente_o_orcamento_nao_e_estouro():
     ],
 )
 def test_arredondamento_meio_para_cima_com_duas_casas(orcamento, custo, esperado):
-    resultado = resumo(Decimal(orcamento), cultura=custo)
+    resultado = resumo(Decimal(orcamento), passeio=custo)
 
-    assert categoria(resultado, "cultura").percentual_orcamento == Decimal(esperado)
+    assert categoria(resultado, "passeio").percentual_orcamento == Decimal(esperado)
     assert str(resultado.percentual_consumido) == esperado
 
 
 def test_somas_sao_exatas_em_decimal():
     # Em float, 0.1 + 0.2 != 0.3.
-    resultado = resumo(Decimal("0.30"), cultura="0.10", lazer="0.20")
+    resultado = resumo(Decimal("0.30"), passeio="0.10", hospedagem="0.20")
 
     assert resultado.total_planejado == Decimal("0.30")
     assert resultado.saldo_disponivel == Decimal("0.00")

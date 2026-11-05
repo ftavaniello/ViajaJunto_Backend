@@ -25,14 +25,14 @@ URL_PLACES = "https://api.geoapify.com/v2/places"
 
 # Categorias do catálogo -> chaves de categoria do Geoapify (pai inclui os filhos).
 CATEGORIAS_GEOAPIFY: dict[CategoriaAtividade, str] = {
-    CategoriaAtividade.CULTURA: "entertainment.museum,entertainment.culture,tourism.sights",
-    CategoriaAtividade.ALIMENTACAO: "catering.restaurant,catering.cafe",
-    CategoriaAtividade.LAZER: (
+    CategoriaAtividade.PASSEIO: (
+        "entertainment.museum,entertainment.culture,tourism.sights,"
         "leisure.park,beach,entertainment.zoo,entertainment.theme_park,tourism.attraction"
     ),
-    CategoriaAtividade.COMPRAS: "commercial.shopping_mall",
+    CategoriaAtividade.REFEICAO: "catering.restaurant,catering.cafe",
+    CategoriaAtividade.HOSPEDAGEM: "accommodation",
     CategoriaAtividade.TRANSPORTE: "public_transport",
-    CategoriaAtividade.OUTROS: "tourism",
+    CategoriaAtividade.OUTRO: "commercial.shopping_mall,tourism",
 }
 _SEIS_CASAS = Decimal("0.000001")  # Numeric(9, 6) no banco.
 _LIMITE_TEXTO = 255
@@ -105,9 +105,7 @@ class GeoapifyProvedorLocais(ProvedorLocais):
                     _segundos(error.headers.get("Retry-After") if error.headers else None),
                 ) from None
             if status >= 500:
-                raise ProvedorLocaisIndisponivel(
-                    f"Geoapify indisponível (HTTP {status})"
-                ) from None
+                raise ProvedorLocaisIndisponivel(f"Geoapify indisponível (HTTP {status})") from None
             raise ProvedorLocaisIndisponivel(
                 f"Geoapify recusou a consulta (HTTP {status})"
             ) from None

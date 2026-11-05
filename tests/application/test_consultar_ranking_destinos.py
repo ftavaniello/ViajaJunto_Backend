@@ -16,7 +16,9 @@ def contexto():
     rio = catalogo.salvar_destino(DestinoCatalogo(nome="Rio", pais_codigo="BR"))
     catalogo.salvar_destino(DestinoCatalogo(nome="Paris", pais_codigo="FR"))  # sem avaliações
     for destino, nome in ((lisboa, "Museu"), (lisboa, "Elétrico"), (rio, "Cristo")):
-        catalogo.salvar_atividade(AtividadeCatalogo(destino=destino, nome=nome, categoria="lazer"))
+        catalogo.salvar_atividade(
+            AtividadeCatalogo(destino=destino, nome=nome, categoria="passeio")
+        )
     avaliacoes = AvaliacoesDestinoRepositoryMemory(catalogo)
     return ConsultarRankingDestinos(avaliacoes), avaliacoes
 

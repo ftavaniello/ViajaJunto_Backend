@@ -40,12 +40,13 @@ class CategoriaDestino(StrEnum):
 
 
 class CategoriaAtividade(StrEnum):
-    ALIMENTACAO = "alimentacao"
+    """Tipos de atividade definidos no documento original de arquitetura."""
+
+    PASSEIO = "passeio"
+    REFEICAO = "refeicao"
+    HOSPEDAGEM = "hospedagem"
     TRANSPORTE = "transporte"
-    CULTURA = "cultura"
-    LAZER = "lazer"
-    COMPRAS = "compras"
-    OUTROS = "outros"
+    OUTRO = "outro"
 
 
 class FonteCatalogo(StrEnum):

@@ -72,7 +72,7 @@ class Cenario:
         self.catalogo = CatalogoRepositoryMemory()
         lisboa = self.catalogo.salvar_destino(DestinoCatalogo(nome="Lisboa", pais_codigo="PT"))
         self.museu = self.catalogo.salvar_atividade(
-            AtividadeCatalogo(destino=lisboa, nome="Museu", categoria="cultura")
+            AtividadeCatalogo(destino=lisboa, nome="Museu", categoria="passeio")
         )
         self.lisboa = lisboa
         self.destinos = DestinoViagemRepositoryMemory()

@@ -1,7 +1,7 @@
 """Busca locais no Geoapify e grava ou atualiza atividades de um destino do catálogo.
 
 Uso (operadores com acesso ao servidor e ao banco):
-    python -m app.adapters.inbound.cli.enriquecer_catalogo --destino 1 --categoria cultura
+    python -m app.adapters.inbound.cli.enriquecer_catalogo --destino 1 --categoria passeio
 """
 
 import argparse
