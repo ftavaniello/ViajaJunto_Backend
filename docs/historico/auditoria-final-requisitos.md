@@ -2,7 +2,7 @@
 
 > Atualização posterior: a usuária aprovou o alinhamento dos tipos ao documento
 > original. O achado A4 e as referências ao vocabulário antigo abaixo descrevem
-> o estado auditado antes da correção. Veja [tipos-atividades.md](tipos-atividades.md)
+> o estado auditado antes da correção. Veja [catalogo-atividades.md#tipos-de-atividades](../catalogo-atividades.md#tipos-de-atividades)
 > para o contrato atual e a migração; as evidências históricas foram preservadas.
 
 Revisão de 04/11/2026, sobre o commit `d9a99b8` da branch
@@ -24,7 +24,7 @@ O fechamento de uma issue, isoladamente, não comprova aprovação externa de um
 
 O frontend, o protótipo navegável e uma implantação pública não foram auditados.
 Os 1.306 testes e 97,61% de cobertura são evidências da execução anterior da #31,
-documentadas em [validacao-issue31.md](validacao-issue31.md); não foram executados
+documentadas em [validacao-e-desempenho.md](../validacao-e-desempenho.md); não foram executados
 novamente nesta revisão. Os cenários novos de verificação descritos abaixo foram
 executados nesta auditoria, em schema temporário, sem tocar no banco de desenvolvimento.
 
@@ -50,9 +50,9 @@ A integração Geoapify não preenche imagens, conforme seus próprios limites d
 Assim, o contrato suporta imagens, mas a demonstração inicial não apresenta esse conteúdo.
 RF09 usa a expressão “deve conter” foto; RF23 pede fotos na página pública.
 
-Evidências: [`SemearDestinosReais._catalogo`](../app/application/use_cases/semear_destinos_reais.py),
-[`DestinoCatalogo`/`AtividadeCatalogo`](../app/domain/entities/catalogo.py),
-[limites do fornecedor](integracao-locais.md) e a contagem do seed reproduzida abaixo.
+Evidências: [`SemearDestinosReais._catalogo`](../../app/application/use_cases/semear_destinos_reais.py),
+[`DestinoCatalogo`/`AtividadeCatalogo`](../../app/domain/entities/catalogo.py),
+[limites do fornecedor](../integracao-locais.md) e a contagem do seed reproduzida abaixo.
 
 Encaminhamento: abastecer fotos válidas e disponíveis para os destinos/atividades de
 exemplo e conferir sua exibição no frontend. **S3 e upload não são exigências desses
@@ -68,8 +68,8 @@ origens CORS em `app/main.py`. Preflight para `POST /auth/login`, com origem
 `Access-Control-Allow-Origin`. O Swagger em `/docs` usa a mesma origem e não detecta isso.
 As URLs de convite e recuperação configuradas por padrão também usam porta 3000.
 
-Evidências: [`app/main.py`](../app/main.py),
-[`config.py`](../app/infrastructure/config.py) e reprodução desta revisão.
+Evidências: [`app/main.py`](../../app/main.py),
+[`config.py`](../../app/infrastructure/config.py) e reprodução desta revisão.
 
 Encaminhamento: confirmar como o NextJS consumirá a API. Se for pelo navegador em
 outra origem, configurar as origens e métodos necessários e testar preflight e chamadas
@@ -86,10 +86,10 @@ embora a implementação seja FastAPI/Python. Vários arquivos apontam para
 **`docs/decisoes-de-produto.md`, que não existe**. O texto da tag Colaboradores no
 OpenAPI ainda diz “convite por código”, apesar do fluxo por email.
 
-Evidências: [`README.md`](../README.md) (tabela inicial e modelo de dados),
-[`architecture-ViajaJunto.md`](architecture-ViajaJunto.md),
-[`regras.py`](../app/domain/regras.py), [`enums.py`](../app/domain/enums.py),
-[`main.py`](../app/main.py). O README, inclusive, já reconhece a divergência de stack.
+Evidências: [`README.md`](../../README.md) (tabela inicial e modelo de dados),
+[`architecture-ViajaJunto.md`](../architecture-ViajaJunto.md),
+[`regras.py`](../../app/domain/regras.py), [`enums.py`](../../app/domain/enums.py),
+[`main.py`](../../app/main.py). O README, inclusive, já reconhece a divergência de stack.
 
 Encaminhamento: na #32, atualizar o estado real das funcionalidades, diagramas, stack e
 contratos; consolidar as decisões efetivamente adotadas em um documento existente e
@@ -106,9 +106,9 @@ O adaptador externo também não mapeia uma categoria de hospedagem; `outros` bu
 O campo livre `hospedagem` da parada não equivale a uma atividade de hospedagem com custo,
 status e classificação próprios.
 
-Evidências: [`CategoriaAtividade`](../app/domain/enums.py),
-[ressalva já documentada no catálogo](catalogo-atividades.md),
-[`CATEGORIAS_GEOAPIFY`](../app/adapters/outbound/locais/geoapify_provedor_locais.py).
+Evidências: [`CategoriaAtividade`](../../app/domain/enums.py),
+[ressalva já documentada no catálogo](../catalogo-atividades.md),
+[`CATEGORIAS_GEOAPIFY`](../../app/adapters/outbound/locais/geoapify_provedor_locais.py).
 
 Isso **não impede** registrar um hotel manualmente como `outros` e adicioná-lo ao roteiro;
 portanto não é ausência total do fluxo de atividades. Falta conciliar se a equipe aceita
@@ -125,10 +125,10 @@ Porém, alterar o limite do orçamento ou reordenar destinos retornou **200 com 
 notificações**. Mudanças apenas de custo, duração, descrição ou hospedagem também são
 excluídas no código/testes atuais.
 
-Evidências: [`NotificadorViagem`](../app/application/notificador_viagem.py),
-[`GerenciarOrcamentoViagem`](../app/application/use_cases/gerenciar_orcamento_viagem.py),
-[`GerenciarDestinosViagem.reordenar`](../app/application/use_cases/gerenciar_destinos_viagem.py),
-[`test_notificacoes.py`](../tests/application/test_notificacoes.py).
+Evidências: [`NotificadorViagem`](../../app/application/notificador_viagem.py),
+[`GerenciarOrcamentoViagem`](../../app/application/use_cases/gerenciar_orcamento_viagem.py),
+[`GerenciarDestinosViagem.reordenar`](../../app/application/use_cases/gerenciar_destinos_viagem.py),
+[`test_notificacoes.py`](../../tests/application/test_notificacoes.py).
 
 Não é uma falha acidental demonstrada: os testes excluem deliberadamente algumas dessas
 mudanças, e RF21 não enumera o que é relevante. Recomendo confirmar especialmente orçamento,
@@ -214,7 +214,7 @@ Resultado bruto em [auditoria-final-evidencias.json](resultados/auditoria-final-
 - Editor alterando nome geral: 200.
 - Mudança de limite orçamentário e reordenação: 200, zero novos avisos em cada caso.
 - DELETE de orçamento: 405; PUT com limite null: 422.
-- A única escrita durável desta revisão é este relatório e seu arquivo de evidências.
+- Os artefatos produzidos por aquela revisão foram este relatório e seu arquivo de evidências.
   Dados criados para verificação foram removidos junto do schema de teste.
 
 ## Ordem sugerida para encerrar a entrega

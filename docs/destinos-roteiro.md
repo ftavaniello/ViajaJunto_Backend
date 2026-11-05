@@ -105,6 +105,6 @@ consulte a lista e use os IDs das paradas no PUT de reordenação. O PATCH pode 
 a descrição particular; uma nova consulta ao catálogo deve continuar igual.
 
 Para testar colaboração, use uma conta com vínculo de Editor ou Visualizador.
-O fluxo de convites pertence à #16; os testes automatizados preparam os vínculos
-no banco exclusivo de testes. O seed abastece somente o catálogo, nunca cria
-viagens ou roteiros privados automaticamente.
+O [seed de desenvolvimento](seed-demonstracao.md) cria contas, viagens, paradas
+e vínculos de Editor/Visualizador. Use os IDs retornados pela API ou pelo manifesto.
+Os testes automatizados preparam cenários isolados no banco exclusivo de testes.

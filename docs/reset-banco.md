@@ -56,4 +56,4 @@ O reset não faz parte do `docker compose up`. Nas inicializações normais, o s
 preserva edições e exclusões e não duplica registros. O reset só ocorre quando alguém
 executa explicitamente o comando acima com `--confirmar`.
 
-Veja [dados iniciais](seed-demonstracao.md) e [destinos reais](seed-destinos-reais.md).
+Veja [dados iniciais](seed-demonstracao.md) e [destinos reais](seed-demonstracao.md).

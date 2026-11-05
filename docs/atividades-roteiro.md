@@ -128,6 +128,7 @@ Para testar no Swagger:
 6. Consulte a lista; teste horários iguais, sem horário, custos e mudanças de status.
 7. Repita com Visualizador para verificar leitura e bloqueio de escrita.
 
-O seed existente abastece apenas os catálogos. Não cria viagens, paradas ou atividades
-privadas automaticamente. Testes usam PostgreSQL exclusivo e cobrem também operações
+O [seed de desenvolvimento](seed-demonstracao.md) abastece catálogos, viagens, paradas
+e atividades privadas para os testes manuais. Testes automatizados usam PostgreSQL
+exclusivo e cobrem também operações
 com IDs cruzados, migração, estados legados e rollback após gravação.

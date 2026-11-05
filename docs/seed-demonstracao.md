@@ -67,6 +67,35 @@ O manifesto JSON contém os IDs reais, em `usuarios`, `viagens`, `destinos_catal
 Exemplos: `viagens.florida`, `paradas.florida-orlando`, `atividades_catalogo.orlando-1`
 e `atividades_roteiro.florida-orlando-1`. Não use números fixos presumidos.
 
+## Lugares e roteiros
+
+| Roteiro | Dono e acesso | Destinos | Orçamento de exemplo |
+|---|---|---|---|
+| `Orlando e Miami em grupo` | Criador, editor e visualizador | Orlando e Miami | BRL 6.000 |
+| `Cultura e paisagens no Rio de Janeiro` | Criador | Rio de Janeiro | BRL 1.200 |
+| `História e gastronomia em Roma` | Criador | Roma | BRL 2.000 |
+| `Roma: roteiro privado` | Externo | Roma | BRL 500 |
+
+| `Rio para descansar` | Conta descartável | Rio de Janeiro | BRL 1.000 |
+
+- **Orlando:** Magic Kingdom Park, Universal Studios Florida, Disney Springs,
+  ICON Park, East End Market e Lake Eola Park. A referência inclui a região
+  turística de Orlando, como Lake Buena Vista.
+- **Miami:** Vizcaya Museum and Gardens, South Beach, Bayside Marketplace,
+  Metromover, Versailles Restaurant e Bayfront Park. South Beach fica em Miami Beach.
+- **Rio:** Cristo Redentor, Pão de Açúcar, Feira Hippie de Ipanema,
+  Confeitaria Colombo, Bonde de Santa Teresa e Jardim Botânico do Rio de Janeiro.
+- **Roma:** Coliseu, Fontana di Trevi, Via del Corso, Trastevere, Metrô de Roma
+  e Villa Borghese. Trastevere representa um passeio gastronômico pelo bairro.
+
+As coordenadas são referências aproximadas dos centros das cidades; não representam
+as entradas das atrações. Os horários e períodos não verificam calendário real de
+abertura ou disponibilidade. Fotos continuam sem preenchimento nesta carga.
+Os reviews são fictícios e criados pelas mesmas regras da API, somente
+para ocorrências concluídas e participantes das viagens. Há exemplos com mais de
+um autor e médias diferentes para testar a busca por nota mínima.
+
+
 ## Testar os casos de uso
 
 Abra <http://localhost:8000/docs>, faça login e use **Authorize** com o token recebido.
@@ -99,5 +128,15 @@ Use o [comando de reset explícito](reset-banco.md): ele verifica o destino,
 limpa o banco e reaplica migrações e seed. Depois, inicie a API normalmente.
 Reiniciar uma base já preenchida com esta versão preserva as alterações dos testes.
 
-Veja [os lugares e roteiros](seed-destinos-reais.md), [atividades do roteiro](atividades-roteiro.md)
-e [avaliações](avaliacoes-atividades.md).
+Veja também [atividades do roteiro](atividades-roteiro.md) e [avaliações](avaliacoes-atividades.md).
+
+## Referências da curadoria
+
+Consultadas em 03/11/2026, para nomes e descrições gerais, sem coletar imagens:
+
+- [Visit Orlando: Disney Springs e East End Market](https://www.visitorlando.com/things-to-do/theme-parks/walt-disney-world-resort/disney-springs/).
+- [Visit Orlando: atrações da região](https://www.visitorlando.com/blog/post/holiday-season-orlando/).
+- [Greater Miami: Bayfront Park e Bayside](https://www.miamiandbeaches.com/l/outdoor-experiences/bayfront-park/2443).
+- [Miami-Dade: Metromover](https://www.miamidade.gov/global/transportation/metromover.page).
+- [Prefeitura do Rio: pontos turísticos](https://controladoria.prefeitura.rio/pontos-turisticos/).
+- [Turismo Roma: roteiro pelo Coliseu, Trevi e Villa Borghese](https://turismoroma.it/it/itinerari/roma-72-ore).

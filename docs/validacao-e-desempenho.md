@@ -1,8 +1,9 @@
-# Consolidação de qualidade — issue #31
+# Validação integrada e desempenho do backend
 
 Referências: RNF02 (páginas em menos de 3 segundos) e RNF03 (hash, JWT e isolamento).
-Esta entrega consolida as validações dos módulos já implementados; não adiciona
-funcionalidades ou altera os contratos da API.
+Este guia reúne os cenários de validação e a reprodução da medição HTTP.
+Os dados de desempenho versionados são uma medição histórica; o CI publica novos
+resultados a cada execução. O contrato atual é o OpenAPI gerado pela aplicação.
 
 ## Fluxo integrado
 
@@ -145,9 +146,9 @@ O segredo acima é apenas uma chave de teste. Para executar somente os cenários
 novos: `python -m pytest tests/integration/consolidacao`. A auditoria de JUnit exige
 a suíte completa, pois verifica a presença de todos os módulos de integração.
 
-## Verificação da entrega
+## Resultados registrados
 
-Validação local: **1.306 testes aprovados, nenhum ignorado**, com PostgreSQL e
+Execução original da #31: **1.306 testes aprovados, nenhum ignorado**, com PostgreSQL e
 Redis reais. A auditoria de JUnit confirmou a execução de todos os módulos de
 integração. Cobertura de linhas de `app`: **97.61%**.
 Ruff, sintaxe YAML, imports hexagonais e Spectral passaram; o Spectral conserva
@@ -158,3 +159,103 @@ com algoritmo JWT alternativo.
 Os checks remotos, incluindo SonarQube e Trivy, precisam executar no PR. A medição
 local documentada permanece como referência; cada execução do CI publica seu
 próprio resultado, sem sobrescrever esse arquivo versionado.
+
+Após o alinhamento dos tipos de atividades, a execução local completa registrou
+**1.309 testes aprovados**, sem skips; a auditoria confirmou 39 módulos de integração.
+Esses números registram aquelas execuções e devem ser atualizados com novas evidências.
+A matriz inclui também `tests/integration/test_tipos_atividades_originais.py`, que
+verifica conversão de dados legados, hospedagem, filtros e resumo financeiro.
+
+## SonarQube e Quality Gate
+
+O workflow de testes executa o job **SonarQube Quality Gate** após os testes
+passarem, em PRs para `main` e pushes nessa branch. O job baixa o `coverage.xml`
+da mesma execução e usa `SonarSource/sonarqube-scan-action` para analisar `app/`
+e identificar `tests/` como código de teste. A cobertura usa caminhos relativos
+para permitir a leitura do relatório em outro job.
+
+O arquivo `sonar-project.properties` identifica o projeto
+`ftavaniello_ViajaJunto_Backend`, na organização `ftavaniello`. A opção
+`sonar.qualitygate.wait=true` faz o scanner aguardar até 300 segundos pelo
+resultado do Quality Gate; reprovação ou falha na análise faz o job falhar.
+
+Configuração externa necessária:
+
+1. No projeto do SonarQube Cloud, desative **Automatic Analysis** em
+   **Administration → Analysis Method** para usar a análise pelo CI.
+2. Gere um token de análise e cadastre-o no GitHub em
+   **Settings → Secrets and variables → Actions**, como secret **SONAR_TOKEN**.
+   Nunca coloque o token no repositório.
+3. Após a primeira execução, inclua **SonarQube Quality Gate** e o check de testes
+   entre os checks obrigatórios da proteção da `main`.
+
+O job falha explicitamente se o token estiver ausente. PRs de forks normalmente
+não recebem secrets e, portanto, não conseguem executar essa análise autenticada.
+
+## Build e verificação da imagem Docker
+
+O Dockerfile usa uma etapa de instalação separada e transfere o ambiente Python
+para a imagem final sem `pip`, `setuptools` ou `wheel`. Essas ferramentas e suas
+dependências internas não são necessárias para iniciar a API ou aplicar as
+migrações. Para mudar dependências, reconstrua a imagem; não instale pacotes
+manualmente no container em execução.
+
+A base é `python:3.13-alpine`, com atualizações do Alpine e bibliotecas de
+execução para PostgreSQL. As dependências são instaladas como pacotes binários
+(`--only-binary=:all:`); uma nova dependência sem pacote compatível exigirá
+revisar o build. A mudança de Debian para Alpine foi validada em Linux amd64.
+
+Somente `app/`, `alembic/` e `alembic.ini` são copiados para a imagem final.
+Os testes continuam no repositório e podem ser montados no container para
+validação. O CI usa `pull: true` para consultar a imagem-base atualizada.
+
+O workflow `.github/workflows/ci.yml` constrói a imagem Docker e executa o Trivy
+em pushes e pull requests para `main` e `develop`. O check `build-and-scan`
+falha quando encontra vulnerabilidades HIGH ou CRITICAL nos pacotes do sistema
+operacional ou nas dependências da aplicação, inclusive sem correção disponível.
+Vulnerabilidades sem correção não são ignoradas para fazer o CI passar.
+
+Inclua `build-and-scan` nos checks obrigatórios da proteção da `main`.
+O workflow também executa em tags `v*` e publica a imagem aprovada pelo Trivy
+conforme as regras abaixo.
+
+## Publicação no Docker Hub
+
+Destino: `ftavaniello/viajajunto-backend`.
+A publicação usa a mesma imagem local verificada pelo Trivy, sem reconstruí-la.
+Se o build ou o scan falhar, as etapas de login e publicação não executam.
+
+| Evento | Tags publicadas |
+|---|---|
+| Push na `main` (inclusive merge de PR) | `latest` e `sha-<SHA completo>` |
+| Push de versão estável, por exemplo `v1.2.3` | `1.2.3`, `latest` e `sha-<SHA completo>` |
+| Push de pré-lançamento, por exemplo `v1.2.3-rc.1` | `1.2.3-rc.1` e `sha-<SHA completo>` |
+| Push na `develop` ou pull request | Somente build e scan; não publica |
+
+Use tags Git no formato SemVer `vMAJOR.MINOR.PATCH`, com sufixo de
+pré-lançamento opcional. A tag `latest` é atualizada por pushes na `main` e por
+versões estáveis; ela não é um identificador imutável. Use a versão ou SHA para
+selecionar uma publicação específica.
+
+Configure dois **Repository secrets** em
+**Settings → Secrets and variables → Actions** no GitHub:
+
+- `DOCKERHUB_USERNAME`: `ftavaniello`.
+- `DOCKERHUB_TOKEN`: Access Token do Docker Hub com permissão de leitura e
+  escrita no repositório da imagem. Não use a senha da conta nem salve o token
+  em arquivos do projeto.
+
+Após o merge na `main`, a publicação de `latest` será automática. Para publicar
+uma versão, crie e envie a tag correspondente a um commit aprovado da `main`:
+
+```sh
+git switch main
+git pull --ff-only origin main
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+O exemplo usa `v1.0.0`; escolha a versão real do projeto. O workflow de imagem
+não espera os outros workflows independentes, por isso mantenha os checks
+obrigatórios da `main` e publique versões a partir de commits já aprovados.
+

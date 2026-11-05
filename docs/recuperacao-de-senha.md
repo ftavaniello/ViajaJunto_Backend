@@ -105,7 +105,8 @@ Compose já está configurada com `EMAIL_BACKEND=smtp` e `SMTP_HOST=mailpit`.
    {"token": "<código do email>", "senha_nova": "novaSenha456"}
    ```
 
-   Ainda não há frontend, então o link para `localhost:3000` não abre nada;
+   O frontend é separado deste repositório. Sem a tela correspondente em execução,
+   o link para `localhost:3000` não terá uma página para abrir;
    o que importa é o valor de `token`.
 
 Para quem prefere linha de comando, o Mailpit tem API HTTP:
