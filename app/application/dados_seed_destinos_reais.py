@@ -1,6 +1,6 @@
 """Curadoria manual de lugares reais; dados operacionais são ilustrativos.
 
-Referências e limites: docs/seed-destinos-reais.md. Coordenadas representam
+Referências e limites: docs/seed-demonstracao.md. Coordenadas representam
 aproximadamente o centro da cidade, não a entrada de cada atração.
 """
 

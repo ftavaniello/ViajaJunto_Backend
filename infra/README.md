@@ -68,13 +68,14 @@ Ordem definida com `depends_on`:
    para restaurar o Redis apos reinicios e aguarda o cluster ficar disponivel.
 3. Apos sucesso do deploy, PostgreSQL inicia e passa no healthcheck.
 4. O container da API executa `alembic upgrade head`.
-5. Somente se as migracoes passarem, Uvicorn inicia a API.
+5. Em `APP_ENV=development`, o seed idempotente cria os dados iniciais.
+6. Após migrações e seed, Uvicorn inicia a API; o Mailpit captura os emails locais.
 
 AWS CLI e uma tarefa temporaria: `Exited (0)` significa sucesso. O deploy aceita
 uma stack existente sem alteracoes. Falhas no deploy bloqueiam a inicializacao
 dos dependentes. As migracoes rodam no proprio container da API.
 
-Ficam em execucao MiniStack, PostgreSQL, API e o Redis criado pelo ElastiCache.
+Ficam em execução MiniStack, PostgreSQL, API, Mailpit e o Redis criado pelo ElastiCache.
 Nao ha Redis auxiliar nem provisionador Python. O volume `ministack-state`
 guarda snapshots do emulador; volume nao e container. O MiniStack usa o socket
 Docker para criar o cache na rede `viajajunto-cache-local`.

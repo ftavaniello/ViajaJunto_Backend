@@ -91,8 +91,10 @@ Todas exigem `Authorization: Bearer <token>` e identificam o usuário pelo token
 O envio usa o mesmo `EmailSender` da recuperação de senha (`EMAIL_BACKEND`, SMTP).
 No Docker Compose os emails ficam no Mailpit, em <http://localhost:8025>.
 
-As notificações `membro_entrou`, `papel_alterado` e `membro_removido` (RF21) ficam
-para a issue de notificações.
+As notificações `membro_entrou`, `papel_alterado` e `membro_removido` (RF21) já são
+persistidas na mesma transação da alteração. A API permite listar e marcar como
+lidas somente as notificações do próprio usuário. Veja o
+[escopo dos avisos](decisoes-de-produto.md#d9--email-e-notificacoes).
 
 ## Teste pelo Swagger
 

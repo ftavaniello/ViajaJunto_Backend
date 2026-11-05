@@ -99,8 +99,9 @@ a proteção de carga inicial. Uma falha reverte o lote inteiro.
 1. Recrie a API com `docker compose up -d --build api` para aplicar a migração.
 2. Abra `/docs` e execute `GET /catalogo/destinos` sem Authorize.
 3. Confira os filtros, o detalhe pelo ID e a paginação.
-4. Em um catálogo já abastecido, Lisboa terá categoria `cidade`; a descrição pode ser
-   nula, pois os dados existentes são preservados.
+4. No seed atual, procure Orlando, Miami, Rio de Janeiro ou Roma. O exemplo de
+   Lisboa só aparecerá se você importar o lote manualmente. Registros antigos podem
+   ter descrição nula, pois as migrações preservam os dados.
 5. Para testar outras categorias, importe um lote revisado como o exemplo acima.
 
 Os testes automatizados cobrem domínio, casos de uso sem banco, memória/PostgreSQL,

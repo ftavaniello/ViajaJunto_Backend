@@ -1,285 +1,158 @@
-## **Documento de Arquitetura de Software**
+# Arquitetura do ViajaJunto — backend
 
-**Histórico de Revisão**
+Este documento descreve a implementação atual. A proposta inicial de 25/08/2026,
+por Gustavo de Freitas Fidélis e Bernardo Lykawka Medeiros da Silva, previa um
+backend NestJS. O backend deste repositório usa Python e FastAPI; os
+[requisitos originais](requirements-ViajaJunto.md) permanecem como referência do
+produto. As adaptações estão em [decisões de produto](decisoes-de-produto.md).
 
-|Data|Versão|Descrição|Autor|
-| - | - | - | - |
-|25/08/2026|0.1|Versão inicial|Gustavo de Freitas Fidélis, Bernardo Lykawka Medeiros da Silva|
+## Componentes e dependências
 
-## **1. Introdução**
-
-### **1.1 Finalidade**
-Este documento apresenta uma visão geral da arquitetura de software do sistema ViajaJunto e especifica as decisões arquiteturais pertinentes ao seu desenvolvimento, servindo de referência para os desenvolvedores do projeto.
-
-### **1.2 Escopo**
-Este documento abrange a arquitetura do ViajaJunto — aplicação web de planejamento colaborativo de viagens. Deve ser seguido pela equipe de desenvolvimento para garantir o padrão arquitetural proposto, incluindo separação entre frontend e backend, organização do banco de dados e controle de acesso.
-
-### **1.3 Definições, Acrônimos e Abreviações**
-
-|Abreviação|Definição|
-| - | - |
-|API|Application Programming Interface|
-|REST|Representational State Transfer|
-|JWT|JSON Web Token|
-|DER|Diagrama de Entidades e Relacionamentos|
-|DLD|Diagrama Lógico de Dados|
-|MVC|Model-View-Controller|
-
-### **1.4 Visão Geral**
-Este documento descreve a representação da arquitetura cliente-servidor adotada, as metas e restrições arquiteturais, a visão lógica com organização em camadas e o modelo de dados relacional do sistema.
-
-## **2. Representação da Arquitetura**
-
-A aplicação adota uma **arquitetura cliente-servidor** com separação clara entre camadas e integrações externas:
-
-- **Frontend (NextJS):** aplicação web responsiva que consome a API REST do backend, renderiza a interface e exibe mapas e cadastros de atividades/locais.
-- **Backend (NestJS):** API REST responsável pela lógica de negócio, autenticação, autorização, persistência e orquestração entre os serviços externos.
-- **Serviço de Mapas:** responsável pela visualização geográfica e roteamento em mapa, com biblioteca como Google Maps ou Leaflet/OpenStreetMap.
-- **Serviço de Locais/Atividades (catálogo_atividades):** integra um fornecedor de locais por uma porta de aplicação para complementar dados de locais, restaurantes e pontos de interesse. O previsto era o Google Places; a implementação usa a Places API do Geoapify (ver [integração de locais](integracao-locais.md)).
-- **Banco de Dados (PostgreSQL):** armazenamento relacional para usuários, viagens, destinos, atividades, orçamento e avaliações.
-
-### **2.1 Diagrama de Relações**
-
-```
-┌────────────────────┐      HTTP/JSON      ┌─────────────────────┐
-│                    │ ──────────────────► │                     │
-│  Frontend (NextJS) │                     │  Backend (NestJS)   │
-│  (Web App)         │ ◄────────────────── │  REST + Auth + RBAC │
-│  - Dashboard       │                     │                     │
-│  - Viagens         │                     │                     │
-│  - Destinos        │                     │                     │
-│  - Orçamento       │                     │                     │
-└────────────────────┘                     └──────────┬──────────┘
-                                                        │
-                        ┌───────────────────────────────┼───────────────────────────────┐
-                        │                               │                               │
-                        ▼                               ▼                               ▼
-                ┌─────────────────────┐       ┌──────────────────────────────┐      ┌─────────────────────┐
-                │  Serviço de Mapas   │       │ Serviço de Locais/Atividades │      │  Banco de Dados     │
-                │  Google Maps /      │       │  Geoapify Places API         │      │  PostgreSQL/        │
-                │  Leaflet + OSM      │       │  - catálogo_atividades       │      │  - usuarios         │
-                │  - geolocalização   │       │  - busca por locais          │      │  - viagens          │
-                │  - rotas            │       │  - dados de pontos de        │      │  - destinos         │
-                │  - marcadores       │       │    interesse                 │      │  - atividades       │
-                └─────────────────────┘       └──────────────────────────────┘      └─────────────────────┘
+```mermaid
+flowchart LR
+    Cliente[Frontend separado / Swagger] --> HTTP[Adaptador HTTP FastAPI]
+    CLI[Adaptadores CLI] --> Casos[Casos de uso]
+    HTTP --> Casos
+    Casos --> Dominio[Domínio e portas]
+    SQL[Adaptador SQLAlchemy] -. implementa .-> Dominio
+    SQL --> PG[(PostgreSQL)]
+    Externos[Adaptadores de email, cache e locais] -. implementam .-> Dominio
+    Externos --> SMTP[SMTP / Mailpit local]
+    Externos --> Redis[(Redis)]
+    Externos --> Geoapify[Geoapify Places]
 ```
 
-## **3. Metas e Restrições de Arquitetura**
+As setas para o núcleo representam dependências de código. Em execução, os casos
+de uso recebem implementações das portas pela composição de dependências.
+As regras obrigatórias estão em [ARQUITETURA_HEXAGONAL.md](../ARQUITETURA_HEXAGONAL.md).
 
-|**Restrição**|**Ferramenta**|
-| :- | :- |
-|Linguagem|A definir pela equipe|
-|Framework|A definir pela equipe|
-|Plataforma|Web (navegador)|
-|Segurança|Senhas com hash; autenticação via JWT; controle de acesso por viagem|
-|Idioma|Português (pt-BR)|
-|Mapa interativo|ex: jsVectormap/Google Maps API|
+| Local | Responsabilidade |
+| --- | --- |
+| `app/domain/` | Entidades, enums, invariantes, erros e interfaces das portas; sem FastAPI ou SQLAlchemy |
+| `app/application/` | Casos de uso, permissões, coordenação de repositórios e transações |
+| `app/adapters/inbound/` | Rotas, schemas HTTP, autenticação da requisição e comandos operacionais |
+| `app/adapters/outbound/` | Persistência SQLAlchemy e implementações de segurança, email, cache e consulta de locais |
+| `app/infrastructure/` | Configuração, banco e composição das implementações |
+| `app/main.py` | Montagem da aplicação FastAPI |
+| `alembic/` | Histórico versionado de migrações |
 
-## **4. Visão Lógica**
+O frontend consome HTTP/JSON e renderiza mapas a partir de coordenadas e da ordem
+das paradas. Este backend não renderiza mapas nem implementa uma interface web.
+A integração Geoapify abastece o catálogo por comando operacional, sem tornar
+cada consulta pública dependente do fornecedor. Fotos são URLs opcionais;
+não existe armazenamento de arquivos ou bucket S3 implementado.
 
-### **4.1 Visão geral: Pacotes e Camadas**
+## Fluxo de uma operação
 
-O sistema é organizado em cinco blocos principais:
+1. O adaptador HTTP valida o formato e resolve o usuário autenticado pelo JWT.
+2. O caso de uso consulta os vínculos atuais e aplica as regras do domínio.
+3. Os adaptadores executam as consultas e gravações dentro da transação.
+4. A resposta é convertida para o contrato HTTP; erros de negócio são traduzidos
+   para os códigos documentados no OpenAPI.
 
-- **Camada de Apresentação (Frontend):** responsável pela interface com o usuário — renderização de telas, formulários, mapa interativo, filtros de busca e consumo da API REST.
-- **Camada de Negócio (Backend / API REST):** responsável pelas regras de negócio, autenticação, controle de permissões, criação de viagens e orquestração de operações sobre dados e integrações externas.
-- **Serviço de Mapas:** encapsula a lógica de renderização geográfica, geolocalização, rotas e marcadores em mapas interativos.
-- **Serviço de Locais/Atividades (catálogo_atividades):** integra a Places API do Geoapify, por meio da porta `ProvedorLocais`, para buscar e enriquecer informações de locais, atrações e estabelecimentos que podem ser cadastrados em viagens ou atividades.
-- **Camada de Dados (Banco de Dados):** responsável pela persistência das informações — usuários, viagens, destinos, atividades, orçamento, avaliações e referências ao catálogo externo.
+Criador, Editor e Visualizador são permissões por viagem. IDs não concedem
+acesso. O catálogo é público; roteiros, orçamento e notificações dependem de
+autorização. JWTs usam versão de sessão e revogação para invalidar acessos.
+Convites e recuperação de senha persistem hashes dos tokens, com validade e uso único.
+Consulte [permissões e políticas](decisoes-de-produto.md) para os detalhes.
 
-> O backend deve manter um catálogo interno de atividades/locais, sincronizando dados com o fornecedor externo (Geoapify) quando necessário e preservando registros próprios de avaliações e contexto da viagem.
+## Modelo relacional
 
-### **4.2 Organização do Código**
+O catálogo representa locais reutilizáveis. `destinos_viagem` representa uma
+parada do roteiro, enquanto `atividades_viagem` representa uma ocorrência agendada
+de uma atividade do catálogo. Avaliações pertencem à atividade do catálogo e
+podem manter a referência à ocorrência que comprovou sua realização.
 
-A estrutura de diretórios segue a separação entre frontend e backend em repositórios ou módulos distintos. A organização interna de cada camada será definida pela equipe conforme o framework adotado.
-
-### **4.3 Diagrama de Classes**
-
-[Inserir diagrama de classes após definição do framework e linguagem de implementação.]
-
-## **5. Visão de Implementação**
-
-### **5.1 Diagrama de Entidade-Relacionamento**
-
-O modelo relacional é composto pelas entidades abaixo. O diagrama completo pode ser visualizado em [dbdiagram.io](https://dbdiagram.io).
-
-#### Enums
-
-| Enum | Valores |
-| ---- | ------- |
-| `status_viagem` | `EM_PLANEJAMENTO`, `CONFIRMADA`, `CONCLUIDA` |
-| `permissao_membro` | `EDITOR`, `VISUALIZADOR` |
-| `categoria_destino` | `CIDADE`, `PRAIA`, `NATUREZA`, `CULTURAL` |
-| `tipo_atividade` | `PASSEIO`, `REFEICAO`, `HOSPEDAGEM`, `TRANSPORTE`, `OUTRO` |
-| `status_atividade` | `PENDENTE`, `CONFIRMADA`, `CONCLUIDA` |
-
-#### Tabelas
-
-**usuario**
-
-| Coluna | Tipo | Restrições |
-| ------ | ---- | ---------- |
-| `id` | integer | PK, auto-increment |
-| `nome` | varchar | NOT NULL |
-| `email` | varchar | NOT NULL, UNIQUE |
-| `senha_hash` | varchar | NOT NULL |
-| `criado_em` | timestamp | default: `now()` |
-
-**viagem**
-
-| Coluna | Tipo | Restrições |
-| ------ | ---- | ---------- |
-| `id/código_convite` | string | PK |
-| `nome` | varchar | NOT NULL |
-| `descricao` | text | |
-| `data_inicio` | date | |
-| `data_fim` | date | |
-| `status` | status_viagem | NOT NULL |
-| `criado_por` | integer | NOT NULL, FK → usuario.id |
-| `criado_em` | timestamp | default: `now()` |
-
-**membro_viagem**
-
-| Coluna | Tipo | Restrições |
-| ------ | ---- | ---------- |
-| `id` | integer | PK, auto-increment |
-| `viagem_id` | integer | NOT NULL, FK → viagem.id |
-| `usuario_id` | integer | NOT NULL, FK → usuario.id |
-| `permissao` | permissao_membro | NOT NULL |
-| `entrou_em` | timestamp | default: `now()` |
-
-**destino_catalogo**
-
-| Coluna | Tipo | Restrições |
-| ------ | ---- | ---------- |
-| `id` | integer | PK, auto-increment |
-| `nome` | varchar | NOT NULL |
-| `pais` | varchar | |
-| `categoria` | categoria_destino | |
-| `descricao` | text | |
-| `latitude` | float | |
-| `longitude` | float | |
-| `foto_url` | varchar | |
-
-> Como cada destino representa uma cidade do mundo, o campo `nome` deve indicar a cidade em si, e o país é informado separadamente para contextualização geográfica.
-
-**destino_viagem**
-
-| Coluna | Tipo | Restrições |
-| ------ | ---- | ---------- |
-| `id` | integer | PK, auto-increment |
-| `viagem_id` | integer | NOT NULL, FK → viagem.id |
-| `destino_catalogo_id` | integer | NOT NULL, FK → destino_catalogo.id |
-| `chegada` | date | |
-| `saida` | date | |
-| `descricao` | text | |
-| `ordem` | integer | |
-
-**catalogo_atividade**
-
-| Coluna | Tipo | Restrições |
-| ------ | ---- | ---------- |
-| `id` | integer | PK, auto-increment |
-| `nome` | varchar | NOT NULL |
-| `descricao` | text | |
-| `tipo_atividade` | tipo_atividade | NOT NULL |
-| `local` | varchar | |
-| `cidade` | varchar | |
-| `pais` | varchar | |
-| `latitude` | float | |
-| `longitude` | float | |
-| `id_externo` | varchar | UNIQUE com `fonte` |
-| `foto_url` | varchar | |
-| `fonte` | varchar | `manual` ou `geoapify`; default: `manual` |
-| `media_avaliacao` | float | default: 0 |
-| `criado_em` | timestamp | default: `now()` |
-
-**atividade_viagem**
-
-| Coluna | Tipo | Restrições |
-| ------ | ---- | ---------- |
-| `id` | integer | PK, auto-increment |
-| `destino_viagem_id` | integer | NOT NULL, FK → destino_viagem.id |
-| `catalogo_atividade_id` | integer | NOT NULL, FK → catalogo_atividade.id |
-| `data_horario` | timestamp | |
-| `duracao_min` | integer | |
-| `custo_previsto` | decimal(10,2) | |
-| `status` | status_atividade | NOT NULL |
-
-**orcamento**
-
-| Coluna | Tipo | Restrições |
-| ------ | ---- | ---------- |
-| `id` | integer | PK, auto-increment |
-| `viagem_id` | integer | NOT NULL, UNIQUE, FK → viagem.id (1:1) |
-| `valor_total` | decimal(10,2) | NOT NULL |
-| `previsto_atividades` | decimal(10,2) | default: 0 |
-
-**avaliacao**
-
-| Coluna | Tipo | Restrições |
-| ------ | ---- | ---------- |
-| `id` | integer | PK, auto-increment |
-| `usuario_id` | integer | NOT NULL, FK → usuario.id |
-| `catalogo_atividade_id` | integer | NOT NULL, FK → catalogo_atividade.id |
-| `nota` | integer | NOT NULL (1 a 5) |
-| `comentario` | text | |
-| `criado_em` | timestamp | default: `now()` |
-
-#### Relacionamentos
-
-| De | Para | Cardinalidade |
-| -- | ---- | ------------- |
-| `viagem.criado_por` | `usuario.id` | N:1 |
-| `membro_viagem.viagem_id` | `viagem.id` | N:1 |
-| `membro_viagem.usuario_id` | `usuario.id` | N:1 |
-| `destino_viagem.viagem_id` | `viagem.id` | N:1 |
-| `destino_viagem.destino_catalogo_id` | `destino_catalogo.id` | N:1 |
-| `atividade_viagem.destino_viagem_id` | `destino_viagem.id` | N:1 |
-| `atividade_viagem.catalogo_atividade_id` | `catalogo_atividade.id` | N:1 |
-| `orcamento.viagem_id` | `viagem.id` | 1:1 |
-| `avaliacao.usuario_id` | `usuario.id` | N:1 |
-| `avaliacao.catalogo_atividade_id` | `catalogo_atividade.id` | N:1 |
-
-### **5.2 Diagrama Lógico de Dados**
-
-O DLD textual abaixo representa as tabelas com chaves primárias e estrangeiras destacadas:
-
+```mermaid
+erDiagram
+    usuarios ||--o{ viagens : criador_id
+    usuarios ||--o{ membros_viagem : usuario_id
+    viagens ||--o{ membros_viagem : viagem_id
+    viagens ||--o{ destinos_viagem : viagem_id
+    destinos_catalogo ||--o{ destinos_viagem : destino_catalogo_id
+    destinos_catalogo ||--o{ catalogo_atividades : destino_catalogo_id
+    destinos_viagem ||--o{ atividades_viagem : destino_viagem_id
+    catalogo_atividades ||--o{ atividades_viagem : catalogo_atividade_id
+    viagens ||--o| orcamentos : viagem_id
+    viagens ||--o{ convites_viagem : viagem_id
+    usuarios |o--o{ convites_viagem : convidado_por_id
+    usuarios |o--o{ atividades_viagem : realizada_por_id
+    usuarios |o--o{ avaliacoes : usuario_id
+    catalogo_atividades ||--o{ avaliacoes : catalogo_atividade_id
+    atividades_viagem |o--o{ avaliacoes : atividade_viagem_id
+    usuarios ||--o{ notificacoes : usuario_id
+    usuarios |o--o{ notificacoes : ator_id
+    viagens |o--o{ notificacoes : viagem_id
+    usuarios ||--o{ tokens_recuperacao_senha : usuario_id
+    usuarios ||--o{ tokens_revogados : usuario_id
 ```
-usuario(#id, nome, email, senha_hash, criado_em)
 
-viagem(#id, nome, descricao, data_inicio, data_fim, status, *criado_por→usuario, criado_em)
+O diagrama mostra chaves estrangeiras, inclusive as opcionais. `seeds_demonstracao`
+é uma tabela operacional independente, sem relacionamentos.
 
-membro_viagem(#id, *viagem_id→viagem, *usuario_id→usuario, permissao, entrou_em)
+| Tabela | Dados principais |
+| --- | --- |
+| `usuarios` | Nome, email único, hash de senha, versão de sessão e criação |
+| `viagens` | Criador, nome, descrição, datas, status, moeda e timestamps |
+| `membros_viagem` | Usuário, viagem, papel e entrada; um vínculo por par usuário/viagem |
+| `destinos_catalogo` | Nome, país ISO, categoria, descrição, coordenadas, fuso, foto e origem externa |
+| `destinos_viagem` | Viagem, destino de catálogo, ordem, chegada, saída, hospedagem e observações |
+| `catalogo_atividades` | Destino de catálogo, nome, descrição, tipo, endereço, coordenadas, foto e origem externa |
+| `atividades_viagem` | Parada, atividade de catálogo, data, horário, duração, custo previsto, status e realização |
+| `orcamentos` | Viagem única, limite total opcional e atualização |
+| `avaliacoes` | Autor opcional, atividade de catálogo, ocorrência opcional, nota, comentário e timestamps |
+| `convites_viagem` | Viagem, email, hash único, remetente opcional, expiração, aceite e criação |
+| `notificacoes` | Destinatário, tipo, mensagem, viagem e ator opcionais, leitura e criação |
+| `tokens_recuperacao_senha` | Usuário, hash, expiração, uso e criação |
+| `tokens_revogados` | JTI como chave primária, usuário, expiração e revogação |
+| `seeds_demonstracao` | Chave do seed, manifesto JSON e criação |
 
-destino_catalogo(#id, nome, pais, categoria, descricao, latitude, longitude, foto_url)
+As demais tabelas usam `id` inteiro como chave primária; `seeds_demonstracao` usa
+`chave`. O schema exato, índices e constraints são definidos pelas migrações Alembic
+e pelos modelos SQLAlchemy, não por este resumo.
 
-destino_viagem(#id, *viagem_id→viagem, *destino_catalogo_id→destino_catalogo, chegada, saida, descricao, ordem)
+### Integridade e representação
 
-catalogo_atividade(#id, nome, descricao, tipo_atividade, local, cidade, pais, latitude, longitude, id_externo, foto_url, fonte, media_avaliacao, criado_em)
+- Tipos de atividades: `passeio`, `refeicao`, `hospedagem`, `transporte`, `outro`.
+  A [conversão dos tipos antigos](catalogo-atividades.md#tipos-de-atividades)
+  preserva os registros e seus relacionamentos.
+- Viagens usam `planejando`, `confirmada` e `concluida`. Atividades usam `pendente`,
+  `confirmada` e `concluida`; `cancelada` permanece para registros legados.
+- Datas do roteiro são datas de calendário; horários não carregam fuso.
+  Timestamps de eventos são timezone-aware. O fuso opcional do catálogo não
+  transforma automaticamente os horários das atividades.
+- Valores monetários usam `Numeric(12,2)` e `Decimal`, atualmente em BRL.
+  Totais, médias e rankings são calculados; não há colunas de totais derivados.
+- `destinos_viagem.observacoes` corresponde à descrição exposta pela API.
+  `orcamentos.limite_total` corresponde ao campo `valor_total` do contrato HTTP.
+- A ordem das paradas é única por viagem. A nota de avaliação fica entre 1 e 5;
+  um usuário pode avaliar cada atividade de catálogo uma vez.
+- A origem e o ID externo identificam itens importados; importações atualizam
+  os registros existentes, preservando IDs e vínculos.
 
-atividade_viagem(#id, *destino_viagem_id→destino_viagem, *catalogo_atividade_id→catalogo_atividade, data_horario, duracao_min, custo_previsto, status)
+### Exclusões
 
-orcamento(#id, *viagem_id→viagem, valor_total, previsto_atividades)
+As FKs dos dados particulares do roteiro usam cascata. Catálogos referenciados
+por paradas ou ocorrências têm exclusão restrita. Avaliações sobrevivem à exclusão
+da ocorrência ou do autor, com referências anuladas; a exclusão do item de
+catálogo elimina suas avaliações. Notificações podem sobreviver sem viagem ou ator.
+O caso de uso de exclusão de conta bloqueia criadores com colaboradores antes da
+remoção, mesmo existindo cascata no banco. Veja [exclusão de conta](exclusao-conta.md).
 
-avaliacao(#id, *usuario_id→usuario, *catalogo_atividade_id→catalogo_atividade, nota, comentario, criado_em)
-```
-> Legenda: `#` chave primária · `*` chave estrangeira
+## Infraestrutura e operação
 
-## **6. Tamanho e Desempenho**
+PostgreSQL é a fonte persistente. Redis guarda somente a contagem de usuários,
+com TTL e invalidação após alterações; não é a fonte das permissões ou sessões.
+No ambiente local, MiniStack provisiona Redis por CloudFormation/AWS CLI.
+O Compose aplica migrações e executa o seed idempotente em desenvolvimento antes
+de iniciar Uvicorn. Mailpit captura os emails desse ambiente.
 
-O sistema é direcionado ao público geral e deve suportar múltiplos usuários simultâneos acessando viagens compartilhadas. O carregamento das páginas principais deve ocorrer em menos de 3 segundos em condições normais de rede. O volume de dados por viagem é relativamente pequeno (destinos, atividades e orçamentos), mas o catálogo de destinos e avaliações pode crescer significativamente com o uso da comunidade.
+- [Execução e variáveis](../README.md)
+- [Infraestrutura de cache](../infra/README.md)
+- [Seed e cenários](seed-demonstracao.md)
+- [Reset explícito de desenvolvimento](reset-banco.md)
+- [Testes, desempenho e CI](validacao-e-desempenho.md)
 
-## **7. Qualidade**
-
-A arquitetura cliente-servidor com separação entre frontend e backend favorece:
-
-- **Manutenibilidade:** as camadas evoluem de forma independente — mudanças no frontend não afetam a API e vice-versa.
-- **Testabilidade:** a API REST pode ser testada de forma isolada com ferramentas como Postman ou testes automatizados.
-- **Segurança:** o controle de acesso é centralizado no backend, garantindo que usuários só acessem dados das viagens às quais pertencem.
-- **Escalabilidade:** a separação de responsabilidades permite escalar frontend e backend de forma independente conforme a demanda.
-
-## **8. Referências**
-
-- Documento de Escopo do Projeto — ViajaJunto (Grupo 4, T1)
-- Documento de Requisitos — ViajaJunto
+Não há reset automático de bancos existentes. CORS/proxy, SMTP externo,
+preenchimento das fotos e validação conjunta com o frontend ainda exigem a
+configuração e a verificação descritas no README.
