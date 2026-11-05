@@ -161,7 +161,10 @@ class SemearDestinosReais:
         )
         manifesto["paradas"][f"{chave}-{cidade}"] = parada.id
         dado = next(lugar for lugar in LUGARES_REAIS if lugar.chave == cidade)
+        # Disney Springs fica disponível no catálogo para inclusão durante a demo.
         for i, catalogo in enumerate(atividades):
+            if chave == "florida" and cidade == "orlando" and i == 2:
+                continue
             estado = (
                 StatusAtividade.CONCLUIDA,
                 StatusAtividade.CONFIRMADA,

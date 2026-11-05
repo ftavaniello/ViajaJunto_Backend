@@ -10,6 +10,13 @@ Os IDs e as datas abaixo foram conferidos no banco local em 04/11/2026, com o
 seed `dados-iniciais-v2` criado com referência em 03/11/2026. Não são IDs universais:
 em outro banco, confira as respostas das consultas iniciais e substitua os valores.
 As datas precisam estar dentro da estadia atual da parada.
+Após o reset de 05/11/2026, Orlando vai de 05/12 a 10/12; a data de inclusão
+05/12 usada abaixo continua válida.
+
+Este roteiro pressupõe a versão do seed que reserva Disney Springs para a demo
+e inclui Ana como Editora e Visualizadora em outras viagens. Bancos já preenchidos
+não são atualizados automaticamente; use o [reset explícito](reset-banco.md) para
+recarregar os cenários depois de atualizar o código.
 
 | Item | Valor usado |
 | --- | --- |
@@ -17,7 +24,7 @@ As datas precisam estar dentro da estadia atual da parada.
 | Parada de Orlando na viagem | `destino_id = 1` |
 | Orlando no catálogo | `destino_catalogo_id = 1` |
 | Disney Springs no catálogo | `catalogo_atividade_id = 3` |
-| Estadia em Orlando | `2026-12-03` a `2026-12-08` |
+| Estadia em Orlando após reset de 05/11 | `2026-12-05` a `2026-12-10` |
 | Data da atividade da demo | `2026-12-05` |
 | Nova ocorrência no roteiro | `A`: copiar o ID retornado pelo POST da etapa 4 |
 
@@ -27,7 +34,7 @@ use a senha atual. A cada login, substitua o token em **Authorize** pelo novo
 
 ## 1. Entrar como Criador e consultar a viagem
 
-**POST `/auth/login`**
+**POST `/auth/login` — seção Autenticação**
 
 ```json
 {
@@ -40,40 +47,73 @@ Copie `access_token` para **Authorize** e execute:
 
 | Endpoint | Parâmetros | O que mostrar |
 | --- | --- | --- |
-| GET `/usuarios/me` | Nenhum | Identidade obtida pelo token |
-| GET `/viagens` | `pagina = 1`, `tamanho_pagina = 20`; demais filtros vazios | Viagens acessíveis ao usuário |
-| GET `/viagens/{viagem_id}` | `viagem_id = 1` | Nome e período do roteiro da Flórida |
-| GET `/viagens/{viagem_id}/destinos` | `viagem_id = 1` | Orlando e Miami, ordem e estadias |
+| GET `/usuarios/me` — seção Usuarios | Nenhum | Identidade obtida pelo token |
+| GET `/viagens` — seção Viagens | `pagina = 1`, `tamanho_pagina = 20`; demais filtros vazios | Viagens acessíveis ao usuário; apontar `papel_usuario` como criador, editor e visualizador |
+| GET `/viagens/{viagem_id}` — seção Viagens | `viagem_id = 1` | Nome e período do roteiro da Flórida |
+| GET `/viagens/{viagem_id}/destinos` — seção Roteiro | `viagem_id = 1` | Orlando e Miami, ordem e estadias |
+
+Na primeira página, localize também **Roma com amigos** (`editor`) e
+**Miami entre amigos** (`visualizador`). Se necessário, filtre pelo nome da viagem.
+Disney Springs permanece no catálogo, mas ainda não está na agenda da Flórida.
 
 Fala sugerida: “Uma viagem pode ter várias paradas, cada uma com sua própria
 estadia e agenda.”
 
-## 2. Escolher uma atividade do catálogo
+## 2. Ver a agenda atual e descobrir atividades em Orlando
 
-**GET `/catalogo/atividades`**
+Primeiro, abra a seção **Atividades do roteiro** do Swagger.
+
+**GET `/viagens/{viagem_id}/destinos/{destino_id}/atividades` — seção Atividades do roteiro**
+
+Parâmetros: `viagem_id = 1`, `destino_id = 1`.
+
+Mostre as cinco atividades já planejadas para Orlando: Magic Kingdom Park,
+Universal Studios Florida, ICON Park, East End Market e Lake Eola Park.
+Confira na resposta que **Disney Springs ainda não está na agenda**.
+Mostre que as atividades já vêm ordenadas por data e horário: Magic Kingdom Park
+em 05/12 às 09h, seguido de Universal Studios Florida em 06/12 às 14h.
+Essa é a ordem cronológica da agenda, não a ordenação do catálogo público.
+
+Fala sugerida: “Estes são os passeios que o grupo já planejou para Orlando.
+Vamos consultar o catálogo para ver o que mais podemos fazer na cidade.”
+
+Agora, abra a seção **Catálogo**.
+
+**GET `/catalogo/atividades` — seção Catálogo**
 
 | Parâmetro | Valor |
 | --- | --- |
-| `nome` | `Disney Springs` |
-| `destino_catalogo_id` | `1` |
+| `localizacao` | `Orlando` |
 | `pagina` | `1` |
 | `tamanho_pagina` | `20` |
 
-Deixe os demais filtros vazios, inclusive `nota_minima`. Confirme Disney Springs,
-ID `3`. O catálogo é público e descreve os lugares reutilizáveis.
+Deixe `nome`, `categoria`, `nota_minima` e `destino_catalogo_id` vazios.
+Assim a pesquisa usa a cidade, sem restringir o resultado a Disney Springs.
+A localização faz busca textual por cidade, país ou endereço; com o seed atual,
+a resposta inclui as seis atividades de Orlando.
+
+Mostre Disney Springs entre os resultados e anote seu ID de catálogo, **3**.
+
+Fala sugerida: “Disney Springs está no catálogo, mas não está no nosso roteiro.
+Quero incluir esse passeio na viagem.”
 
 ## 3. Consultar o orçamento antes da inclusão
 
-**GET `/viagens/{viagem_id}/orcamento`**, com `viagem_id = 1`.
+**GET `/viagens/{viagem_id}/orcamento` — seção Orçamento**, com `viagem_id = 1`.
 
 Anote `total_planejado` e `saldo_disponivel` da resposta. Use esses valores como
 base da comparação, pois o banco pode conter alterações de ensaios anteriores.
 
 ## 4. Adicionar Disney Springs ao roteiro
 
-**POST `/viagens/{viagem_id}/destinos/{destino_id}/atividades`**
+**POST `/viagens/{viagem_id}/destinos/{destino_id}/atividades` — seção Atividades do roteiro**
 
 Parâmetros: `viagem_id = 1`, `destino_id = 1`.
+
+Antes de executar, comente: “Vou agendar Disney Springs em 05/12 às 10h,
+entre Magic Kingdom Park, em 05/12 às 09h, e Universal Studios Florida,
+em 06/12 às 14h. Ao consultar novamente, ela deve aparecer nessa posição,
+mesmo tendo sido cadastrada por último.”
 
 ```json
 {
@@ -91,15 +131,32 @@ campos `atividade_id` das próximas etapas.
 
 | Consulta | Resultado esperado |
 | --- | --- |
-| GET `/viagens/1/destinos/1/atividades` | Nova ocorrência na agenda cronológica |
-| GET `/viagens/1/orcamento` | Total planejado aumenta R$ 150 e saldo diminui R$ 150 |
+| GET `/viagens/1/destinos/1/atividades` — seção Atividades do roteiro | Disney Springs aparece entre Magic Kingdom Park e Universal Studios Florida |
+| GET `/viagens/1/orcamento` — seção Orçamento | Total planejado aumenta R$ 150 e saldo diminui R$ 150 |
+
+Na resposta do GET da agenda, destaque esta sequência:
+
+| Posição | Atividade | Data | Horário |
+| --- | --- | --- | --- |
+| 1 | Magic Kingdom Park | 05/12/2026 | 09h |
+| 2 | **Disney Springs** | 05/12/2026 | **10h** |
+| 3 | Universal Studios Florida | 06/12/2026 | 14h |
+| 4 | ICON Park | 08/12/2026 | 14h |
+| 5 | East End Market | 09/12/2026 | 09h |
+| 6 | Lake Eola Park | 10/12/2026 | 14h |
+
+Fala sugerida: “A atividade foi incluída por último, mas a API a retornou na
+posição correspondente à data e ao horário, atendendo à agenda cronológica.”
+A duração é estimativa; este exemplo demonstra ordenação, sem validar conflito
+entre os horários dos passeios. Após a edição para 11h na etapa 5, Disney Springs
+continua entre Magic Kingdom e Universal.
 
 Fala sugerida: “O catálogo descreve o lugar. Data, horário, custo e status
 pertencem ao planejamento deste grupo.”
 
 ## 5. Alterar o planejamento como Editor
 
-**POST `/auth/login`** e substituir o token em **Authorize**:
+**POST `/auth/login` — seção Autenticação** e substituir o token em **Authorize**:
 
 ```json
 {
@@ -108,7 +165,7 @@ pertencem ao planejamento deste grupo.”
 }
 ```
 
-**PATCH `/viagens/{viagem_id}/destinos/{destino_id}/atividades/{atividade_id}`**
+**PATCH `/viagens/{viagem_id}/destinos/{destino_id}/atividades/{atividade_id}` — seção Atividades do roteiro**
 
 Parâmetros: `viagem_id = 1`, `destino_id = 1`, `atividade_id = A`.
 
@@ -119,13 +176,13 @@ Parâmetros: `viagem_id = 1`, `destino_id = 1`, `atividade_id = A`.
 }
 ```
 
-A alteração deve ser aceita. Consulte **GET `/viagens/1/orcamento`**: o total
+A alteração deve ser aceita. Consulte **GET `/viagens/1/orcamento` — seção Orçamento**: o total
 planejado aumenta mais R$ 100, e o saldo diminui no mesmo valor. Mostre também a
 distribuição por tipo. A alteração de horário gera o aviso usado na próxima etapa.
 
 ## 6. Consultar e testar a restrição do Visualizador
 
-**POST `/auth/login`** e substituir o token:
+**POST `/auth/login` — seção Autenticação** e substituir o token:
 
 ```json
 {
@@ -136,11 +193,11 @@ distribuição por tipo. A alteração de horário gera o aviso usado na próxim
 
 | Chamada | Parâmetros | Resultado esperado |
 | --- | --- | --- |
-| GET `/viagens/{viagem_id}/destinos` | `viagem_id = 1` | `200`: consulta permitida |
-| GET `/notificacoes` | Manter padrões | Localizar o aviso da alteração do horário |
-| PATCH da ocorrência, abaixo | `viagem_id = 1`, `destino_id = 1`, `atividade_id = A` | `403`: alteração proibida |
+| GET `/viagens/{viagem_id}/destinos` — seção Roteiro | `viagem_id = 1` | `200`: consulta permitida |
+| GET `/notificacoes` — seção Notificações | Manter padrões | Localizar o aviso da alteração do horário |
+| PATCH da ocorrência, abaixo — seção Atividades do roteiro | `viagem_id = 1`, `destino_id = 1`, `atividade_id = A` | `403`: alteração proibida |
 
-No mesmo endpoint PATCH da etapa 5, envie:
+Na seção **Atividades do roteiro**, use o mesmo endpoint PATCH da etapa 5 e envie:
 
 ```json
 {
@@ -148,7 +205,7 @@ No mesmo endpoint PATCH da etapa 5, envie:
 }
 ```
 
-A tentativa deve ser recusada. Consulte **GET `/viagens/1/destinos/1/atividades`**
+A tentativa deve ser recusada. Consulte **GET `/viagens/1/destinos/1/atividades` — seção Atividades do roteiro**
 e confira que a ocorrência A continua às **11h**.
 
 Fala sugerida: “Os participantes compartilham o roteiro, mas as permissões são
@@ -156,7 +213,7 @@ verificadas em cada operação.”
 
 ## 7. Demonstrar isolamento de uma viagem privada
 
-**POST `/auth/login`** e substituir o token:
+**POST `/auth/login` — seção Autenticação** e substituir o token:
 
 ```json
 {
@@ -165,16 +222,16 @@ verificadas em cada operação.”
 }
 ```
 
-**GET `/viagens/{viagem_id}`**, com `viagem_id = 1`.
+**GET `/viagens/{viagem_id}` — seção Viagens**, com `viagem_id = 1`.
 
 Resultado esperado: **404**, pois essa conta não participa da viagem.
 
 ## 8. Concluir a atividade e publicar uma avaliação
 
-Faça login novamente como `criador.demo@example.com`, com senha `DemoViaja123!`,
+Na seção **Autenticação**, use **POST `/auth/login`** novamente como `criador.demo@example.com`, com senha `DemoViaja123!`,
 e substitua o token em **Authorize**.
 
-**PATCH `/viagens/{viagem_id}/destinos/{destino_id}/atividades/{atividade_id}`**
+**PATCH `/viagens/{viagem_id}/destinos/{destino_id}/atividades/{atividade_id}` — seção Atividades do roteiro**
 
 Parâmetros: `viagem_id = 1`, `destino_id = 1`, `atividade_id = A`.
 
@@ -187,7 +244,7 @@ Parâmetros: `viagem_id = 1`, `destino_id = 1`, `atividade_id = A`.
 Mostre os campos que registram a realização. A conclusão é declarada pelo grupo,
 não uma comprovação externa de presença.
 
-**PUT `/viagens/{viagem_id}/destinos/{destino_id}/atividades/{atividade_id}/avaliacao`**
+**PUT `/viagens/{viagem_id}/destinos/{destino_id}/atividades/{atividade_id}/avaliacao` — seção Avaliações**
 
 Use os mesmos parâmetros:
 
@@ -202,29 +259,32 @@ Consulte os resultados públicos:
 
 | Endpoint | Parâmetros |
 | --- | --- |
-| GET `/catalogo/atividades/{atividade_id}/avaliacoes` | `atividade_id = 3`, `pagina = 1`, `tamanho_pagina = 20` |
-| GET `/catalogo/atividades/{atividade_id}` | `atividade_id = 3` |
+| GET `/catalogo/atividades/{atividade_id}/avaliacoes` — seção Catálogo | `atividade_id = 3`, `pagina = 1`, `tamanho_pagina = 20` |
+| GET `/catalogo/atividades/{atividade_id}` — seção Catálogo | `atividade_id = 3` |
 
 Aqui o ID é **3, do catálogo**, e não A, da ocorrência privada. Se o usuário já
 avaliou Disney Springs, o PUT atualiza sua avaliação existente, sem duplicá-la.
 
 ## 9. Encerrar com os dados geográficos
 
-**GET `/viagens/{viagem_id}/mapa`**, com `viagem_id = 1`.
+**GET `/viagens/{viagem_id}/mapa` — seção Mapa**, com `viagem_id = 1`.
 
 Mostre Orlando e Miami, suas coordenadas e a ordem das paradas. O backend fornece
 os pontos; a renderização do mapa pertence ao frontend.
 
-Se houver tempo, consulte também **GET `/usuarios/me/paises-visitados`** e
-**GET `/catalogo/destinos/ranking`**, mantendo os parâmetros padrão. Países
+Se houver tempo, consulte também **GET `/usuarios/me/paises-visitados` — seção Mapa** e
+**GET `/catalogo/destinos/ranking` — seção Catálogo**, mantendo os parâmetros padrão. Países
 visitados dependem do status e da data de chegada, não apenas de existir uma parada.
 
 ## Ensaios e repetição
 
+- Se Disney Springs já aparecer na consulta inicial por causa de um ensaio,
+  remova somente a ocorrência criada no ensaio antes de repetir a inclusão.
+  Não remova as atividades originais do seed.
 - Cada POST da etapa 4 cria outra ocorrência e soma seu custo. Para continuar o
   mesmo ensaio, reutilize A nas edições em vez de executar novamente o POST.
-- Para remover apenas a ocorrência do ensaio, use **DELETE
-  `/viagens/{viagem_id}/destinos/{destino_id}/atividades/{atividade_id}`**, como
+- Para remover apenas a ocorrência do ensaio, use a seção **Atividades do roteiro**, endpoint
+  **DELETE `/viagens/{viagem_id}/destinos/{destino_id}/atividades/{atividade_id}`**, como
   Criador ou Editor, com `viagem_id = 1`, `destino_id = 1`, `atividade_id = A`.
   Isso retira seu custo do orçamento, mas preserva a avaliação pública.
 - Reiniciar a API não desfaz as alterações. O seed não sobrescreve os dados.

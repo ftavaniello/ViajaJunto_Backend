@@ -56,11 +56,11 @@ def test_seed_tem_apenas_destinos_reais_e_nomes_sem_prefixos(client, db_session,
     m = cenario_seed
     for chave, total in [
         ("usuarios", 6),
-        ("viagens", 27),
+        ("viagens", 28),
         ("destinos_catalogo", 4),
         ("atividades_catalogo", 24),
         ("paradas", 6),
-        ("atividades_roteiro", 36),
+        ("atividades_roteiro", 35),
         ("avaliacoes", 20),
     ]:
         assert len(m[chave]) == total
@@ -85,10 +85,10 @@ def test_listas_e_paginacao(client, cenario_seed):
     pagina1 = client.get("/viagens", headers=headers).json()
     pagina2 = client.get("/viagens?pagina=2", headers=headers).json()
     assert len(pagina1["itens"]) == 20 and pagina1["tem_proxima"]
-    assert len(pagina2["itens"]) == 4 and not pagina2["tem_proxima"]
+    assert len(pagina2["itens"]) == 6 and not pagina2["tem_proxima"]
     for papel, total in [
         ("editor", 2),
-        ("visualizador", 1),
+        ("visualizador", 2),
         ("externo", 1),
         ("vazio", 0),
         ("descartavel", 1),
@@ -107,7 +107,7 @@ def test_permissoes_de_edicao(client, cenario_seed, papel, status):
     m = cenario_seed
     caminho = (
         f"/viagens/{m['viagens']['florida']}/destinos/{m['paradas']['florida-orlando']}"
-        f"/atividades/{m['atividades_roteiro']['florida-orlando-3']}"
+        f"/atividades/{m['atividades_roteiro']['florida-orlando-2']}"
     )
     headers = login(client, papel)
     assert (
@@ -231,3 +231,29 @@ def test_lock_permanece_ate_commit_externo(db_session, cenario_seed):
 
     with engine.connect() as outra:
         assert outra.scalar(text("SELECT pg_try_advisory_xact_lock(202647, 1)")) is False
+
+
+def test_ana_tem_tres_papeis_e_disney_springs_disponivel_para_demo(client, cenario_seed):
+    m = cenario_seed
+    headers = login(client, "criador")
+    viagens = client.get("/viagens?tamanho_pagina=100", headers=headers).json()["itens"]
+    assert {v["papel_usuario"] for v in viagens} == {"criador", "editor", "visualizador"}
+    caminho = (
+        f"/viagens/{m['viagens']['florida']}/destinos/{m['paradas']['florida-orlando']}/atividades"
+    )
+    disney = m["atividades_catalogo"]["orlando-3"]
+    antes = client.get(caminho, headers=headers).json()
+    assert all(a["catalogo_atividade_id"] != disney for a in antes)
+    resposta = client.post(
+        caminho,
+        headers=headers,
+        json={
+            "catalogo_atividade_id": disney,
+            "data": "2027-02-16",
+            "hora_inicio": "10:00:00",
+            "custo_previsto": "150.00",
+        },
+    )
+    assert resposta.status_code == 201, resposta.text
+    depois = client.get(caminho, headers=headers).json()
+    assert sum(a["catalogo_atividade_id"] == disney for a in depois) == 1

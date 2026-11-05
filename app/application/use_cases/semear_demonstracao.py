@@ -5,6 +5,7 @@ from datetime import date, timedelta
 from app.application.use_cases.criar_usuario import CriarUsuario
 from app.application.use_cases.criar_viagem import CriarViagem
 from app.application.use_cases.semear_destinos_reais import SemearDestinosReais
+from app.domain.enums import PapelMembro
 from app.domain.errors import DadosInvalidos
 from app.domain.ports.seed_demonstracao_repository import SeedDemonstracaoRepository
 from app.domain.ports.usuario_repository import UsuarioRepository
@@ -71,7 +72,10 @@ class SemearDemonstracao:
 
     def _viagens_vazias(self, manifesto: dict, referencia: date) -> None:
         usuarios = manifesto["usuarios"]
-        planos = [("propria-editor", "Roma com amigos", usuarios["editor"], 45)]
+        planos = [
+            ("propria-editor", "Roma com amigos", usuarios["editor"], 45),
+            ("propria-visualizador", "Miami entre amigos", usuarios["visualizador"], 75),
+        ]
         temas = ("Férias em Orlando", "Praias de Miami", "Rio em família", "Descobrindo Roma")
         planos.extend(
             (
@@ -92,3 +96,7 @@ class SemearDemonstracao:
                 inicio + timedelta(days=7),
             )
             manifesto["viagens"][chave] = viagem.id
+            if chave == "propria-editor":
+                self.registro.vincular(viagem.id, usuarios["criador"], PapelMembro.EDITOR)
+            elif chave == "propria-visualizador":
+                self.registro.vincular(viagem.id, usuarios["criador"], PapelMembro.VISUALIZADOR)

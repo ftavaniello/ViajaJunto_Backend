@@ -39,9 +39,9 @@ os testes e o exemplo de login no Swagger. O banco armazena hashes bcrypt.
 
 | Nome | Email | Cenário |
 |---|---|---|
-| Ana Souza | `criador.demo@example.com` | Dona dos roteiros da Flórida, Rio, Roma e de 21 planejamentos vazios. |
+| Ana Souza | `criador.demo@example.com` | Dona dos roteiros da Flórida, Rio, Roma e de 21 planejamentos vazios; Editora em Roma com amigos e Visualizadora em Miami entre amigos. |
 | Bruno Lima | `editor.demo@example.com` | Editor na Flórida e dono de uma viagem vazia a Roma. |
-| Carla Santos | `visualizador.demo@example.com` | Leitura da Flórida e publicação de avaliações de suas ocorrências concluídas. |
+| Carla Santos | `visualizador.demo@example.com` | Leitura da Flórida, publicação de avaliações de suas ocorrências concluídas e dona de Miami entre amigos. |
 | Diego Alves | `externo.demo@example.com` | Dono do roteiro privado de Roma; sem acesso à Flórida. |
 | Elisa Costa | `vazio.demo@example.com` | Nenhuma viagem, para testar primeira criação e lista vazia. |
 | Felipe Rocha | `descartavel.demo@example.com` | Dono de uma viagem ao Rio com roteiro, para testar exclusões e troca de senha. |
@@ -52,13 +52,13 @@ O comando antigo sem `--completo` continua disponível manualmente para criar
 ## Conteúdo
 
 - Seis contas, quatro destinos e 24 atividades públicas.
-- 27 viagens: cinco roteiros preenchidos, uma viagem vazia do editor e 21 planejamentos
+- 28 viagens: cinco roteiros preenchidos, uma viagem vazia do editor, uma da visualizadora e 21 planejamentos
   vazios do criador para testar paginação. Os nomes fazem referência aos quatro destinos.
-- Seis paradas, 36 ocorrências de atividades e 20 avaliações fictícias.
+- Seis paradas, 35 ocorrências de atividades e 20 avaliações fictícias.
 - Orçamentos definidos nos cinco roteiros preenchidos, incluindo um exemplo excedido.
 
-A listagem padrão do criador tem 20 viagens na primeira página e quatro na segunda.
-Editor vê duas viagens; visualizador, externo e conta descartável veem uma cada.
+A listagem padrão do criador tem 20 viagens na primeira página e seis na segunda, totalizando 26: 24 próprias e duas compartilhadas.
+Editor e visualizador veem duas viagens cada; externo e conta descartável veem uma cada.
 A conta vazia não vê nenhuma. O catálogo de atividades tem 20 itens na primeira
 página e quatro na segunda. Todos os dados adicionais criados por você somam-se a esses totais.
 
@@ -75,7 +75,6 @@ e `atividades_roteiro.florida-orlando-1`. Não use números fixos presumidos.
 | `Cultura e paisagens no Rio de Janeiro` | Criador | Rio de Janeiro | BRL 1.200 |
 | `História e gastronomia em Roma` | Criador | Roma | BRL 2.000 |
 | `Roma: roteiro privado` | Externo | Roma | BRL 500 |
-
 | `Rio para descansar` | Conta descartável | Rio de Janeiro | BRL 1.000 |
 
 - **Orlando:** Magic Kingdom Park, Universal Studios Florida, Disney Springs,
@@ -98,6 +97,12 @@ Os reviews são fictícios e criados pelas mesmas regras da API, somente
 para ocorrências concluídas e participantes das viagens. Há exemplos com mais de
 um autor e médias diferentes para testar a busca por nota mínima.
 
+
+Disney Springs está no catálogo de Orlando, mas não é agendado no roteiro inicial
+da Flórida: fica reservado para inclusão na [demo pelo Swagger](demo-swagger.md).
+Ana também participa como Editora em Roma com amigos (Bruno) e Visualizadora em
+Miami entre amigos (Carla); essas duas viagens começam sem paradas. Os papéis são
+por viagem, não um perfil global da conta.
 
 ## Testar os casos de uso
 

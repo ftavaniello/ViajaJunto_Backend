@@ -26,7 +26,7 @@ docker compose up -d --no-deps --wait db
 Depois do sucesso, abra <http://localhost:8000/docs> e faça login novamente:
 `criador.demo@example.com` / `DemoViaja123!`.
 Os dados iniciais incluem seis usuários, quatro destinos, 24 atividades públicas,
-27 viagens, 36 atividades do roteiro e 20 avaliações fictícias.
+28 viagens, 35 atividades do roteiro e 20 avaliações fictícias.
 
 ## Restrições
 
