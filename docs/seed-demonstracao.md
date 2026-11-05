@@ -90,7 +90,10 @@ e `atividades_roteiro.florida-orlando-1`. Não use números fixos presumidos.
 
 As coordenadas são referências aproximadas dos centros das cidades; não representam
 as entradas das atrações. Os horários e períodos não verificam calendário real de
-abertura ou disponibilidade. Fotos continuam sem preenchimento nesta carga.
+abertura ou disponibilidade. Cada destino e atividade tem `foto_url` em
+`app/application/dados_seed_destinos_reais.py`: uma URL HTTP(S) externa, sem
+armazenar o arquivo. Bancos já carregados só recebem novas fotos após o
+[reset explícito](reset-banco.md).
 Os reviews são fictícios e criados pelas mesmas regras da API, somente
 para ocorrências concluídas e participantes das viagens. Há exemplos com mais de
 um autor e médias diferentes para testar a busca por nota mínima.
