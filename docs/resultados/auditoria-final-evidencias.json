@@ -1,0 +1,33 @@
+{
+  "catalogo_seed": {
+    "destinos_catalogo": {
+      "total": 4,
+      "com_foto": 0
+    },
+    "catalogo_atividades": {
+      "total": 24,
+      "com_foto": 0
+    }
+  },
+  "preflight_frontend": {
+    "status": 405,
+    "allow_origin": null
+  },
+  "filtro_hospedagem_status": 422,
+  "editor_altera_nome_viagem_status": 200,
+  "alterar_orcamento": {
+    "status": 200,
+    "novas_notificacoes": 0
+  },
+  "reordenar_roteiro": {
+    "status": 200,
+    "novas_notificacoes": 0
+  },
+  "remover_limite_orcamento": {
+    "delete": 405,
+    "put_null": 422
+  },
+  "comparacao_orm_migracoes_diferencas": 0,
+  "imports_proibidos_detectados": [],
+  "documento_decisoes_presente": false
+}
