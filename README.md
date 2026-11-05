@@ -53,6 +53,9 @@ O catálogo é público. Operações privadas identificam o usuário pelo JWT; a
 consulta o vínculo atual a cada operação. Usuários sem acesso à viagem recebem
 `404`, e participantes sem permissão para uma alteração recebem `403`.
 
+O [roteiro da demonstração no Swagger](docs/demo-swagger.md) reúne a sequência
+de chamadas, parâmetros, corpos JSON e resultados esperados para a apresentação.
+
 ## Funcionalidades e guias
 
 | Área | Implementado no backend | Guia |
