@@ -117,12 +117,13 @@ class SemearDestinosReais:
                     descricao=dado.descricao,
                     latitude=Decimal(dado.latitude),
                     longitude=Decimal(dado.longitude),
+                    foto_url=dado.foto_url,
                 )
             )
             lugares[dado.chave] = lugar
             manifesto["destinos_catalogo"][dado.chave] = lugar.id
             atividades[dado.chave] = []
-            for i, (nome, categoria, area, descricao, _) in enumerate(dado.atividades):
+            for i, (nome, foto_url, categoria, area, descricao, _) in enumerate(dado.atividades):
                 atividade = self.catalogo.salvar_atividade(
                     AtividadeCatalogo(
                         destino=lugar,
@@ -130,6 +131,7 @@ class SemearDestinosReais:
                         categoria=categoria,
                         endereco=area,
                         descricao=descricao,
+                        foto_url=foto_url,
                     )
                 )
                 atividades[dado.chave].append(atividade)
@@ -175,7 +177,7 @@ class SemearDestinosReais:
                 catalogo.id,
                 chegada + timedelta(days=i),
                 hora_inicio=time(9 if i % 2 == 0 else 14),
-                duracao_minutos=dado.atividades[i][4],
+                duracao_minutos=dado.atividades[i][5],
                 custo_previsto=Decimal(custo),
                 status=estado,
             )
