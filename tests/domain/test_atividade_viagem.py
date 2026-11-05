@@ -11,7 +11,7 @@ from app.domain.errors import DadosInvalidos
 
 def atividade(**campos):
     destino = DestinoCatalogo(id=1, nome="Lisboa", pais_codigo="PT")
-    catalogo = AtividadeCatalogo(id=1, destino=destino, nome="Museu", categoria="cultura")
+    catalogo = AtividadeCatalogo(id=1, destino=destino, nome="Museu", categoria="passeio")
     return AtividadeViagem(
         **{
             "viagem_id": 1,

@@ -75,7 +75,7 @@ def _catalogo(db) -> tuple[DestinoCatalogoModel, CatalogoAtividadeModel]:
     db.add(destino)
     db.commit()
     atividade = CatalogoAtividadeModel(
-        destino_catalogo_id=destino.id, nome=f"{PREFIXO}Torre de Belém", categoria="cultura"
+        destino_catalogo_id=destino.id, nome=f"{PREFIXO}Torre de Belém", categoria="passeio"
     )
     db.add(atividade)
     db.commit()

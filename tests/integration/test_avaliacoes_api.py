@@ -68,7 +68,7 @@ def cenario(db_session, email_teste):
             AtividadeCatalogo(
                 destino=lugar,
                 nome=nome,
-                categoria="cultura",
+                categoria="passeio",
                 foto_url="https://example.com/foto.jpg",
             )
         )
@@ -248,7 +248,7 @@ def test_media_filtro_e_paginacao_de_reviews(client, cenario):
         params={
             "nota_minima": "4.33",
             "nome": "museu",
-            "categoria": "cultura",
+            "categoria": "passeio",
             "localizacao": "lisboa",
         },
     ).json()

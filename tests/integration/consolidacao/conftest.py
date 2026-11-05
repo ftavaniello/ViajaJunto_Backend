@@ -57,7 +57,7 @@ def catalogo_integrado(db_session):
         AtividadeCatalogo(
             destino=destino,
             nome="Coliseu",
-            categoria="cultura",
+            categoria="passeio",
             descricao="Anfiteatro em Roma",
         )
     )

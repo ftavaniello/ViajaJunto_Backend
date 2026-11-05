@@ -22,7 +22,7 @@ def test_pagina_maior_nao_causa_consultas_por_item(api_integrada, matriz, db_ses
             CatalogoAtividadeModel(
                 destino_catalogo_id=matriz["catalogo"][0],
                 nome=f"Extra {indice}",
-                categoria="cultura",
+                categoria="passeio",
             )
         )
     db_session.commit()

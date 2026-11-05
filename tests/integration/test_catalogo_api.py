@@ -40,10 +40,10 @@ def catalogo(db_session):
     porto = repo.salvar_destino(DestinoCatalogo(nome="Porto", pais_codigo="PT"))
     atividades = []
     for nome, categoria, destino, endereco in [
-        ("Museu Nacional", "cultura", lisboa, "Rua Azul"),
-        ("Museu do Porto", "cultura", porto, None),
-        ("Restaurante", "alimentacao", lisboa, "Rua Verde"),
-        ("Passeio 100%", "lazer", lisboa, None),
+        ("Museu Nacional", "passeio", lisboa, "Rua Azul"),
+        ("Museu do Porto", "passeio", porto, None),
+        ("Restaurante", "refeicao", lisboa, "Rua Verde"),
+        ("Passeio 100%", "passeio", lisboa, None),
     ]:
         atividades.append(
             repo.salvar_atividade(
@@ -105,8 +105,8 @@ def test_detalhe_publico_sem_token_e_sem_dados_privados(client, catalogo):
     ("filtros", "nomes"),
     [
         ({"nome": "MUSEU"}, ["Museu Nacional", "Museu do Porto"]),
-        ({"categoria": "alimentacao"}, ["Restaurante"]),
-        ({"nome": "museu", "categoria": "cultura", "localizacao": "LISBOA"}, ["Museu Nacional"]),
+        ({"categoria": "refeicao"}, ["Restaurante"]),
+        ({"nome": "museu", "categoria": "passeio", "localizacao": "LISBOA"}, ["Museu Nacional"]),
         ({"localizacao": "azul"}, ["Museu Nacional"]),
         (
             {"localizacao": "pt"},
@@ -188,7 +188,7 @@ def test_importacao_json_persiste_e_aparece_publicamente(client, db_session, tmp
                     {
                         "destino": "lisboa",
                         "nome": "Museu",
-                        "categoria": "cultura",
+                        "categoria": "passeio",
                         "id_externo": "referencia-curada",
                     }
                 ],
@@ -209,7 +209,7 @@ def test_importacao_json_persiste_e_aparece_publicamente(client, db_session, tmp
 def test_importacao_desfaz_lote_inteiro_em_duplicacao(db_session):
     destino = DestinoCatalogo(nome="Lisboa", pais_codigo="PT")
     atividade = AtividadeCatalogo(
-        destino=destino, nome="Museu", categoria="cultura", id_externo="duplicada"
+        destino=destino, nome="Museu", categoria="passeio", id_externo="duplicada"
     )
     caso = ImportarCatalogo(
         SQLAlchemyCatalogoRepository(db_session),
@@ -230,7 +230,7 @@ def test_importacao_rejeita_json_invalido_sem_gravar(db_session, tmp_path):
         json.dumps(
             {
                 "destinos": {"lisboa": {"nome": "Lisboa", "pais_codigo": "PT"}},
-                "atividades": [{"destino": "lisboa", "nome": " ", "categoria": "cultura"}],
+                "atividades": [{"destino": "lisboa", "nome": " ", "categoria": "passeio"}],
             }
         ),
         encoding="utf-8",

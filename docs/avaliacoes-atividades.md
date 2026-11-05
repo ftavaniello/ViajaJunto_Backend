@@ -92,7 +92,7 @@ atividade inexistente retorna 404. Alterações entre requisições podem mudar 
 ### Nota mínima
 
 ```http
-GET /catalogo/atividades?nota_minima=4.5&categoria=cultura&localizacao=Lisboa
+GET /catalogo/atividades?nota_minima=4.5&categoria=passeio&localizacao=Lisboa
 ```
 
 Aceita número finito entre 1 e 5, inclusive fracionário. Combina com os demais

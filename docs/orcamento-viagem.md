@@ -39,18 +39,18 @@ orçamento não definido.
   "percentual_consumido": "30.00",
   "orcamento_excedido": false,
   "categorias": [
-    {"categoria": "alimentacao", "total_planejado": "0.00",
-     "percentual_orcamento": "0.00", "percentual_planejado": "0.00"},
-    {"categoria": "cultura", "total_planejado": "200.00",
+    {"categoria": "passeio", "total_planejado": "200.00",
      "percentual_orcamento": "20.00", "percentual_planejado": "66.67"},
-    {"categoria": "lazer", "total_planejado": "100.00",
+    {"categoria": "refeicao", "total_planejado": "0.00",
+     "percentual_orcamento": "0.00", "percentual_planejado": "0.00"},
+    {"categoria": "hospedagem", "total_planejado": "100.00",
      "percentual_orcamento": "10.00", "percentual_planejado": "33.33"}
   ]
 }
 ```
 
-(As categorias `transporte`, `compras` e `outros` foram omitidas do exemplo; a
-resposta sempre traz as seis, na ordem do enum, mesmo zeradas.)
+(As categorias `transporte` e `outro` foram omitidas do exemplo; a
+resposta sempre traz as cinco, na ordem do enum, mesmo zeradas.)
 
 ### Fórmula
 

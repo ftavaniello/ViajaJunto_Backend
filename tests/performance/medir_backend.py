@@ -40,7 +40,7 @@ def preparar(engine):
         "INSERT INTO destinos_catalogo(id,nome,pais_codigo) SELECT g,"
         "CASE WHEN g=1 THEN 'Roma' ELSE 'Cidade '||g END,'IT' FROM generate_series(1,50) g",
         "INSERT INTO catalogo_atividades(id,destino_catalogo_id,nome,categoria) "
-        "SELECT g,(g-1)%50+1,'Atividade '||g,'cultura' FROM generate_series(1,1000) g",
+        "SELECT g,(g-1)%50+1,'Atividade '||g,'passeio' FROM generate_series(1,1000) g",
         "INSERT INTO viagens(id,criador_id,nome,data_inicio,data_fim) SELECT g,(g-1)%50+1,"
         "'Viagem '||g,'2027-01-01','2027-01-10' FROM generate_series(1,2000) g",
         "INSERT INTO membros_viagem(viagem_id,usuario_id,papel) SELECT id,1,'editor' "

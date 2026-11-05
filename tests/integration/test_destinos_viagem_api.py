@@ -261,7 +261,7 @@ def test_criacao_invalida_nao_grava(client, cenario, campos, status):
 def test_encolher_viagem_e_parada_preserva_datas_das_atividades(client, cenario, db_session):
     destino = adicionar(client, cenario)
     atividade = CatalogoAtividadeModel(
-        destino_catalogo_id=cenario["catalogo"], nome="Museu", categoria="cultura"
+        destino_catalogo_id=cenario["catalogo"], nome="Museu", categoria="passeio"
     )
     db_session.add(atividade)
     db_session.flush()
@@ -290,7 +290,7 @@ def test_exclusao_cascata_preserva_catalogo_e_avaliacao(client, cenario, db_sess
     primeira = adicionar(client, cenario)
     segunda = adicionar(client, cenario)
     atividade = CatalogoAtividadeModel(
-        destino_catalogo_id=cenario["catalogo"], nome="Museu", categoria="cultura"
+        destino_catalogo_id=cenario["catalogo"], nome="Museu", categoria="passeio"
     )
     db_session.add(atividade)
     db_session.flush()

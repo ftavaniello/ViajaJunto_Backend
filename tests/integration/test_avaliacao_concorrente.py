@@ -51,7 +51,7 @@ def test_upsert_concorrente_nao_duplica_avaliacao(banco_de_testes, monkeypatch):
             catalogo = SQLAlchemyCatalogoRepository(db)
             destino = catalogo.salvar_destino(DestinoCatalogo(nome="Lisboa", pais_codigo="PT"))
             atividade = catalogo.salvar_atividade(
-                AtividadeCatalogo(destino=destino, nome="Museu", categoria="cultura")
+                AtividadeCatalogo(destino=destino, nome="Museu", categoria="passeio")
             )
             viagem = CriarViagem(SQLAlchemyViagemRepository(db), SQLAlchemyUnitOfWork(db)).execute(
                 usuario_id,

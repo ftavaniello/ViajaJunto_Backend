@@ -13,7 +13,7 @@ def lote_json():
     return json.dumps(
         {
             "destinos": {"cidade": {"nome": "Lisboa", "pais_codigo": "PT"}},
-            "atividades": [{"destino": "cidade", "nome": "Museu", "categoria": "cultura"}],
+            "atividades": [{"destino": "cidade", "nome": "Museu", "categoria": "passeio"}],
         }
     )
 
@@ -67,7 +67,7 @@ def test_cli_destino_ausente_nao_invoca_caso_de_uso():
     conteudo = json.dumps(
         {
             "destinos": {},
-            "atividades": [{"destino": "ausente", "nome": "Museu", "categoria": "cultura"}],
+            "atividades": [{"destino": "ausente", "nome": "Museu", "categoria": "passeio"}],
         }
     )
     with pytest.raises(DadosInvalidos):

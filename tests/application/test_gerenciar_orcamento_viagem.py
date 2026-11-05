@@ -48,8 +48,10 @@ def contexto():
     membros.adicionar(1, VISUALIZADOR, PapelMembro.VISUALIZADOR)
     catalogo = CatalogoRepositoryMemory()
     lisboa = catalogo.salvar_destino(DestinoCatalogo(nome="Lisboa", pais_codigo="PT"))
-    catalogo.salvar_atividade(AtividadeCatalogo(destino=lisboa, nome="Museu", categoria="cultura"))
-    catalogo.salvar_atividade(AtividadeCatalogo(destino=lisboa, nome="Barco", categoria="lazer"))
+    catalogo.salvar_atividade(AtividadeCatalogo(destino=lisboa, nome="Museu", categoria="passeio"))
+    catalogo.salvar_atividade(
+        AtividadeCatalogo(destino=lisboa, nome="Hotel", categoria="hospedagem")
+    )
     destinos = DestinoViagemRepositoryMemory()
     for viagem_id in (1, 2):
         destinos.salvar(
@@ -107,8 +109,8 @@ def test_criador_e_editor_definem_orcamento(contexto, usuario):
         Decimal("300.00"),
         Decimal("700.00"),
     )
-    assert por_categoria(resumo)["cultura"].percentual_orcamento == Decimal("20.00")
-    assert por_categoria(resumo)["lazer"].percentual_planejado == Decimal("33.33")
+    assert por_categoria(resumo)["passeio"].percentual_orcamento == Decimal("20.00")
+    assert por_categoria(resumo)["hospedagem"].percentual_planejado == Decimal("33.33")
     assert uow.commits == 1
 
 
@@ -175,7 +177,7 @@ def test_resumo_reflete_inclusao_edicao_e_remocao_de_atividades(contexto):
     roteiro.atualizar(1, 1, museu.id, EDITOR, custo_previsto=Decimal("450.25"))
     resumo = caso.consultar_resumo(1, CRIADOR)
     assert resumo.saldo_disponivel == Decimal("549.75")
-    assert por_categoria(resumo)["cultura"].total_planejado == Decimal("450.25")
+    assert por_categoria(resumo)["passeio"].total_planejado == Decimal("450.25")
 
     roteiro.remover(1, 1, museu.id, EDITOR)
     resumo = caso.consultar_resumo(1, CRIADOR)

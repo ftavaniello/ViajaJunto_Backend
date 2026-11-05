@@ -39,15 +39,15 @@ roda no servidor, com acesso ao banco, pela linha de comando. Não há endpoint 
 usuário para disparar buscas no fornecedor, o que protege a cota e a chave.
 
 ```bash
-python -m app.adapters.inbound.cli.enriquecer_catalogo --destino 1 --categoria cultura
-python -m app.adapters.inbound.cli.enriquecer_catalogo --destino 1 --categoria alimentacao \
+python -m app.adapters.inbound.cli.enriquecer_catalogo --destino 1 --categoria passeio
+python -m app.adapters.inbound.cli.enriquecer_catalogo --destino 1 --categoria refeicao \
     --raio 3000 --limite 50
 ```
 
 | Opção | Padrão | Faixa |
 |---|---|---|
 | `--destino` | obrigatório | ID de `destinos_catalogo`, que precisa ter latitude e longitude |
-| `--categoria` | obrigatório | `cultura`, `alimentacao`, `lazer`, `compras`, `transporte`, `outros` |
+| `--categoria` | obrigatório | `passeio`, `refeicao`, `hospedagem`, `transporte`, `outro` |
 | `--raio` | 5000 | 100 a 50.000 metros a partir do destino |
 | `--limite` | 20 | 1 a 100 locais |
 
@@ -55,14 +55,16 @@ Saída de sucesso: `Catálogo enriquecido: 12 criada(s), 3 atualizada(s), 0 igno
 
 ### Mapeamento de categorias
 
-| Catálogo | Categorias do Geoapify |
-|---|---|
-| `cultura` | `entertainment.museum`, `entertainment.culture`, `tourism.sights` |
-| `alimentacao` | `catering.restaurant`, `catering.cafe` |
-| `lazer` | `leisure.park`, `beach`, `entertainment.zoo`, `entertainment.theme_park`, `tourism.attraction` |
-| `compras` | `commercial.shopping_mall` |
+| ViajaJunto | Categorias Geoapify |
+| --- | --- |
+| `passeio` | Museus, cultura, atrações, parques, praias, zoológicos e parques temáticos |
+| `refeicao` | Restaurantes e cafés |
+| `hospedagem` | `accommodation` (inclui hotéis, hostels e outras acomodações) |
 | `transporte` | `public_transport` |
-| `outros` | `tourism` |
+| `outro` | Centros comerciais e `tourism` |
+
+Os tipos correspondem ao documento original de arquitetura. Referência do fornecedor:
+[Geoapify Places API — categorias](https://apidocs.geoapify.com/docs/places/).
 
 ## Regras
 
@@ -145,7 +147,7 @@ a integração de verdade:
 4. Rode o comando para esse destino:
 
    ```bash
-   python -m app.adapters.inbound.cli.enriquecer_catalogo --destino <id> --categoria cultura --limite 10
+   python -m app.adapters.inbound.cli.enriquecer_catalogo --destino <id> --categoria passeio --limite 10
    ```
 
    Esperado: `Catálogo enriquecido: N criada(s), 0 atualizada(s), 0 ignorada(s).`

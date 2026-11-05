@@ -69,7 +69,7 @@ def cenario(db_session, email_teste):
         categoria: catalogo.salvar_atividade(
             AtividadeCatalogo(destino=lisboa, nome=categoria.title(), categoria=categoria)
         ).id
-        for categoria in ("cultura", "lazer", "alimentacao")
+        for categoria in ("passeio", "hospedagem", "refeicao")
     }
     repo_destinos = SQLAlchemyDestinoViagemRepository(db_session)
     paradas = [
@@ -133,9 +133,9 @@ def test_resumo_sem_orcamento_e_sem_atividades(client, cenario):
     assert corpo["saldo_disponivel"] is None
     assert corpo["percentual_consumido"] is None
     assert corpo["orcamento_excedido"] is False
-    assert len(corpo["categorias"]) == 6
-    assert categoria(corpo, "cultura") == {
-        "categoria": "cultura",
+    assert len(corpo["categorias"]) == 5
+    assert categoria(corpo, "passeio") == {
+        "categoria": "passeio",
         "total_planejado": "0.00",
         "percentual_orcamento": None,
         "percentual_planejado": None,
@@ -143,9 +143,9 @@ def test_resumo_sem_orcamento_e_sem_atividades(client, cenario):
 
 
 def test_exemplo_1000_com_300_planejados_e_recalculo(client, cenario):
-    adicionar(client, cenario, "cultura", "200.00")
-    lazer = adicionar(client, cenario, "lazer", "100.00")
-    adicionar(client, cenario, "alimentacao", "5000.00", indice=1)  # outra viagem
+    adicionar(client, cenario, "passeio", "200.00")
+    hospedagem = adicionar(client, cenario, "hospedagem", "100.00")
+    adicionar(client, cenario, "refeicao", "5000.00", indice=1)  # outra viagem
 
     response = definir(client, cenario, "1000")
     assert response.status_code == 200, response.text
@@ -157,13 +157,13 @@ def test_exemplo_1000_com_300_planejados_e_recalculo(client, cenario):
         "700.00",
     )
     assert corpo["percentual_consumido"] == "30.00"
-    assert categoria(corpo, "cultura")["percentual_orcamento"] == "20.00"
-    assert categoria(corpo, "cultura")["percentual_planejado"] == "66.67"
-    assert categoria(corpo, "lazer")["percentual_planejado"] == "33.33"
-    assert categoria(corpo, "alimentacao")["total_planejado"] == "0.00"
+    assert categoria(corpo, "passeio")["percentual_orcamento"] == "20.00"
+    assert categoria(corpo, "passeio")["percentual_planejado"] == "66.67"
+    assert categoria(corpo, "hospedagem")["percentual_planejado"] == "33.33"
+    assert categoria(corpo, "refeicao")["total_planejado"] == "0.00"
 
     url_lazer = (
-        f"/viagens/{cenario['viagem']}/destinos/{cenario['paradas'][0]}/atividades/{lazer['id']}"
+        f"/viagens/{cenario['viagem']}/destinos/{cenario['paradas'][0]}/atividades/{hospedagem['id']}"
     )
     headers = cenario["headers"]["editor"]
     response = client.patch(url_lazer, json={"custo_previsto": "350.50"}, headers=headers)
@@ -176,7 +176,7 @@ def test_exemplo_1000_com_300_planejados_e_recalculo(client, cenario):
     corpo = resumo(client, cenario)
     assert corpo["total_planejado"] == "200.00"
     assert corpo["saldo_disponivel"] == "800.00"
-    assert categoria(corpo, "lazer")["total_planejado"] == "0.00"
+    assert categoria(corpo, "hospedagem")["total_planejado"] == "0.00"
 
 
 def test_orcamento_unico_editavel_e_gravado_como_decimal(client, cenario, db_session):
@@ -212,7 +212,7 @@ def test_linha_legada_com_limite_nulo_equivale_a_sem_orcamento(client, cenario, 
 
 
 def test_estouro_e_orcamento_zero(client, cenario):
-    adicionar(client, cenario, "cultura", "150.00")
+    adicionar(client, cenario, "passeio", "150.00")
 
     corpo = definir(client, cenario, "100").json()
     assert corpo["saldo_disponivel"] == "-50.00"
@@ -223,13 +223,13 @@ def test_estouro_e_orcamento_zero(client, cenario):
     assert corpo["orcamento_total"] == "0.00"
     assert corpo["saldo_disponivel"] == "-150.00"
     assert corpo["percentual_consumido"] is None
-    assert categoria(corpo, "cultura")["percentual_orcamento"] is None
-    assert categoria(corpo, "cultura")["percentual_planejado"] == "100.00"
+    assert categoria(corpo, "passeio")["percentual_orcamento"] is None
+    assert categoria(corpo, "passeio")["percentual_planejado"] == "100.00"
 
 
 def test_atividades_canceladas_legadas_ficam_fora_do_total(client, cenario, db_session):
-    legada = adicionar(client, cenario, "cultura", "80.00")
-    adicionar(client, cenario, "lazer", "20.00")
+    legada = adicionar(client, cenario, "passeio", "80.00")
+    adicionar(client, cenario, "hospedagem", "20.00")
     db_session.get(AtividadeViagemModel, legada["id"]).status = "cancelada"
     db_session.commit()
 

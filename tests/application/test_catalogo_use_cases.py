@@ -20,10 +20,10 @@ def repository():
     lisboa = repo.salvar_destino(DestinoCatalogo(nome="Lisboa", pais_codigo="PT"))
     porto = repo.salvar_destino(DestinoCatalogo(nome="Porto", pais_codigo="PT"))
     for nome, categoria, destino, endereco in [
-        ("Museu Nacional", "cultura", lisboa, "Rua Azul"),
-        ("Museu do Porto", "cultura", porto, None),
-        ("Restaurante", "alimentacao", lisboa, "Rua Verde"),
-        ("Passeio 100%", "lazer", lisboa, None),
+        ("Museu Nacional", "passeio", lisboa, "Rua Azul"),
+        ("Museu do Porto", "passeio", porto, None),
+        ("Restaurante", "refeicao", lisboa, "Rua Verde"),
+        ("Passeio 100%", "passeio", lisboa, None),
     ]:
         repo.salvar_atividade(
             AtividadeCatalogo(
@@ -40,7 +40,7 @@ def repository():
     ("filtros", "nomes"),
     [
         ({"nome": "MUSEU"}, ["Museu Nacional", "Museu do Porto"]),
-        ({"categoria": CategoriaAtividade.ALIMENTACAO}, ["Restaurante"]),
+        ({"categoria": CategoriaAtividade.REFEICAO}, ["Restaurante"]),
         ({"localizacao": "LISBOA", "nome": "museu"}, ["Museu Nacional"]),
         ({"localizacao": "azul"}, ["Museu Nacional"]),
         ({"destino_catalogo_id": 2}, ["Museu do Porto"]),
@@ -95,7 +95,7 @@ def test_detalhe_e_inexistente(repository):
 def test_importacao_confirma_lote():
     repo, uow = CatalogoRepositoryMemory(), UnitOfWorkMemory()
     destino = DestinoCatalogo(nome="Lisboa", pais_codigo="PT")
-    atividade = AtividadeCatalogo(destino=destino, nome="Museu", categoria="cultura")
+    atividade = AtividadeCatalogo(destino=destino, nome="Museu", categoria="passeio")
     assert (
         ImportarCatalogo(repo, uow).execute(
             LoteCatalogo(
@@ -113,7 +113,7 @@ def test_importacao_desfaz_em_falha():
     repo, uow = Mock(), UnitOfWorkMemory()
     repo.salvar_atividade.side_effect = RuntimeError("falha de persistência")
     destino = DestinoCatalogo(nome="Lisboa", pais_codigo="PT")
-    atividade = AtividadeCatalogo(destino=destino, nome="Museu", categoria="cultura")
+    atividade = AtividadeCatalogo(destino=destino, nome="Museu", categoria="passeio")
     caso_em_teste = ImportarCatalogo(repo, uow)
     entrada_teste_0 = LoteCatalogo({"lisboa": destino}, [("lisboa", atividade)])
     with pytest.raises(RuntimeError):
@@ -124,7 +124,7 @@ def test_importacao_desfaz_em_falha():
 def test_destino_ausente_impede_importacao():
     repo, uow = Mock(), UnitOfWorkMemory()
     destino = DestinoCatalogo(nome="Lisboa", pais_codigo="PT")
-    atividade = AtividadeCatalogo(destino=destino, nome="Museu", categoria="cultura")
+    atividade = AtividadeCatalogo(destino=destino, nome="Museu", categoria="passeio")
     caso_em_teste = ImportarCatalogo(repo, uow)
     entrada_teste_0 = LoteCatalogo({"lisboa": destino}, [("porto", atividade)])
     with pytest.raises(DadosInvalidos):
@@ -143,7 +143,7 @@ def test_falha_de_busca_nao_e_ocultada():
 @pytest.fixture
 def lote_seed():
     destino = DestinoCatalogo(nome="Lisboa", pais_codigo="PT")
-    atividade = AtividadeCatalogo(destino=destino, nome="Museu", categoria="cultura")
+    atividade = AtividadeCatalogo(destino=destino, nome="Museu", categoria="passeio")
     return LoteCatalogo({"lisboa": destino}, [("lisboa", atividade)])
 
 

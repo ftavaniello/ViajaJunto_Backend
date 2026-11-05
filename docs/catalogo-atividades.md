@@ -16,7 +16,7 @@ Filtros opcionais, combinados por **E**:
 | Parâmetro | Significado |
 |---|---|
 | `nome` | Trecho do nome da atividade |
-| `categoria` | `alimentacao`, `transporte`, `cultura`, `lazer`, `compras`, `outros` |
+| `categoria` | `passeio`, `refeicao`, `hospedagem`, `transporte`, `outro` |
 | `localizacao` | Trecho da cidade, do código de país ou do endereço |
 | `destino_catalogo_id` | Destino exato pelo ID público |
 | `nota_minima` | Média mínima inclusiva entre 1 e 5; exclui atividades sem avaliações |
@@ -27,7 +27,7 @@ Textos são aparados; espaços em branco equivalem a filtro ausente. As buscas n
 distinguem maiúsculas de minúsculas, mas não removem acentos. `%` e `_` são
 caracteres literais, não curingas. Campos desconhecidos são rejeitados com 422.
 
-Exemplo: `/catalogo/atividades?nome=passeio&categoria=cultura&localizacao=lisboa`.
+Exemplo: `/catalogo/atividades?nome=passeio&categoria=passeio&localizacao=lisboa`.
 
 A resposta contém `itens`, `pagina`, `tamanho_pagina` e `tem_proxima`.
 Ordenação crescente por ID, com limite e deslocamento aplicados no PostgreSQL.
@@ -42,8 +42,9 @@ Cada item tem ID, nome, descrição, categoria, endereço, latitude/longitude,
 O modelo aprovado na migração usa uma foto por registro, representada por URL;
 não há armazenamento ou upload de imagens. URLs são referências e não são baixadas
 pelo backend. Não são retornados usuários, membros, convites nem dados do roteiro.
-O vocabulário de categorias segue `CategoriaAtividade` e os CHECKs existentes no banco,
-que divergem dos tipos exemplificados no documento inicial de arquitetura.
+Os tipos seguem o documento original de arquitetura: `passeio`, `refeicao`,
+`hospedagem`, `transporte` e `outro`. O campo da API continua se chamando `categoria`.
+Veja [conversão de registros existentes](tipos-atividades.md).
 
 ## Avaliações — RF22–24
 
